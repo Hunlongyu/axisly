@@ -1,4 +1,20 @@
-# Axisly Flexbox 规范矩阵（实施前基线）
+# Axisly Flexbox 规范矩阵与开发状态
+
+## 2026-09-28 状态
+
+`compute_flex` 当前只接收**确定的有限容器尺寸**。已加入行／列及
+reverse、wrap／wrap-reverse、LTR／RTL 和纵向轴映射、固定与百分比
+尺寸、grow／shrink 冻结迭代、auto margin、gap、主交叉轴对齐、
+宽度确定后的测量、绝对定位子项的静态位置及基本 offset 几何、
+`visibility:collapse` 的两轮重排。GeeyoouUI 的 BoxLayout 实际
+排布已使用 Flex；Overlay／Anchor 是单独的非 CSS 布局 API。
+
+仍未完成的验收项包括：不确定容器尺寸下的完整 intrinsic sizing、
+fragmentainer／break 传播与子项续片、正交书写模式下的完整基线与
+尺寸推导、替换元素自动最小尺寸的所有分支、绝对定位的全部过约束
+规则、从 WPT 抽取的逐项几何对照，以及 Grid／Flex／Overlay
+混合保留树。当前测试只证明覆盖到的用例，不能据此宣称完整
+CSS Flexbox Level 1 兼容。
 
 ## 验收含义
 

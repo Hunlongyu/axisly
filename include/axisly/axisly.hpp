@@ -3,8 +3,10 @@
 #include <axisly/cache.hpp>
 #include <axisly/rounding.hpp>
 #include <axisly/measurement_cache.hpp>
+#include <axisly/overlay.hpp>
 #include <axisly/tree.hpp>
 #include <axisly/geometry.hpp>
+#include <axisly/flex.hpp>
 #include <axisly/grid.hpp>
 #include <axisly/layout.hpp>
 #include <axisly/measurement.hpp>

@@ -87,7 +87,20 @@ int main() {
     (void)measurements.measure(7, {{}, {}, {100, 100}});
     (void)measurements.measure(7, {{}, {}, {100, 100}});
     const bool measurement_cache_valid = measurements.measurement_count() == 1 && measurements.hit_count() == 1 && standalone_calls == 1;
+    const std::array flex_items{axisly::FlexItem{.id = 1, .preferred_size = {20, 10}},
+        axisly::FlexItem{.id = 2, .preferred_size = {10, 10}}};
+    const auto flex = axisly::compute_flex({}, flex_items, {50, 20});
+    axisly::OverlayItem anchored;
+    anchored.id = 3;
+    anchored.anchors.right = axisly::AnchorLength::fixed(5);
+    anchored.width = 10.0f;
+    anchored.height = 5.0f;
+    const auto overlay = axisly::compute_overlay({}, std::array{anchored}, {50, 20});
     return advanced_valid && measurement_cache_valid && snapped.succeeded()
+            && flex.succeeded() && flex.items.size() == 2
+            && flex.items[1].rect == axisly::Rect{20, 0, 10, 20}
+            && overlay.succeeded() && overlay.items.size() == 1
+            && overlay.items[0].rect == axisly::Rect{35, 0, 10, 5}
             && first_valid && hit_valid && !changed.cache_hit && cached_calls == 4
             && track.kind() == axisly::TrackKind::Range
             && std::get<axisly::FixedTrack>(range.minimum).size == 100

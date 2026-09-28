@@ -12,6 +12,22 @@ target_link_libraries(axisly_fixed_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_fixed_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_fixed_tests)
 
+add_executable(axisly_overlay_tests overlay/overlay_tests.cpp)
+target_link_libraries(axisly_overlay_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_overlay_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_overlay_tests)
+add_test(NAME axisly.overlay COMMAND axisly_overlay_tests)
+
+add_executable(axisly_flex_tests flex/flex_tests.cpp)
+target_link_libraries(axisly_flex_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_flex_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_flex_tests)
+foreach(behavior IN ITEMS empty row_column box_model grow_shrink flex_freeze_and_partial_factors automatic_minimum replaced_automatic_minimum wrap
+    reverse_and_writing alignment baseline_alignment logical_and_safe_alignment margins_and_gap basis_and_order absolute_and_collapse absolute_stretch collapsed_strut_rewrap
+    aspect_and_measurement invalid_and_overflow)
+    add_test(NAME axisly.flex.${behavior} COMMAND axisly_flex_tests ${behavior})
+endforeach()
+
 foreach(behavior IN ITEMS
     one_cell multiple_columns multiple_rows asymmetric_padding gaps fractional
     zero_container zero_tracks empty_grids overflow_layout identity_and_order
@@ -144,7 +160,7 @@ foreach(behavior IN ITEMS flat_equivalence unchanged targeted_dirty nested_refer
     add_test(NAME axisly.tree.${behavior} COMMAND axisly_tree_tests ${behavior})
 endforeach()
 
-foreach(header IN ITEMS geometry track grid layout measurement result cache rounding measurement_cache tree axisly)
+foreach(header IN ITEMS geometry track grid layout measurement result cache rounding measurement_cache tree flex overlay axisly)
     set(source "${CMAKE_CURRENT_BINARY_DIR}/header_${header}.cpp")
     file(WRITE "${source}" "#include <axisly/${header}.hpp>\n")
     list(APPEND header_check_sources "${source}")

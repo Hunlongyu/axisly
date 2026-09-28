@@ -3,11 +3,11 @@
 面向原生 UI 的 C++20 通用布局库。核心只依赖 STL，通过数据和测量回调
 与宿主 UI 对接，不持有控件，不依赖 Qt、SDL 或 Win32。
 
-## 当前进度：Grid 已实现，Flexbox 尚未实现
+## 当前进度：Grid 已实现，Flexbox 与 Overlay／Anchor 开发中
 
 当前版本为 `0.1.0`。`compute_grid()` 支持固定／权重／Content／Range／百分比轨道、显式与自动放置、隐式轨道、跨格、padding／gap／margin、两轴独立对齐与首基线对齐。列宽确定后重新测量高度；`round_layout()` 可按设备像素取整。默认仍是显式放置、浮点坐标和无状态计算。
 
-可选 `GridCache` 复用完整布局和工作区，可进一步启用条目测量缓存；`MeasurementCache` 也可独立使用。可选 `GridTree` 管理节点、父子关系、嵌套布局和脏标记传播，修改叶子时可复用无关分支。原 Grid 阶段的 M0–M10 及 1.1+ 计划功能已实现；这不表示通用布局目标已完成。Flexbox 将按规范的布局语义实现，使用 C++ 类型输入，不引入 CSS 解析和样式系统。范围见 [通用布局计划](docs/27-native-ui-layout-plan.md) 与 [Flexbox 规范矩阵](docs/28-flexbox-conformance-matrix.md)。现有 Grid 的 [功能与验收记录](docs/22-roadmap-completion.md) 和 [API 契约](docs/23-api-contract.md) 仍可查阅；项目尚未发布，也未承诺跨版本二进制兼容。
+可选 `GridCache` 复用完整布局和工作区，可进一步启用条目测量缓存；`MeasurementCache` 也可独立使用。可选 `GridTree` 管理节点、父子关系、嵌套布局和脏标记传播，修改叶子时可复用无关分支。原 Grid 阶段的 M0–M10 及 1.1+ 计划功能已实现；这不表示通用布局目标已完成。`compute_flex()` 已加入常规行列、换行、伸缩、对齐、书写模式、绝对定位及折叠项目的首批算法，`compute_overlay()` 提供叠层与锚定几何。Flexbox **尚未达到完整规范验收**；分片、独立 intrinsic 查询、混合保留树和更多 WPT 边界仍待实现。使用 C++ 类型输入，不引入 CSS 解析和样式系统。范围与状态见 [通用布局计划](docs/27-native-ui-layout-plan.md) 和 [Flexbox 规范矩阵](docs/28-flexbox-conformance-matrix.md)。现有 Grid 的 [功能与验收记录](docs/22-roadmap-completion.md) 和 [API 契约](docs/23-api-contract.md) 仍可查阅；项目尚未发布，也未承诺跨版本二进制兼容。
 
 SDL3 演示保留十个可交互场景和等宽字体。Taffy 对照、SDL3 演示和性能工具仍为可选开发依赖，不进入生产库。历史性能记录见 [缓存接口](docs/20-layout-cache.md) 和 [工作区优化](docs/21-workspace-optimization.md)。
 
@@ -60,6 +60,7 @@ Release 将上述 `debug` 替换为 `release`。Windows 示例：
 - `build/debug/axisly_range_example.exe`：展示固定上限、内容最小值、权重增长以及容器不足时的布局。
 - `build/debug/axisly_nested_example.exe`：展示三层嵌套、容器变窄后的换行、完整 ID 路径和根坐标。
 - `build/debug/axisly_retained_example.exe`：展示自动放置、隐式行、百分比列、首基线、DPI 取整、整树命中和单条目失效。
+- `build/debug/axisly_native_example.exe`：组合 Grid 页面、Flex 工具栏与 Overlay 徽标。
 
 这些是控制台示例，不是图形窗口。Windows 双击启动并独占交互式控制台时，结果会保留到按回车关闭；在已有终端内运行或重定向输出时，打印后正常结束。先前版本打印完成便退出，双击时表现为窗口立即关闭。
 

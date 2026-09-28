@@ -31,6 +31,8 @@ endif()
 add_library(axisly STATIC
     src/track.cpp
     src/compute_grid.cpp
+    src/flex.cpp
+    src/overlay.cpp
     src/cache.cpp
     src/rounding.cpp
     src/measurement_cache.cpp
@@ -100,6 +102,14 @@ if(AXISLY_BUILD_TESTS)
 endif()
 
 if(AXISLY_BUILD_EXAMPLES)
+    add_executable(axisly_native_example examples/native_layout.cpp)
+    target_link_libraries(axisly_native_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_native_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_native_example)
+    if(AXISLY_BUILD_TESTS)
+        add_test(NAME axisly.native.example COMMAND axisly_native_example)
+    endif()
+
     add_executable(axisly_api_example examples/fixed_grid.cpp)
     target_link_libraries(axisly_api_example PRIVATE axisly::axisly)
     set_target_properties(axisly_api_example PROPERTIES CXX_EXTENSIONS OFF)

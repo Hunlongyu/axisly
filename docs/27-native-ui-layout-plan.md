@@ -12,20 +12,23 @@
 Row／Column 分配规则。现有 Grid 保持原有契约；增加 Flex 不等于现有
 Grid 自动成为 CSS Grid 的完整实现。
 
-项目名称确定为 **Axisly**。后续统一调整仓库内的命名空间、头文件、
-CMake 包／目标、公开 API 和文档。验证通过也不发布。
+项目名称确定为 **Axisly**，仓库与现有公开名称已完成迁移。
+验证通过也不发布。
 
 ## 当前实现与缺口
 
 - Grid 的轨道、自动放置、跨度、测量、缓存和保留树已经可用；
   GeeyoouUI Showcase 的 19 页内容根已接入。
-- GeeyoouUI 的 `GridlyBoxLayout` 为每个一维子项建立独占轨道。
-  它可服务当前演示，但伸缩、换行和对齐不是 Flexbox。
+- GeeyoouUI 的 `AxislyBoxLayout` 已把实际一维排布切换为 Flex，
+  测量提示仍由宿主的 Grid 兼容路径提供；真实窗口冒烟与宿主测试通过。
+- `compute_flex` 已有类型化尺寸、方向、换行、伸缩、对齐、绝对定位
+  静态位置和折叠 strut 的首批实现；`compute_overlay` 提供叠层锚定。
+  这些属于开发中的算法，尚未通过全部规范矩阵。
 - `GridTree` 的节点直接保存 `GridSpec`／`GridItem`，容器使用
   `GridCache`。混合 Grid／Flex 树需要抽取共同的树与缓存机制。
-- `MeasureResult` 仅有最小／首选尺寸及可选基线。CSS 的 min-content、
-  max-content、auto 最小尺寸、纵横书写模式及分片测量不能从现有字段
-  推断，必须设计新的测量契约。
+- `MeasureResult` 保留 Grid 契约；Flex 已增加 min-content／
+  max-content／指定尺寸的独立测量结构。分片回调、无限可用空间和
+  独立 intrinsic 容器查询仍需设计及验证。
 
 ## 目标算法矩阵
 
@@ -34,7 +37,7 @@ CMake 包／目标、公开 API 和文档。验证通过也不发布。
 | Grid | 两轴对齐、跨格、表单和仪表盘 | 保留现有实现与合法输入语义 |
 | Flex | 一维排列、伸缩、多行换行和交叉轴对齐 | 按 Flexbox 规范实现全部布局边界 |
 | 定位／分片辅助 | 绝对定位子项、分片容器所需的几何 | 作为 Flex 完整性依赖实现 |
-| Overlay／Anchor | 非 CSS 的叠层和锚定 API | 后续从宿主案例决定 |
+| Overlay／Anchor | 非 CSS 的叠层和锚定 API | 与 Flex 同批实现 |
 
 `flex-wrap` 本身负责 Flex 换行，不另设重复的 Flow 算法。普通纵向堆叠
 可用 Column Flex 表达；CSS Block 格式化上下文并非通用原生 UI 的
@@ -107,8 +110,8 @@ web-compatible intrinsic sizing 算法尚未写出；10.1 的分片算法是
    重入保护、失败原子性、测量次数及布局结果顺序。
 5. **宿主验证**：在 GeeyoouUI 将代表性的工具栏、导航和竖向页面改用
    Flex 适配器，记录与当前单轴 Grid 的预期差异和不同 DPI 的表现。
-6. **命名迁移**：统一仓库内名称、CMake 包／目标、命名空间、头文件及
-   文档；明确现有 `gridly` 使用者的迁移方式。
+6. **Overlay／Anchor 与集成**：定义边缘锚定和叠层对齐规则，验证
+   Grid／Flex／Overlay 混合树及宿主实际页面。
 
 验收以规范章节及 WPT 几何用例为主，抽取适合类型化输入的测试；再在
 相同功能交集上与 Taffy、浏览器结果比对。Taffy 不是规范，也不成为
@@ -125,5 +128,5 @@ web-compatible intrinsic sizing 算法尚未写出；10.1 的分片算法是
 ## 命名决定
 
 选择 `Axisly`，因为它不再把产品限定为 Grid，且延续短名称风格。
-本决定仅覆盖仓库内代码、包名和文档；远端仓库地址是否更名在发布前
-另行处理。当前无发布动作。
+仓库、包名和文档已经迁移；私有远端现为 `Hunlongyu/axisly`。
+当前无发布动作。

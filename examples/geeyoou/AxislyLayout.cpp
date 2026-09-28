@@ -249,8 +249,57 @@ AxislyLayout::Request AxislyLayout::request(Mode mode) const {
     }
     return r;
 }
+AxislyLayout::FlexRequest AxislyLayout::flexRequest() const {
+    FlexRequest request;
+    const bool vertical = kind_ == Kind::Vertical;
+    request.spec.direction = vertical ? axisly::FlexDirection::Column : axisly::FlexDirection::Row;
+    bool previousWidget = false;
+    request.items.reserve(snapshots_.size());
+    for (const auto& snapshot : snapshots_) {
+        const bool widget = snapshot.entry.child != noChild;
+        axisly::FlexItem item;
+        item.id = snapshot.entry.item.id;
+        item.grow = static_cast<float>(snapshot.entry.weight);
+        item.shrink = widget ? 1.0f : 0.0f;
+        if (widget) {
+            item.min_content = {snapshot.hint.min.width, snapshot.hint.min.height};
+            item.max_content = {snapshot.hint.preferred.width, snapshot.hint.preferred.height};
+            item.preferred_size = item.max_content;
+            item.minimum_width = axisly::FlexLength::fixed(snapshot.hint.min.width);
+            item.minimum_height = axisly::FlexLength::fixed(snapshot.hint.min.height);
+            item.maximum_width = axisly::FlexLength::fixed(snapshot.hint.max.width);
+            item.maximum_height = axisly::FlexLength::fixed(snapshot.hint.max.height);
+            if (previousWidget) {
+                if (vertical) item.margin.top = axisly::FlexLength::fixed(std::max(0.0f, spacing()));
+                else item.margin.left = axisly::FlexLength::fixed(std::max(0.0f, spacing()));
+            }
+        } else {
+            item.basis = axisly::FlexLength::fixed(snapshot.entry.space);
+            if (vertical) item.minimum_height = axisly::FlexLength::fixed(snapshot.entry.space);
+            else item.minimum_width = axisly::FlexLength::fixed(snapshot.entry.space);
+        }
+        request.items.push_back(item);
+        previousWidget = widget;
+    }
+    return request;
+}
 axisly::MeasureResult AxislyLayout::callback(axisly::ItemId id, const axisly::MeasureInput& in, void* ctx) {
     return static_cast<AxislyLayout*>(ctx)->measureItem(id, in);
+}
+axisly::FlexMeasureResult AxislyLayout::flexCallback(axisly::ItemId id,
+        const axisly::FlexMeasureInput& input, void* ctx) {
+    return static_cast<AxislyLayout*>(ctx)->measureFlexItem(id, input);
+}
+axisly::FlexMeasureResult AxislyLayout::measureFlexItem(axisly::ItemId id,
+        const axisly::FlexMeasureInput& input) const {
+    axisly::MeasureInput gridInput;
+    gridInput.known_width = input.known_content_width;
+    gridInput.known_height = input.known_content_height;
+    gridInput.available = {input.available_content_width.value_or(0),
+        input.available_content_height.value_or(0)};
+    const auto measured = measureItem(id, gridInput);
+    return {measured.minimum, measured.preferred, measured.preferred,
+        measured.baseline, measured.baseline};
 }
 axisly::MeasureResult AxislyLayout::measureItem(axisly::ItemId id, const axisly::MeasureInput& input) const {
     if (!valid(passRevision_, passStyle_)) throw Interrupted{};
@@ -329,16 +378,40 @@ geeyoou::LayoutOverflow AxislyLayout::arrange(geeyoou::Widget& hostWidget, const
     try {
         gather(hostWidget);
         mode_ = Mode::Arrange; passRevision_ = revision_; passStyle_ = geeyoou::styleGeneration();
-        auto req = request(mode_);
-        arranged_.set_spec(req.spec); arranged_.set_items(req.items);
-        const auto computed = arranged_.compute({std::max(0.0f, content.width()), std::max(0.0f, content.height())},
-                                                cacheVersion_);
-        if (!computed.result.succeeded()) {
-            ++totals.errors;
-            std::fprintf(stderr, "axisly host arrange: %s\n", computed.result.error.message.c_str());
-            return {};
+        std::vector<axisly::ItemLayout> layouts;
+        axisly::Size occupied{};
+        const axisly::Size available{std::max(0.0f, content.width()), std::max(0.0f, content.height())};
+        if (kind_ == Kind::Grid) {
+            auto req = request(mode_);
+            arranged_.set_spec(req.spec); arranged_.set_items(req.items);
+            const auto computed = arranged_.compute(available, cacheVersion_);
+            if (!computed.result.succeeded()) {
+                ++totals.errors;
+                std::fprintf(stderr, "axisly host arrange: %s\n", computed.result.error.message.c_str());
+                return {};
+            }
+            if (computed.cache_hit) ++totals.cacheHits; else ++totals.solves;
+            layouts = computed.result.items;
+            occupied = computed.result.size;
+        } else {
+            auto req = flexRequest();
+            const auto computed = axisly::compute_flex(req.spec, req.items, available, flexCallback, this);
+            if (!computed.succeeded()) {
+                ++totals.errors;
+                std::fprintf(stderr, "axisly host flex arrange: %s\n", computed.error.message.c_str());
+                return {};
+            }
+            ++totals.solves;
+            layouts.reserve(computed.items.size());
+            for (const auto& item : computed.items) {
+                axisly::ItemLayout layout;
+                layout.id = item.id;
+                layout.rect = item.rect;
+                layouts.push_back(layout);
+            }
+            occupied = {computed.occupied_bounds.x + computed.occupied_bounds.width,
+                computed.occupied_bounds.y + computed.occupied_bounds.height};
         }
-        if (computed.cache_hit) ++totals.cacheHits; else ++totals.solves;
         float scale = scale_;
         // window() can be overridden. Guard it just like measurement.
         auto* window = hostWidget.window();
@@ -346,10 +419,10 @@ geeyoou::LayoutOverflow AxislyLayout::arrange(geeyoou::Widget& hostWidget, const
         if (window) scale = window->scaleFactor();
         const auto snap = [scale](float v) { return std::round(v * scale) / scale; };
         geeyoou::LayoutOverflow overflow;
-        overflow.widthShort = std::max(0.0f, computed.result.size.width - content.width());
-        overflow.heightShort = std::max(0.0f, computed.result.size.height - content.height());
+        overflow.widthShort = std::max(0.0f, occupied.width - content.width());
+        overflow.heightShort = std::max(0.0f, occupied.height - content.height());
         // No geometry is published until ALL measurements and solving succeed.
-        for (const auto& item : computed.result.items) {
+        for (const auto& item : layouts) {
             if (!valid(passRevision_, passStyle_)) throw Interrupted{};
             const auto entry = snapshots_.at(lookup_.at(item.id));
             if (entry.entry.child == noChild) continue;

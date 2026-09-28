@@ -57,13 +57,17 @@ private:
     };
     struct Snapshot { Entry entry; geeyoou::SizeHint hint; };
     struct Request { axisly::GridSpec spec; std::vector<axisly::GridItem> items; };
+    struct FlexRequest { axisly::FlexSpec spec; std::vector<axisly::FlexItem> items; };
     std::size_t indexOf(const geeyoou::Widget*) const;
     bool valid(std::uint64_t epoch, std::uint64_t style) const;
     void gather(const geeyoou::Widget&) const;
     Request request(Mode) const;
+    FlexRequest flexRequest() const;
     axisly::Size intrinsic(Mode, std::optional<float> width = {}) const;
     static axisly::MeasureResult callback(axisly::ItemId, const axisly::MeasureInput&, void*);
     axisly::MeasureResult measureItem(axisly::ItemId, const axisly::MeasureInput&) const;
+    static axisly::FlexMeasureResult flexCallback(axisly::ItemId, const axisly::FlexMeasureInput&, void*);
+    axisly::FlexMeasureResult measureFlexItem(axisly::ItemId, const axisly::FlexMeasureInput&) const;
     void changed();
     Kind kind_;
     std::vector<Entry> entries_;

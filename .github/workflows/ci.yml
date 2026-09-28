@@ -16,30 +16,46 @@ jobs:
           - name: Windows MSVC
             os: windows-latest
             cxx: cl
+            configuration: Debug
+          - name: Windows MSVC Release
+            os: windows-latest
+            cxx: cl
+            configuration: Release
           - name: Linux GCC
             os: ubuntu-latest
             cxx: g++
+            configuration: Debug
           - name: Linux Clang
             os: ubuntu-latest
             cxx: clang++
+            configuration: Debug
     env:
       CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=Debug -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON -DGRIDLY_BUILD_BENCHMARKS=ON
+        run: cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON -DGRIDLY_BUILD_BENCHMARKS=ON
       - name: Build
-        run: cmake --build build/ci --config Debug --parallel
+        run: cmake --build build/ci --config ${{ matrix.configuration }} --parallel
       - name: Test
-        run: ctest --test-dir build/ci -C Debug --output-on-failure --no-tests=error
+        run: ctest --test-dir build/ci -C ${{ matrix.configuration }} --output-on-failure --no-tests=error
       - name: Install
-        run: cmake --install build/ci --config Debug --prefix "${{ github.workspace }}/build/install"
+        run: cmake --install build/ci --config ${{ matrix.configuration }} --prefix "${{ github.workspace }}/build/install"
       - name: Configure installed consumer
-        run: cmake -S tests/consumer -B build/consumer -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build/install"
+        run: cmake -S tests/consumer -B build/consumer -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build/install"
       - name: Build installed consumer
-        run: cmake --build build/consumer --config Debug --parallel
+        run: cmake --build build/consumer --config ${{ matrix.configuration }} --parallel
       - name: Test installed consumer
-        run: ctest --test-dir build/consumer -C Debug --output-on-failure --no-tests=error
+        run: ctest --test-dir build/consumer -C ${{ matrix.configuration }} --output-on-failure --no-tests=error
+      - name: Preserve build test failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-${{ matrix.name }}
+          path: |
+            build/ci/Testing/Temporary/LastTest.log
+            build/consumer/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
 
   sanitizers:
     name: Linux ${{ matrix.cxx }} ASan and UBSan
@@ -108,5 +124,6 @@ jobs:
           name: gridly-reference-failure
           path: |
             build/reference/tests/reference/failures/
+            build/reference/tests/reference/advanced-failures/
             build/reference/Testing/Temporary/LastTest.log
           if-no-files-found: ignore

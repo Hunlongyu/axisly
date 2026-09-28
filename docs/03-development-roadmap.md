@@ -29,6 +29,13 @@ baseline alignment. API contracts and sanitizer CI are provided. `0.1.0` is the
 current development version; milestone headings below are not published releases
 or a claim of full browser behavior or broad production qualification.
 
+Follow-up verification: the real Windows Debug allocation failure is fixed; a
+separate V2 Taffy suite covers automatic placement, fixed implicit tracks,
+percentages and the compatible first-baseline subset. Retained-tree benchmarks
+include selective invalidation and real DirectWrite text measurement on Windows.
+See [extended validation](24-ci-and-extended-validation.md). The selected next host
+is [GeeyoouUI](25-geeyoou-integration-plan.md); actual host integration remains to be implemented.
+
 ## Phase M0 — Freeze the data model
 
 Implement public value types only:

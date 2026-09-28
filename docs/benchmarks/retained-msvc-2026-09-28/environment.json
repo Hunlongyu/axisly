@@ -1,0 +1,27 @@
+{
+  "recorded_utc": "2026-09-28T07:20:28.1634205Z",
+  "cpu": {
+    "Name": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
+    "NumberOfCores": 8,
+    "NumberOfLogicalProcessors": 16
+  },
+  "build": "Release",
+  "version": "0.1.0",
+  "compiler": "MSVC 19.51.36257.0",
+  "flags": "/O2 /Ob2 /DNDEBUG",
+  "rounds": 2,
+  "samples_per_round": 9,
+  "iterations_per_sample": 40,
+  "affinity_pinned": false,
+  "background_builds_or_tests": false,
+  "native_path": "build/benchmark-release/gridly_retained_bench.exe",
+  "native_sha256": "a49b0269faff99c2d6c80797216c2bfee3439c1fa91957a53cdd3d49d54e50aa",
+  "font": "Consolas",
+  "font_pixels": 16,
+  "font_sha256": "cf00b507b3286870cc5064ebd0633c303f70b491a4af25eec2d32df413db0179",
+  "dwrite_version": "10.0.26100.8875 (WinBuild.160101.0800)",
+  "geometry": "All nodes compared to full invalidation and independent stateless layout before timers; exact placement and geometry checked in separate Taffy V2 suite",
+  "scope": "GridTree targeted versus whole-tree invalidation; no competitor timing; actual DirectWrite shaping and wrapping on Windows",
+  "excluded": "Construction, font setup, initial warm-up, full geometry validation, final destruction, file IO",
+  "included": "Content mutation, dirty propagation, compute, old-result retirement, counters and three sampled rectangles"
+}

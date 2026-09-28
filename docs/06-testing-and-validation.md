@@ -89,6 +89,12 @@ host adapter. Cache keys, exceptions, reentry, node lifetime, topology, baseline
 caps and percentage resize are tested separately. The new features are not
 silently added to the older Taffy common-subset eligibility set.
 
+A separate V2 suite now adds 913 default Taffy cases with explicit admission rules,
+engine-native placement/track diagnostics, exact placement comparisons and 12
+harness checks. The original 780 V1 cases and their replay protocol remain intact.
+See [extended validation](24-ci-and-extended-validation.md) for the baseline
+MinContent boundary and the sparse spanning-placement regression it found.
+
 The `GRIDLY_ENABLE_SANITIZERS` option and `scripts/build-sanitizers.ps1` instrument
 local developer builds. CI has separate Linux Clang and GCC ASan+UBSan jobs.
 Exact local results are recorded in [the completion report](22-roadmap-completion.md);

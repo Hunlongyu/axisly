@@ -25,7 +25,23 @@ target_link_libraries(gridly_cache_allocations PRIVATE gridly::gridly)
 set_target_properties(gridly_cache_allocations PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 gridly_enable_warnings(gridly_cache_allocations)
 
+add_executable(gridly_retained_bench retained.cpp)
+target_link_libraries(gridly_retained_bench PRIVATE gridly::gridly)
+if(WIN32)
+    target_link_libraries(gridly_retained_bench PRIVATE dwrite)
+endif()
+target_compile_definitions(gridly_retained_bench PRIVATE
+    GRIDLY_BENCH_VERSION="${PROJECT_VERSION}" GRIDLY_BENCH_CONFIG="$<CONFIG>")
+set_target_properties(gridly_retained_bench PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+gridly_enable_warnings(gridly_retained_bench)
+
 if(GRIDLY_BUILD_TESTS)
+    add_test(NAME gridly.retained_bench.geometry_and_smoke COMMAND gridly_retained_bench --smoke)
+    add_test(NAME gridly.retained_bench.reject_zero COMMAND gridly_retained_bench --iterations 0)
+    add_test(NAME gridly.retained_bench.reject_unknown COMMAND gridly_retained_bench --invalid)
+    set_tests_properties(gridly.retained_bench.reject_zero gridly.retained_bench.reject_unknown PROPERTIES WILL_FAIL TRUE)
+    set_tests_properties(gridly.retained_bench.geometry_and_smoke gridly.retained_bench.reject_zero
+        gridly.retained_bench.reject_unknown PROPERTIES LABELS benchmark TIMEOUT 120)
     add_test(NAME gridly.cache.no_allocations COMMAND gridly_cache_allocations)
     set_tests_properties(gridly.cache.no_allocations PROPERTIES LABELS benchmark TIMEOUT 60)
     add_test(NAME gridly.bench.timing_smoke COMMAND gridly_bench --smoke)

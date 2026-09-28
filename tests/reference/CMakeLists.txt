@@ -18,7 +18,7 @@ add_custom_command(OUTPUT "${taffy_output}"
     COMMAND "${GRIDLY_CARGO_EXECUTABLE}" build --release --locked
         --manifest-path "${taffy_manifest}" --target "${rust_host}"
         --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
-    DEPENDS "${taffy_manifest}" taffy/Cargo.lock taffy/src/main.rs
+    DEPENDS "${taffy_manifest}" taffy/Cargo.lock taffy/src/main.rs taffy/src/advanced.rs
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Building pinned Taffy reference tool (development only)" VERBATIM)
 add_custom_target(gridly_taffy_reference ALL DEPENDS "${taffy_output}")
@@ -34,3 +34,10 @@ add_test(NAME gridly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_
 add_test(NAME gridly.reference.harness COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_reference.py"
     --gridly "$<TARGET_FILE:gridly_reference_native>" --taffy "${taffy_output}")
 set_tests_properties(gridly.reference.compare gridly.reference.harness PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME gridly.reference.advanced COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/advanced.py"
+    --gridly "$<TARGET_FILE:gridly_reference_native>" --taffy "${taffy_output}"
+    --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/advanced-failures")
+add_test(NAME gridly.reference.advanced_harness COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_advanced.py"
+    --gridly "$<TARGET_FILE:gridly_reference_native>" --taffy "${taffy_output}")
+set_tests_properties(gridly.reference.advanced gridly.reference.advanced_harness PROPERTIES LABELS reference TIMEOUT 120)

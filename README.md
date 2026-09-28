@@ -10,6 +10,10 @@
 
 SDL3 演示保留十个可交互场景和等宽字体。Taffy 对照、SDL3 演示和性能工具仍为可选开发依赖，不进入生产库。历史性能记录见 [缓存接口](docs/20-layout-cache.md) 和 [工作区优化](docs/21-workspace-optimization.md)。
 
+后续已修复真实 Windows Debug CI 分配问题，新增 913 个高级功能 Taffy 对照及
+`GridTree` 局部失效／真实字体 benchmark，见 [扩展验收记录](docs/24-ci-and-extended-validation.md)。
+真实宿主目标确定为 [GeeyoouUI，接入计划](docs/25-geeyoou-integration-plan.md)。
+
 ## 构建与测试
 
 需要支持 C++20 的编译器、CMake 3.25+；预设另需 Ninja。默认构建不下载依赖。

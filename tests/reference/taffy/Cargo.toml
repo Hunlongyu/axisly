@@ -5,4 +5,4 @@ edition = "2021"
 publish = false
 
 [dependencies]
-taffy = { version = "=0.14.0", default-features = false, features = ["std", "taffy_tree", "grid"] }
+taffy = { version = "=0.14.0", default-features = false, features = ["std", "taffy_tree", "grid", "detailed_layout_info"] }

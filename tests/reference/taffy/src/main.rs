@@ -4,6 +4,7 @@ use std::{
     str::{FromStr, SplitWhitespace},
 };
 use taffy::prelude::*;
+mod advanced;
 
 type Result<T> = std::result::Result<T, String>;
 
@@ -44,6 +45,7 @@ impl Reader<'_> {
         (0..count)
             .map(|_| match self.token()? {
                 "F" => Ok(length(self.unit()?)),
+                "P" => Ok(percent(self.unit()?)),
                 "C" => Ok(minmax(min_content(), max_content())),
                 "W" | "R" => {
                     let weight = self.unit()?;
@@ -63,6 +65,7 @@ impl Reader<'_> {
 struct Metrics {
     minimum: Size<f32>,
     preferred: Size<f32>,
+    baseline: Option<f32>,
 }
 
 fn alignment(value: u16) -> AlignItems {
@@ -119,7 +122,7 @@ fn compute(tree: &mut TaffyTree<Metrics>, root: NodeId, available: Size<f32>) ->
         },
         |inputs, _, context, style| {
             let metrics = context.copied().unwrap_or_default();
-            taffy::compute_leaf_layout(
+            let mut output = taffy::compute_leaf_layout(
                 inputs,
                 style,
                 |_, _| 0.0,
@@ -137,7 +140,9 @@ fn compute(tree: &mut TaffyTree<Metrics>, root: NodeId, available: Size<f32>) ->
                         metrics.preferred.height,
                     ),
                 },
-            )
+            );
+            output.baselines = taffy::tree::Baselines::from_first(metrics.baseline);
+            output
         },
     )
     .map_err(|e| e.to_string())
@@ -205,6 +210,7 @@ fn run_case(reader: &mut Reader, index: u16) -> Result<()> {
         let metrics = Metrics {
             minimum: reader.size()?,
             preferred: reader.size()?,
+            baseline: None,
         };
         if metrics.minimum.width > metrics.preferred.width
             || metrics.minimum.height > metrics.preferred.height
@@ -280,12 +286,19 @@ fn run() -> Result<()> {
         .read_to_string(&mut input)
         .map_err(|e| e.to_string())?;
     let mut reader = Reader(input.split_whitespace());
-    if reader.token()? != "GRIDLY_REFERENCE_V1" {
+    let version = reader.token()?;
+    if version != "GRIDLY_REFERENCE_V1" && version != "GRIDLY_REFERENCE_V2" {
         return Err("Unsupported protocol version".into());
     }
+    let advanced_protocol = version == "GRIDLY_REFERENCE_V2";
     let count = reader.count(10000, false)?;
     for index in 0..count {
-        run_case(&mut reader, index).map_err(|e| format!("taffy reference case {index}: {e}"))?;
+        if advanced_protocol {
+            advanced::run_case(&mut reader, index)
+        } else {
+            run_case(&mut reader, index)
+        }
+        .map_err(|e| format!("taffy reference case {index}: {e}"))?;
     }
     if reader.0.next().is_some() {
         return Err("Unexpected trailing input".into());

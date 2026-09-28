@@ -48,6 +48,7 @@ std::vector<Track> tracks(std::uint32_t length) {
     for (std::uint32_t index = 0; index < length; ++index) {
         const auto kind = token();
         if (kind == "F") result.push_back(Track::fixed(number<Unit>()));
+        else if (kind == "P") result.push_back(Track::percentage(number<Unit>()));
         else if (kind == "C") result.push_back(Track::content());
         else if (kind == "W" || kind == "R") {
             const auto weight = number<Unit>();
@@ -64,7 +65,7 @@ void rect(Rect value) {
     std::cout << '[' << value.x << ',' << value.y << ',' << value.width << ',' << value.height << ']';
 }
 
-void run_case(std::uint32_t index) {
+void run_case(std::uint32_t index, bool advanced) {
     const auto available = size();
     GridSpec spec;
     spec.padding = insets();
@@ -75,19 +76,32 @@ void run_case(std::uint32_t index) {
     const auto item_count = count(128);
     spec.columns = tracks(columns);
     spec.rows = tracks(rows);
+    if (advanced) {
+        spec.auto_flow = static_cast<AutoFlow>(count(4));
+        spec.allow_implicit_tracks = count(1) != 0;
+        spec.implicit_column = Track::fixed(number<Unit>());
+        spec.implicit_row = Track::fixed(number<Unit>());
+        spec.max_implicit_tracks = 4096;
+    }
     std::vector<GridItem> items;
     std::map<ItemId, MeasureResult> metrics;
     for (std::uint32_t n = 0; n < item_count; ++n) {
         GridItem item;
         item.id = number<ItemId>();
-        item.column = count(15);
-        item.row = count(15);
+        const auto position = [advanced]() {
+            const auto value = number<std::uint32_t>();
+            if (value > 15 && !(advanced && value == auto_position)) throw std::runtime_error("Invalid position");
+            return value;
+        };
+        item.column = position();
+        item.row = position();
         item.column_span = count(16, false);
         item.row_span = count(16, false);
         item.margin = insets();
         item.horizontal_alignment = static_cast<HorizontalAlignment>(count(3));
-        item.vertical_alignment = static_cast<VerticalAlignment>(count(3));
+        item.vertical_alignment = static_cast<VerticalAlignment>(count(advanced ? 4 : 3));
         metrics[item.id] = {size(), size()};
+        if (advanced && count(1) != 0) metrics[item.id].baseline = number<Unit>();
         items.push_back(item);
     }
     const auto result = compute_grid(spec, items, available,
@@ -102,6 +116,9 @@ void run_case(std::uint32_t index) {
         rect(item.rect);
         std::cout << ",\"cell\":";
         rect(item.cell_rect);
+        if (advanced) {
+            std::cout << ",\"at\":[" << item.column << ',' << item.row << ',' << item.column_span << ',' << item.row_span << ']';
+        }
         std::cout << '}';
     }
     std::cout << "]}\n";
@@ -114,9 +131,10 @@ int main() {
         std::cin.imbue(std::locale::classic());
         std::cout.imbue(std::locale::classic());
         std::cout << std::setprecision(std::numeric_limits<gridly::Unit>::max_digits10);
-        if (token() != "GRIDLY_REFERENCE_V1") throw std::runtime_error("Unsupported protocol version");
+        const auto protocol = token();
+        if (protocol != "GRIDLY_REFERENCE_V1" && protocol != "GRIDLY_REFERENCE_V2") throw std::runtime_error("Unsupported protocol version");
         const auto cases = count(10000, false);
-        for (; index < cases; ++index) run_case(index);
+        for (; index < cases; ++index) run_case(index, protocol == "GRIDLY_REFERENCE_V2");
         std::string extra;
         if (std::cin >> extra) throw std::runtime_error("Unexpected trailing input");
         return 0;

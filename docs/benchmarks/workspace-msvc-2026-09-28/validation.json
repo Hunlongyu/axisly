@@ -1,0 +1,54 @@
+{
+  "recorded_utc": "2026-09-28T03:54:33.529289+00:00",
+  "gridly": "0.0.13",
+  "baseline_gridly": "0.0.12",
+  "cpu": "Intel Core i7-11700K, 8 cores / 16 threads",
+  "msvc": "19.51.36257",
+  "cpp_flags": "/O2 /Ob2 /DNDEBUG",
+  "rustc": "1.98.0 (88d9e12ae 2026-08-18)",
+  "rust_opt_level": 3,
+  "lto": false,
+  "tests": {
+    "debug": 233,
+    "comparison_release": 240,
+    "reference_release": 235,
+    "taffy_cases": 780,
+    "reference_harness": 22,
+    "installed_consumer": 1,
+    "embedded_consumer": 1
+  },
+  "geometry": {
+    "pairs": 61,
+    "frames": 2074,
+    "rectangles": 3175600,
+    "max_absolute_error": 0
+  },
+  "allocation_probe": "single-thread C++ new/delete only; --smoke 3 samples x 2 iterations; no timing inference",
+  "allocation_binary_sha256": {
+    "before": "30695e4c84fba7848e4225a624f23d0aaf9d8636aa02827840b6cd807a2c9459",
+    "after": "f503913874e05ce9ba64a68d638c061df500975857ed636eec85eccb6776b65b",
+    "cache": "6b4450ae0479ec969f0f7fd46bda8bfb49cc98dc49cbf64b7f9c36f3b70e3a9e"
+  },
+  "core_source_sha256": {
+    "src/cache.cpp": "61aa265e7c9a48b2a550be49b0c7d0c4e0d32ffe5c04242094da0b1444e804a8",
+    "src/compute_grid.cpp": "8f6e882cede89ac091255b6450691e10c56a028737749a048f8260233634abd5",
+    "src/detail/item_alignment.cpp": "7397130f3673af92a41092ada595ae601988baed1fed517d4186c54858a20176",
+    "src/detail/item_alignment.hpp": "abb1700918b40ffcc277bb5bc6a8dbf7671c201db86b3843978984769df0e89e",
+    "src/detail/layout_workspace.hpp": "2d7c9c57a1c123625771187260ecbf0bd5028c9a8ae9a754b60810bccc33d8fe",
+    "src/detail/span_resolution.cpp": "0c24e1ee3c6e8adac0bd435ac47a6dec294d23991d45e5a759cffe1d7f16f2d0",
+    "src/detail/span_resolution.hpp": "a37b12cae5195a873eb07f86d805b87a3c288592e91e34588fb06ebd8f4aa9fb",
+    "src/detail/track_sizing.cpp": "bf42e0d22ad147bb15fa5016c73456cb857b4019da05e95a327e1a7c94b90cd6",
+    "src/detail/track_sizing.hpp": "fe78e0b26a6f6eda99453b1ad0fc2270d4166d8a99dae8844c29e5fecd17cce9",
+    "src/detail/track_state.cpp": "a980e862a3325ea975c40ccac572c43cf82d9c91da594a0ad0cfe70c8480710a",
+    "src/detail/track_state.hpp": "81190b1590c15c2c3c5180b0e7261085caeb7cba8057cb6f4eec0af3d31a14b0",
+    "src/track.cpp": "562d7acd1fd78c780027ecd408f77b4a90aee5b46f2a5127f9fdbaa2a173ac89",
+    "include/gridly/cache.hpp": "b7131f336373b657bbb2386a2c59955d73f40e2af3c79410564e9b23704c3d7d",
+    "include/gridly/geometry.hpp": "f80368057293c70380dd5d469bfef2a907e06fb96be257ed2bb65abbfd5e5b9d",
+    "include/gridly/grid.hpp": "975c033a2c81300c1dfe489aa475906ced291efb91c23d1969a391e0c09bcbee",
+    "include/gridly/gridly.hpp": "a1771623b961841ae2b23a8bc7f71091905d1632e0d6a96da7e22a2081580725",
+    "include/gridly/layout.hpp": "9af9dfe5c212c83f30a80094afee75fb1edaf7d20985691b0b979bebbfe7e415",
+    "include/gridly/measurement.hpp": "1956b46143b481634cc3e75777a245e716e0a1731729812ca2f1ad0a7b028684",
+    "include/gridly/result.hpp": "3740704049ec5bed909688457cb8aa702866c6a665f7263acd7d202b741c1ba5",
+    "include/gridly/track.hpp": "cfd5c92772554d1ece01fc93c4c1acfd4361f2b3f5350d9b95fbe8783196d6a8"
+  }
+}

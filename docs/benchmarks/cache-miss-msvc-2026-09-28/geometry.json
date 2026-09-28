@@ -1,0 +1,58 @@
+[
+  {
+    "case": "row_weighted_1000",
+    "engine": "gridly",
+    "frames": 34,
+    "items": 1000,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "row_weighted_1000",
+    "engine": "gridly_cached",
+    "frames": 34,
+    "items": 1000,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "weighted_grid_100x100",
+    "engine": "gridly",
+    "frames": 34,
+    "items": 10000,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "weighted_grid_100x100",
+    "engine": "gridly_cached",
+    "frames": 34,
+    "items": 10000,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "fixed_spans_50x50",
+    "engine": "gridly",
+    "frames": 34,
+    "items": 2500,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "fixed_spans_50x50",
+    "engine": "gridly_cached",
+    "frames": 34,
+    "items": 2500,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "weighted_spans_50x50",
+    "engine": "gridly",
+    "frames": 34,
+    "items": 2500,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "weighted_spans_50x50",
+    "engine": "gridly_cached",
+    "frames": 34,
+    "items": 2500,
+    "max_abs_error": 0.0
+  }
+]

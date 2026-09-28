@@ -1,0 +1,232 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "GRIDLY_BUILD_TESTS": "ON",
+        "GRIDLY_BUILD_EXAMPLES": "ON",
+        "GRIDLY_BUILD_REFERENCE_TESTS": "OFF",
+        "GRIDLY_BUILD_PLAYGROUND": "OFF",
+        "GRIDLY_FETCH_SDL3": "OFF",
+        "GRIDLY_BUILD_BENCHMARKS": "OFF",
+        "GRIDLY_BUILD_COMPARISON_BENCHMARKS": "OFF"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug with tests and API example",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release with tests and API example",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "reference-debug",
+      "displayName": "Debug with optional Taffy differential tests",
+      "inherits": "debug",
+      "cacheVariables": {
+        "GRIDLY_BUILD_REFERENCE_TESTS": "ON"
+      }
+    },
+    {
+      "name": "reference-release",
+      "displayName": "Release with optional Taffy differential tests",
+      "inherits": "release",
+      "cacheVariables": {
+        "GRIDLY_BUILD_REFERENCE_TESTS": "ON"
+      }
+    },
+    {
+      "name": "playground-debug",
+      "displayName": "Debug with SDL3 visual playground (downloads pinned SDL3)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "GRIDLY_BUILD_PLAYGROUND": "ON",
+        "GRIDLY_FETCH_SDL3": "ON"
+      }
+    },
+    {
+      "name": "playground-release",
+      "displayName": "Release with SDL3 visual playground (downloads pinned SDL3)",
+      "inherits": "release",
+      "cacheVariables": {
+        "GRIDLY_BUILD_PLAYGROUND": "ON",
+        "GRIDLY_FETCH_SDL3": "ON"
+      }
+    },
+    {
+      "name": "benchmark-release",
+      "displayName": "Release with layout timing and allocation benchmarks",
+      "inherits": "release",
+      "cacheVariables": {
+        "GRIDLY_BUILD_BENCHMARKS": "ON",
+        "GRIDLY_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "benchmark-debug",
+      "displayName": "Debug benchmark correctness checks (not a timing baseline)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "GRIDLY_BUILD_BENCHMARKS": "ON",
+        "GRIDLY_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "comparison-release",
+      "displayName": "Release comparison with pinned Taffy and Yoga",
+      "inherits": "benchmark-release",
+      "cacheVariables": {
+        "GRIDLY_BUILD_COMPARISON_BENCHMARKS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "reference-debug",
+      "configurePreset": "reference-debug"
+    },
+    {
+      "name": "reference-release",
+      "configurePreset": "reference-release"
+    },
+    {
+      "name": "playground-debug",
+      "configurePreset": "playground-debug"
+    },
+    {
+      "name": "playground-release",
+      "configurePreset": "playground-release"
+    },
+    {
+      "name": "benchmark-release",
+      "configurePreset": "benchmark-release"
+    },
+    {
+      "name": "benchmark-debug",
+      "configurePreset": "benchmark-debug"
+    },
+    {
+      "name": "comparison-release",
+      "configurePreset": "comparison-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "reference-debug",
+      "configurePreset": "reference-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "reference-release",
+      "configurePreset": "reference-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "playground-debug",
+      "configurePreset": "playground-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "playground-release",
+      "configurePreset": "playground-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "benchmark-release",
+      "configurePreset": "benchmark-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "benchmark-debug",
+      "configurePreset": "benchmark-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "comparison-release",
+      "configurePreset": "comparison-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    }
+  ]
+}

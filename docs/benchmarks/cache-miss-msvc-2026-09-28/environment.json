@@ -1,0 +1,29 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "taffy": "0.14.0",
+  "yoga": "3.2.1",
+  "rounds": 8,
+  "smoke": false,
+  "engines": [
+    "gridly",
+    "gridly_cached"
+  ],
+  "cases": [
+    "row_weighted_1000",
+    "weighted_grid_100x100",
+    "fixed_spans_50x50",
+    "weighted_spans_50x50"
+  ],
+  "modes": [
+    "cold",
+    "resize"
+  ],
+  "executable_sha256": {
+    "gridly": "83a52cbb01ab8ad73198a84f780e1dd9fb8465fb4296e05144490c6195aa7ba5",
+    "gridly_cached": "83a52cbb01ab8ad73198a84f780e1dd9fb8465fb4296e05144490c6195aa7ba5"
+  },
+  "geometry_tolerance": "abs 1e-4 + rel 1e-6",
+  "timers": "in-process steady_clock/Instant; setup and engine destruction excluded; GridCache result replacement inside compute is included",
+  "cache": "cold=fresh tree, resize=reused tree changing viewport, same=reused tree unchanged viewport"
+}

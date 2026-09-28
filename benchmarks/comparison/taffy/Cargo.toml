@@ -1,0 +1,13 @@
+[package]
+name = "gridly-taffy-bench"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[dependencies]
+taffy = { version = "=0.14.0", default-features = false, features = ["std", "taffy_tree", "grid"] }
+
+[profile.release]
+opt-level = 3
+lto = false
+codegen-units = 16

@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-28",
+  "version": "0.0.11",
+  "cpu": "11th Gen Intel Core i7-11700K @ 3.60GHz",
+  "physical_cores": 8,
+  "logical_processors": 16,
+  "os": "Windows 11 Pro 10.0.26200 x64",
+  "compiler": "MSVC 19.51.36257",
+  "configuration": "Release /O2 /Ob2 /DNDEBUG",
+  "preset": "benchmark-release",
+  "iterations_per_sample": 100,
+  "samples": 11,
+  "warmup_calls": 3,
+  "benchmark_threads": 1,
+  "affinity_pinned": false,
+  "competing_benchmark_or_build": false,
+  "revision": "Uncommitted workspace; baseline uses unordered_set, optimized uses sorted ID/index pairs",
+  "sequence": [
+    "baseline-timing",
+    "baseline-allocations",
+    "optimized-timing",
+    "optimized-allocations",
+    "baseline-timing-repeat",
+    "optimized-timing-repeat"
+  ],
+  "executable_sha256": {
+    "baseline_timing": "0835C70A2259E2CAE30C1BBE9898E92B1F23F7E84044F3E3B3917DB292C31E52",
+    "baseline_allocations": "ED43B178EF70D9A582A50AA436FD209515898B20656578D03483CB4AAEACA79C",
+    "optimized_timing": "EC1BA2207E008DC99430F94B5D11E0B164AC4264BA2576ACE33DDAB01BB79BB0",
+    "optimized_allocations": "4E23E52573232EDC0373B54F423B9BDA759C265CA274A7502A5514A701B5BE7F"
+  }
+}

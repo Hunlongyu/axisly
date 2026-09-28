@@ -1,0 +1,112 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows MSVC
+            os: windows-latest
+            cxx: cl
+          - name: Linux GCC
+            os: ubuntu-latest
+            cxx: g++
+          - name: Linux Clang
+            os: ubuntu-latest
+            cxx: clang++
+    env:
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=Debug -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON -DGRIDLY_BUILD_BENCHMARKS=ON
+      - name: Build
+        run: cmake --build build/ci --config Debug --parallel
+      - name: Test
+        run: ctest --test-dir build/ci -C Debug --output-on-failure --no-tests=error
+      - name: Install
+        run: cmake --install build/ci --config Debug --prefix "${{ github.workspace }}/build/install"
+      - name: Configure installed consumer
+        run: cmake -S tests/consumer -B build/consumer -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build/install"
+      - name: Build installed consumer
+        run: cmake --build build/consumer --config Debug --parallel
+      - name: Test installed consumer
+        run: ctest --test-dir build/consumer -C Debug --output-on-failure --no-tests=error
+
+  sanitizers:
+    name: Linux ${{ matrix.cxx }} ASan and UBSan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [clang++, g++]
+    env:
+      CXX: ${{ matrix.cxx }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure instrumented core and tests
+        run: cmake -S . -B build/sanitizers -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGRIDLY_ENABLE_SANITIZERS=ON -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON
+      - name: Build
+        run: cmake --build build/sanitizers --parallel
+      - name: Run regression and randomized cases
+        run: ctest --test-dir build/sanitizers --output-on-failure --no-tests=error
+      - name: Preserve sanitizer failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitizer-${{ matrix.cxx }}
+          path: build/sanitizers/Testing/Temporary/LastTest.log
+
+  playground:
+    name: Windows SDL3 playground
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test with installed monospace font
+        shell: pwsh
+        run: ./scripts/build-msvc.ps1 -Preset playground-release
+      - name: Preserve render captures and logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gridly-playground-failure
+          path: |
+            build/playground-release/examples/playground/captures/
+            build/playground-release/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+
+  reference:
+    name: Taffy common-subset comparison
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path tests/reference/taffy/Cargo.toml -- --check
+      - name: Configure optional reference tooling
+        run: cmake -S . -B build/reference -DCMAKE_BUILD_TYPE=Release -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=OFF -DGRIDLY_BUILD_REFERENCE_TESTS=ON
+      - name: Build reference tools
+        run: cmake --build build/reference --target gridly_reference_native gridly_taffy_reference --parallel
+      - name: Compare and test the harness
+        run: ctest --test-dir build/reference -L reference --output-on-failure --no-tests=error
+      - name: Preserve failure fixtures and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gridly-reference-failure
+          path: |
+            build/reference/tests/reference/failures/
+            build/reference/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore

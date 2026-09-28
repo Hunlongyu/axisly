@@ -1,0 +1,11 @@
+/build/
+/out/
+/CMakeUserPresets.json
+/compile_commands.json
+/.vs/
+/.idea/
+*.user
+/tests/reference/__pycache__/
+/tests/reference/taffy/target/
+/benchmarks/comparison/taffy/target/
+/benchmarks/comparison/__pycache__/

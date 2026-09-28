@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('debug', 'release', 'reference-debug', 'reference-release', 'playground-debug', 'playground-release', 'benchmark-debug', 'benchmark-release', 'comparison-release')]
+    [ValidateSet('debug', 'release', 'reference-debug', 'reference-release', 'playground-debug', 'playground-release', 'benchmark-debug', 'benchmark-release', 'comparison-release', 'geeyoou-release', 'geeyoou-debug')]
     [string]$Preset = 'release',
     [string]$SdlSource = ''
 )

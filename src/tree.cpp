@@ -1,5 +1,5 @@
-#include <gridly/tree.hpp>
-#include <gridly/cache.hpp>
+#include <axisly/tree.hpp>
+#include <axisly/cache.hpp>
 #include "detail/rounding.hpp"
 
 #include <algorithm>
@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace gridly {
+namespace axisly {
 namespace {
 NodeId allocate_id() {
     static std::atomic<std::uint64_t> next{1};

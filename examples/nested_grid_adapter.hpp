@@ -3,7 +3,7 @@
 // Host-side reference adapter, deliberately outside the installed core API.
 // The host owns every grid and callback context; all addresses and inputs must
 // remain valid and unchanged until compute_nested_grid() returns.
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace gridly::examples {
+namespace axisly::examples {
 
 struct NestedGrid {
     GridSpec spec;
@@ -222,4 +222,4 @@ private:
     return nested_detail::LayoutRun{limits}.run(root, available);
 }
 
-} // namespace gridly::examples
+} // namespace axisly::examples

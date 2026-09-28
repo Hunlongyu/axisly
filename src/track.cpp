@@ -1,11 +1,11 @@
-#include <gridly/track.hpp>
+#include <axisly/track.hpp>
 
 #include <cmath>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 
-namespace gridly {
+namespace axisly {
 namespace {
 
 TrackBound as_bound(const Track& track) {
@@ -96,4 +96,4 @@ TrackKind Track::kind() const noexcept {
     }, definition_);
 }
 
-} // namespace gridly
+} // namespace axisly

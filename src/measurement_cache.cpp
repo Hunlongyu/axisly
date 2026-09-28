@@ -1,4 +1,4 @@
-#include <gridly/measurement_cache.hpp>
+#include <axisly/measurement_cache.hpp>
 #include "detail/measurement_validation.hpp"
 
 #include <algorithm>
@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace gridly {
+namespace axisly {
 struct MeasurementCache::Impl {
     struct Entry { MeasureInput input; MeasureResult result; };
     std::unordered_map<ItemId, std::vector<Entry>> items;

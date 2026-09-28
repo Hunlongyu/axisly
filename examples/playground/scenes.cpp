@@ -5,7 +5,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace gridly::playground {
+namespace axisly::playground {
 namespace {
 struct Definition {
     GridSpec spec;
@@ -59,7 +59,7 @@ Definition define(std::size_t index) {
         for (std::uint32_t row = 0; row < 3; ++row) {
             add(d, 0, row, std::array{"Name", "Server URL", "Very long label"}[row]);
             d.items.back().preferred_size = {std::array{64.0f, 96.0f, 160.0f}[row], 32};
-            add(d, 1, row, std::array{"gridly", "https://example.test", "Wraps at the final item width"}[row]);
+            add(d, 1, row, std::array{"axisly", "https://example.test", "Wraps at the final item width"}[row]);
             d.items.back().preferred_size = {std::array{140.0f, 300.0f, 620.0f}[row], 32};
         }
         return d;
@@ -180,4 +180,4 @@ Frame arrange_scene(std::size_t index, Size available) {
     }
     return frame;
 }
-} // namespace gridly::playground
+} // namespace axisly::playground

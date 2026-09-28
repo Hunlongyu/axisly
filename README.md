@@ -1,18 +1,28 @@
-# gridly
+# Axisly
 
-独立的 C++20 网格布局算法库。核心只依赖 STL，通过数据和测量回调与宿主 UI 对接，不持有控件，不依赖 Qt、SDL 或 Win32。
+面向原生 UI 的 C++20 通用布局库。核心只依赖 STL，通过数据和测量回调
+与宿主 UI 对接，不持有控件，不依赖 Qt、SDL 或 Win32。
 
-## 当前进度：计划功能已实现
+## 当前进度：Grid 已实现，Flexbox 尚未实现
 
 当前版本为 `0.1.0`。`compute_grid()` 支持固定／权重／Content／Range／百分比轨道、显式与自动放置、隐式轨道、跨格、padding／gap／margin、两轴独立对齐与首基线对齐。列宽确定后重新测量高度；`round_layout()` 可按设备像素取整。默认仍是显式放置、浮点坐标和无状态计算。
 
-可选 `GridCache` 复用完整布局和工作区，可进一步启用条目测量缓存；`MeasurementCache` 也可独立使用。可选 `GridTree` 管理节点、父子关系、嵌套布局和脏标记传播，修改叶子时可复用无关分支。M0–M10 及原 1.1+ 计划中的功能均已实现，API 契约、sanitizer 构建和 CI 配置已补齐。功能完成不等于已经发布或承诺二进制兼容；详见 [功能与验收记录](docs/22-roadmap-completion.md) 和 [API 契约](docs/23-api-contract.md)。
+可选 `GridCache` 复用完整布局和工作区，可进一步启用条目测量缓存；`MeasurementCache` 也可独立使用。可选 `GridTree` 管理节点、父子关系、嵌套布局和脏标记传播，修改叶子时可复用无关分支。原 Grid 阶段的 M0–M10 及 1.1+ 计划功能已实现；这不表示通用布局目标已完成。Flexbox 将按规范的布局语义实现，使用 C++ 类型输入，不引入 CSS 解析和样式系统。范围见 [通用布局计划](docs/27-native-ui-layout-plan.md) 与 [Flexbox 规范矩阵](docs/28-flexbox-conformance-matrix.md)。现有 Grid 的 [功能与验收记录](docs/22-roadmap-completion.md) 和 [API 契约](docs/23-api-contract.md) 仍可查阅；项目尚未发布，也未承诺跨版本二进制兼容。
 
 SDL3 演示保留十个可交互场景和等宽字体。Taffy 对照、SDL3 演示和性能工具仍为可选开发依赖，不进入生产库。历史性能记录见 [缓存接口](docs/20-layout-cache.md) 和 [工作区优化](docs/21-workspace-optimization.md)。
 
 后续已修复真实 Windows Debug CI 分配问题，新增 913 个高级功能 Taffy 对照及
 `GridTree` 局部失效／真实字体 benchmark，见 [扩展验收记录](docs/24-ci-and-extended-validation.md)。
-真实宿主目标确定为 [GeeyoouUI，接入计划](docs/25-geeyoou-integration-plan.md)。
+真实宿主现已接入 [GeeyoouUI 的完整 19 页 Showcase](docs/26-geeyoou-showcase.md)，
+包含 axisly 页面布局、真实文字测量、动态控件及自动窗口验收。
+
+### 从旧名称迁移
+
+此前的私有开发名称为 `gridly`。源码接入改用 `<axisly/axisly.hpp>` 和
+`axisly::`；CMake 改用 `find_package(axisly CONFIG REQUIRED)` 与
+`axisly::axisly`；构建选项前缀改为 `AXISLY_`。旧名称没有保留公开别名，
+因此已接入旧名称的宿主需要同步修改并重新构建。历史基准和 CI 记录中的
+`gridly` 表示改名前的实测版本。
 
 ## 构建与测试
 
@@ -42,21 +52,21 @@ ctest --preset debug
 
 Release 将上述 `debug` 替换为 `release`。Windows 示例：
 
-- `build/debug/gridly_api_example.exe`：输出 3×2 固定网格的实际矩形。
-- `build/debug/gridly_weighted_example.exe`：展示固定＋权重混合网格在三个容器宽度下的矩形。
-- `build/debug/gridly_alignment_example.exe`：对照四种对齐的原始单元格和最终条目矩形。
-- `build/debug/gridly_measurement_example.exe`：展示 Content 收缩、宽度变化后的高度测量和调用次数。
-- `build/debug/gridly_spanning_example.exe`：展示跨三列标题、跨两行侧栏，以及容器变窄后的重新测量。
-- `build/debug/gridly_range_example.exe`：展示固定上限、内容最小值、权重增长以及容器不足时的布局。
-- `build/debug/gridly_nested_example.exe`：展示三层嵌套、容器变窄后的换行、完整 ID 路径和根坐标。
-- `build/debug/gridly_retained_example.exe`：展示自动放置、隐式行、百分比列、首基线、DPI 取整、整树命中和单条目失效。
+- `build/debug/axisly_api_example.exe`：输出 3×2 固定网格的实际矩形。
+- `build/debug/axisly_weighted_example.exe`：展示固定＋权重混合网格在三个容器宽度下的矩形。
+- `build/debug/axisly_alignment_example.exe`：对照四种对齐的原始单元格和最终条目矩形。
+- `build/debug/axisly_measurement_example.exe`：展示 Content 收缩、宽度变化后的高度测量和调用次数。
+- `build/debug/axisly_spanning_example.exe`：展示跨三列标题、跨两行侧栏，以及容器变窄后的重新测量。
+- `build/debug/axisly_range_example.exe`：展示固定上限、内容最小值、权重增长以及容器不足时的布局。
+- `build/debug/axisly_nested_example.exe`：展示三层嵌套、容器变窄后的换行、完整 ID 路径和根坐标。
+- `build/debug/axisly_retained_example.exe`：展示自动放置、隐式行、百分比列、首基线、DPI 取整、整树命中和单条目失效。
 
 这些是控制台示例，不是图形窗口。Windows 双击启动并独占交互式控制台时，结果会保留到按回车关闭；在已有终端内运行或重定向输出时，打印后正常结束。先前版本打印完成便退出，双击时表现为窗口立即关闭。
 
 测试检查不会被 Release 的 `NDEBUG` 禁用。
 
 Windows x64 可使用本机 LLVM 运行 AddressSanitizer：`./scripts/build-sanitizers.ps1`；
-MSVC 使用 `-Compiler MSVC`。Linux GCC／Clang 使用 `-DGRIDLY_ENABLE_SANITIZERS=ON`，
+MSVC 使用 `-Compiler MSVC`。Linux GCC／Clang 使用 `-DAXISLY_ENABLE_SANITIZERS=ON`，
 同时启用 ASan／UBSan。这些是开发构建，发布库保持该选项关闭。
 
 不使用 Ninja 时可使用本机默认生成器：
@@ -66,6 +76,21 @@ cmake -S . -B build/default -DCMAKE_BUILD_TYPE=Debug
 cmake --build build/default --config Debug
 ctest --test-dir build/default -C Debug --output-on-failure
 ```
+
+## 可选的 GeeyoouUI 完整演示（Windows）
+
+复用 GeeyoouUI 的控件与交互，由 axisly 计算页面和容器布局。默认关闭，首次启用需要
+Python 3.10+、Git 和网络，下载锁定版本的 GeeyoouUI、Blend2D、AsmJit。
+
+```powershell
+./scripts/build-msvc.ps1 -Preset geeyoou-release
+./build/geeyoou-release/bin/axisly_geeyoou_showcase.exe
+```
+
+19 个页面包含概览、表单、七类表格、实时 HMI、主题切换、弹窗和 3D 视图。
+布局页增加百分比、自动放置、隐式行、跨格、基线与动态增删；侧栏支持滚动。
+固定工艺画面保留最小画布与控件内部坐标。测试在隐藏的真实 Win32 窗口中遍历全部页面，
+保存截图和验收数据。构建、适配边界与验证结果见 [宿主演示说明](docs/26-geeyoou-showcase.md)。
 
 ## 可选的 Taffy 对照验证
 
@@ -83,19 +108,19 @@ Windows 同样先初始化 MSVC 环境。Debug 使用 `reference-debug`。对照
 
 ## 可选的性能基准
 
-基准只依赖 C++20／STL，启用 `GRIDLY_BUILD_BENCHMARKS` 或使用专用预设：
+基准只依赖 C++20／STL，启用 `AXISLY_BUILD_BENCHMARKS` 或使用专用预设：
 
 ```powershell
 ./scripts/build-msvc.ps1 -Preset benchmark-release
-./build/benchmark-release/gridly_bench.exe --output build/benchmark-release/timing.csv
-./build/benchmark-release/gridly_bench_allocations.exe --output build/benchmark-release/allocations.csv
+./build/benchmark-release/axisly_bench.exe --output build/benchmark-release/timing.csv
+./build/benchmark-release/axisly_bench_allocations.exe --output build/benchmark-release/allocations.csv
 ```
 
 其他平台用 `cmake --preset benchmark-release`、对应 build/test 预设，再运行两个无 `.exe` 后缀的程序。`benchmark-debug` 用于正确性检查，不作为性能结论。
 
 覆盖 3×3 固定网格、20／31／50／100／316 阶权重网格、乱序 ID、连续缩放、Content、Range、密集跨格和宿主嵌套。计时程序使用普通分配器；分配程序单独统计，不混用其耗时。Taffy 原生 bench、计时范围、CSV 含义及本机结果见 [M10 性能基准](docs/18-performance-benchmarks.md)。
 
-另有独立的 `comparison-release` 预设，对相同输入比较无缓存 gridly、`GridCache`、Taffy 0.14.0 和 Yoga 3.2.1。它需要 Rust/Cargo、Python，首次构建下载锁定的 Yoga 源码。先校验全部矩形，再分别测新树首次布局、复用树连续缩放、输入不变的重复调用；Yoga 仅参与能映射为单轴 Flexbox 的场景。历史基线见 [同场景性能对比](docs/19-comparative-benchmarks.md)，缓存接口见 [完整布局缓存](docs/20-layout-cache.md)，工作区优化记录见 [0.0.13 复测](docs/21-workspace-optimization.md)，最新数据见 [0.1.0 完成记录](docs/22-roadmap-completion.md)。比较工具同样默认关闭，不安装或链接进生产核心。
+另有独立的 `comparison-release` 预设，对相同输入比较无缓存 axisly、`GridCache`、Taffy 0.14.0 和 Yoga 3.2.1。它需要 Rust/Cargo、Python，首次构建下载锁定的 Yoga 源码。先校验全部矩形，再分别测新树首次布局、复用树连续缩放、输入不变的重复调用；Yoga 仅参与能映射为单轴 Flexbox 的场景。历史基线见 [同场景性能对比](docs/19-comparative-benchmarks.md)，缓存接口见 [完整布局缓存](docs/20-layout-cache.md)，工作区优化记录见 [0.0.13 复测](docs/21-workspace-optimization.md)，最新数据见 [0.1.0 完成记录](docs/22-roadmap-completion.md)。比较工具同样默认关闭，不安装或链接进生产核心。
 
 ## 接入
 
@@ -104,8 +129,8 @@ Windows 同样先初始化 MSVC 环境。Debug 使用 `reference-debug`。对照
 作为子目录引入，测试和示例默认关闭：
 
 ```cmake
-add_subdirectory(path/to/gridly)
-target_link_libraries(your_app PRIVATE gridly::gridly)
+add_subdirectory(path/to/axisly)
+target_link_libraries(your_app PRIVATE axisly::axisly)
 ```
 
 也可以安装后用 CMake 包接入：
@@ -117,32 +142,32 @@ cmake --install build/release --prefix build/install
 消费工程将安装前缀加入 `CMAKE_PREFIX_PATH`，然后：
 
 ```cmake
-find_package(gridly CONFIG REQUIRED)
-target_link_libraries(your_app PRIVATE gridly::gridly)
+find_package(axisly CONFIG REQUIRED)
+target_link_libraries(your_app PRIVATE axisly::axisly)
 ```
 
-公共入口为 `<gridly/gridly.hpp>`，命名空间为 `gridly`：
+公共入口为 `<axisly/axisly.hpp>`，命名空间为 `axisly`：
 
 ```cpp
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 #include <array>
 
-gridly::GridSpec spec;
+axisly::GridSpec spec;
 spec.columns = {
-    gridly::Track::fixed(180),
-    gridly::Track::weighted(1),
-    gridly::Track::weighted(2)
+    axisly::Track::fixed(180),
+    axisly::Track::weighted(1),
+    axisly::Track::weighted(2)
 };
-spec.rows = {gridly::Track::fixed(80), gridly::Track::weighted()};
+spec.rows = {axisly::Track::fixed(80), axisly::Track::weighted()};
 spec.column_gap = 8;
 spec.row_gap = 8;
 spec.padding = {12, 12, 12, 12};
 
 const std::array items{
-    gridly::GridItem{.id = 1, .column = 1, .row = 0},
-    gridly::GridItem{.id = 2, .column = 2, .row = 1}
+    axisly::GridItem{.id = 1, .column = 1, .row = 0},
+    axisly::GridItem{.id = 2, .column = 2, .row = 1}
 };
-auto result = gridly::compute_grid(spec, items, {640, 360});
+auto result = axisly::compute_grid(spec, items, {640, 360});
 if (result.succeeded()) {
     // result.size == Size{640, 360}
     // result.items[0].rect == Rect{200, 12, 140, 80}
@@ -155,9 +180,9 @@ if (result.succeeded()) {
 数值约束示例：
 
 ```cpp
-auto proportional = gridly::Track::weighted(2);                // 权重 2，无额外上下限
-auto minimum = gridly::Track::weighted(1, 120);                // 最少 120
-auto bounded = gridly::Track::weighted(1, 80, 240.0f);         // 80..240
+auto proportional = axisly::Track::weighted(2);                // 权重 2，无额外上下限
+auto minimum = axisly::Track::weighted(1, 120);                // 最少 120
+auto bounded = axisly::Track::weighted(1, 80, 240.0f);         // 80..240
 ```
 
 最小值是比例分配结果的下限，不是在最小值上再加一份比例空间。空间不足时保留最小值，所有轨道达到上限后留白。详情见 [M2 行为约定](docs/10-weighted-layout.md)。
@@ -165,11 +190,11 @@ auto bounded = gridly::Track::weighted(1, 80, 240.0f);         // 80..240
 对齐与边距示例：
 
 ```cpp
-gridly::GridItem label{
+axisly::GridItem label{
     .id = 3,
     .margin = {8, 4, 8, 4},
-    .horizontal_alignment = gridly::HorizontalAlignment::Center,
-    .vertical_alignment = gridly::VerticalAlignment::End,
+    .horizontal_alignment = axisly::HorizontalAlignment::Center,
+    .vertical_alignment = axisly::VerticalAlignment::End,
     .preferred_size = {60, 24}
 };
 ```
@@ -179,8 +204,8 @@ gridly::GridItem label{
 ## 测量与 Content
 
 ```cpp
-auto measure = +[](gridly::ItemId id, const gridly::MeasureInput& input,
-                   void* user_data) -> gridly::MeasureResult {
+auto measure = +[](axisly::ItemId id, const axisly::MeasureInput& input,
+                   void* user_data) -> axisly::MeasureResult {
     // 用 id 从宿主找到控件，并根据 input.known_width 测量换行后的高度。
     // 示例使用固定的模拟尺寸；完整换行示例见 examples/measurement_grid.cpp。
     (void)id;
@@ -188,12 +213,12 @@ auto measure = +[](gridly::ItemId id, const gridly::MeasureInput& input,
     (void)user_data;
     return {{40, 20}, {120, 30}};
 };
-gridly::GridSpec measured_spec{
-    .columns = {gridly::Track::content()},
-    .rows = {gridly::Track::content()}
+axisly::GridSpec measured_spec{
+    .columns = {axisly::Track::content()},
+    .rows = {axisly::Track::content()}
 };
-const std::array measured_items{gridly::GridItem{.id = 7}};
-auto measured = gridly::compute_grid(measured_spec, measured_items, {100, 100}, measure);
+const std::array measured_items{axisly::GridItem{.id = 7}};
+auto measured = axisly::compute_grid(measured_spec, measured_items, {100, 100}, measure);
 // measured.size == Size{100, 30}; measured.measurement_count == 2
 ```
 
@@ -206,16 +231,16 @@ Content 的最小／首选尺寸取该轨道所有条目尺寸加 margin 后的�
 ## 跨行与跨列
 
 ```cpp
-gridly::GridSpec spanning_spec{
-    .columns = {gridly::Track::fixed(80), gridly::Track::content()},
-    .rows = {gridly::Track::fixed(20), gridly::Track::fixed(30)},
+axisly::GridSpec spanning_spec{
+    .columns = {axisly::Track::fixed(80), axisly::Track::content()},
+    .rows = {axisly::Track::fixed(20), axisly::Track::fixed(30)},
     .column_gap = 10,
     .row_gap = 5
 };
 const std::array spanning_items{
-    gridly::GridItem{.id = 1, .column_span = 2, .row_span = 2, .preferred_size = {200, 40}}
+    axisly::GridItem{.id = 1, .column_span = 2, .row_span = 2, .preferred_size = {200, 40}}
 };
-auto spanning = gridly::compute_grid(spanning_spec, spanning_items, {300, 100});
+auto spanning = axisly::compute_grid(spanning_spec, spanning_items, {300, 100});
 // 两列为 80、110；cell_rect 和默认 Stretch 的 rect 均为 {0, 0, 200, 55}。
 ```
 
@@ -226,10 +251,10 @@ span 必须为正且落在显式网格内。完整区域包括所跨轨道及内
 ## Range 轨道
 
 ```cpp
-auto bounded_content = gridly::Track::range(gridly::Track::fixed(80), gridly::Track::fixed(160));
-auto flexible = gridly::Track::range(gridly::Track::fixed(100), gridly::Track::weighted(2));
-auto measured_minimum = gridly::Track::range(gridly::Track::content(), gridly::Track::weighted());
-auto capped_content = gridly::Track::range(gridly::Track::content(), gridly::Track::fixed(240));
+auto bounded_content = axisly::Track::range(axisly::Track::fixed(80), axisly::Track::fixed(160));
+auto flexible = axisly::Track::range(axisly::Track::fixed(100), axisly::Track::weighted(2));
+auto measured_minimum = axisly::Track::range(axisly::Track::content(), axisly::Track::weighted());
+auto capped_content = axisly::Track::range(axisly::Track::content(), axisly::Track::fixed(240));
 ```
 
 Fixed 下界提供数值最小值；Content 下界采用单格测量 minimum 加 margin 的最大贡献。Fixed 上界限制按内容增长的尺寸，Content 上界以测量 preferred 为目标，Weighted 上界按权重分配容器空间。
@@ -244,8 +269,8 @@ Fixed 下界提供数值最小值；Content 下界采用单格测量 minimum 加
 
 ```cpp
 int calls = 0;
-auto result = gridly::compute_grid(spec, items, {640, 360},
-    [&](gridly::ItemId, const gridly::MeasureInput&) -> gridly::MeasureResult {
+auto result = axisly::compute_grid(spec, items, {640, 360},
+    [&](axisly::ItemId, const axisly::MeasureInput&) -> axisly::MeasureResult {
         ++calls;
         return {{40, 20}, {120, 30}};
     });
@@ -262,7 +287,7 @@ auto result = gridly::compute_grid(spec, items, {640, 360},
 需要跨帧复用时，由宿主长期持有一个 `GridCache`。构造时复制输入，后续用更新接口修改；每帧只传容器尺寸和外部内容版本：
 
 ```cpp
-gridly::GridCache cache(spec, items);
+axisly::GridCache cache(spec, items);
 auto first = cache.compute({640, 360});
 auto same = cache.compute({640, 360}); // same.cache_hit == true
 const auto& layout = same.result;     // 借用结果，不复制矩形数组
@@ -297,7 +322,7 @@ Windows：
 
 ```powershell
 ./scripts/build-msvc.ps1 -Preset playground-release
-./build/playground-release/gridly_playground.exe
+./build/playground-release/axisly_playground.exe
 ```
 
 其他平台或已初始化编译器的终端：
@@ -308,7 +333,7 @@ cmake --build --preset playground-release
 ctest --preset playground-release
 ```
 
-该预设显式开启 `GRIDLY_BUILD_PLAYGROUND` 和 `GRIDLY_FETCH_SDL3`，首次下载校验过的 SDL3、SDL_ttf 和 FreeType 源码并静态构建。已有开发包时，可单独启用 `GRIDLY_BUILD_PLAYGROUND=ON`，保持下载选项关闭，通过 `CMAKE_PREFIX_PATH` 查找 SDL3 3.4+ 和 SDL_ttf 3.2+。
+该预设显式开启 `AXISLY_BUILD_PLAYGROUND` 和 `AXISLY_FETCH_SDL3`，首次下载校验过的 SDL3、SDL_ttf 和 FreeType 源码并静态构建。已有开发包时，可单独启用 `AXISLY_BUILD_PLAYGROUND=ON`，保持下载选项关闭，通过 `CMAKE_PREFIX_PATH` 查找 SDL3 3.4+ 和 SDL_ttf 3.2+。
 
 十个场景覆盖固定、两种权重比例、混合、Content、跨列、跨行、全部 16 种对齐组合、Range 和嵌套。
 
@@ -318,16 +343,16 @@ ctest --preset playground-release
 - `[` / `]`：调整画布宽度，观察最小宽度溢出；拖动窗口边缘实时重排。
 - `R`：恢复窗口和画布大小；`Esc`：退出。
 
-Windows 默认使用 Consolas，与 VS Code 的默认编程字体一致；缺少时寻找其他本机等宽字体。使用抗锯齿和按输出像素密度栅格化，不再使用 SDL 的像素调试字体。可通过 `GRIDLY_FONT` 环境变量指定 `.ttf` / `.otf` 文件；不打包个人字体文件。详见 [M9 图形演示](docs/17-sdl3-playground.md)。
+Windows 默认使用 Consolas，与 VS Code 的默认编程字体一致；缺少时寻找其他本机等宽字体。使用抗锯齿和按输出像素密度栅格化，不再使用 SDL 的像素调试字体。可通过 `AXISLY_FONT` 环境变量指定 `.ttf` / `.otf` 文件；不打包个人字体文件。详见 [M9 图形演示](docs/17-sdl3-playground.md)。
 
 ## 目录与文档
 
 ```text
-include/gridly/      公共头文件
+include/axisly/      公共头文件
 src/                轨道定义、运行时约束、输入校验、轨道／跨度分配与条目对齐
 tests/              契约、轨道／跨度／对齐／测量／嵌套、接入测试与头文件检查
 tests/reference/    可选 C++／Taffy 适配器、Python 对照器和 JSON 用例
-examples/           使用公共 API 的七个控制台示例和宿主嵌套适配器
+examples/           控制台示例、宿主适配器、SDL3 与 GeeyoouUI 演示
 examples/playground/ 可选 SDL3 窗口、十个场景、字体和检查面板
 benchmarks/         可选布局耗时、分配计数和确定性场景
 scripts/            Windows MSVC 工具链发现、构建和测试入口
@@ -354,6 +379,6 @@ docs/               产品、架构、路线图和初始化决策
 - [M8 Taffy 共同子集与差异重放](docs/16-reference-validation.md)
 - [M9 SDL3 图形演示与等宽字体](docs/17-sdl3-playground.md)
 - [M10 性能基准、竞品口径与本机结果](docs/18-performance-benchmarks.md)
-- [gridly／Taffy／Yoga 同场景性能对比](docs/19-comparative-benchmarks.md)
+- [axisly／Taffy／Yoga 同场景性能对比](docs/19-comparative-benchmarks.md)
 - [完整布局缓存、失效契约与优化后对比](docs/20-layout-cache.md)
 - [工作区复用、预处理缓存与同场景复测](docs/21-workspace-optimization.md)

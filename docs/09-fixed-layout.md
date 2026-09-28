@@ -5,13 +5,13 @@
 ## 公共入口
 
 ```cpp
-gridly::GridResult gridly::compute_grid(
+axisly::GridResult axisly::compute_grid(
     const GridSpec& spec,
     std::span<const GridItem> items,
     Size available);
 ```
 
-声明位于 `<gridly/layout.hpp>`，也由 `<gridly/gridly.hpp>` 导出。`GridSpec` 和 items 只在同步调用期间借用，结果拥有独立的矩形数组。计算不修改输入，不缓存状态，不持有宿主对象。
+声明位于 `<axisly/layout.hpp>`，也由 `<axisly/axisly.hpp>` 导出。`GridSpec` 和 items 只在同步调用期间借用，结果拥有独立的矩形数组。计算不修改输入，不缓存状态，不持有宿主对象。
 
 M1 支持固定行、固定列、显式单格放置、独立行列间隙、非对称 padding 和两轴 Stretch。条目输出顺序与输入一致。不同 ID 可以显式占据同一个单元格，宿主决定绘制和层级顺序。
 
@@ -74,8 +74,8 @@ M1 测试位于 `tests/fixed/`：20 项固定布局测试加上原有 8 项数�
 | Debug 构建与测试 | 无编译告警，28/28 通过 |
 | Release 构建与测试 | 无编译告警，28/28 通过 |
 | 7 个公共头文件分别编译 | 两种配置均通过 |
-| `gridly_api_example.exe` 实际运行 | 3×2 网格，6 个矩形，占用尺寸 `500 × 232` |
-| 安装包 `find_package(gridly)` | Release 编译、链接与计算验证通过，1/1 |
+| `axisly_api_example.exe` 实际运行 | 3×2 网格，6 个矩形，占用尺寸 `500 × 232` |
+| 安装包 `find_package(axisly)` | Release 编译、链接与计算验证通过，1/1 |
 | 子目录 `add_subdirectory()` | Debug 编译、链接与计算验证通过，1/1 |
 
 跨平台 CI、真实 UI 和 SDL3 渲染验证不属于本次本机结论。

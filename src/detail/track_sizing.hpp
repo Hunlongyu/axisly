@@ -4,11 +4,11 @@
 #include <span>
 #include <vector>
 
-#include <gridly/track.hpp>
+#include <axisly/track.hpp>
 
 #include "track_state.hpp"
 
-namespace gridly::detail {
+namespace axisly::detail {
 
 struct ResolvedTrack {
     // Keep sizing precision until cell and aligned item output is built.
@@ -44,4 +44,4 @@ struct TrackSizingWorkspace {
     std::span<const Track> tracks, Unit available, Unit gap, Unit start_padding, Unit end_padding,
     std::span<const TrackState> states, bool all_fixed, TrackSizingWorkspace& workspace);
 
-} // namespace gridly::detail
+} // namespace axisly::detail

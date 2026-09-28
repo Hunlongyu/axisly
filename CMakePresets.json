@@ -13,13 +13,14 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "GRIDLY_BUILD_TESTS": "ON",
-        "GRIDLY_BUILD_EXAMPLES": "ON",
-        "GRIDLY_BUILD_REFERENCE_TESTS": "OFF",
-        "GRIDLY_BUILD_PLAYGROUND": "OFF",
-        "GRIDLY_FETCH_SDL3": "OFF",
-        "GRIDLY_BUILD_BENCHMARKS": "OFF",
-        "GRIDLY_BUILD_COMPARISON_BENCHMARKS": "OFF"
+        "AXISLY_BUILD_TESTS": "ON",
+        "AXISLY_BUILD_EXAMPLES": "ON",
+        "AXISLY_BUILD_REFERENCE_TESTS": "OFF",
+        "AXISLY_BUILD_PLAYGROUND": "OFF",
+        "AXISLY_FETCH_SDL3": "OFF",
+        "AXISLY_BUILD_BENCHMARKS": "OFF",
+        "AXISLY_BUILD_COMPARISON_BENCHMARKS": "OFF",
+        "AXISLY_BUILD_GEEYOOU_SHOWCASE": "OFF"
       }
     },
     {
@@ -43,7 +44,7 @@
       "displayName": "Debug with optional Taffy differential tests",
       "inherits": "debug",
       "cacheVariables": {
-        "GRIDLY_BUILD_REFERENCE_TESTS": "ON"
+        "AXISLY_BUILD_REFERENCE_TESTS": "ON"
       }
     },
     {
@@ -51,7 +52,7 @@
       "displayName": "Release with optional Taffy differential tests",
       "inherits": "release",
       "cacheVariables": {
-        "GRIDLY_BUILD_REFERENCE_TESTS": "ON"
+        "AXISLY_BUILD_REFERENCE_TESTS": "ON"
       }
     },
     {
@@ -59,8 +60,8 @@
       "displayName": "Debug with SDL3 visual playground (downloads pinned SDL3)",
       "inherits": "debug",
       "cacheVariables": {
-        "GRIDLY_BUILD_PLAYGROUND": "ON",
-        "GRIDLY_FETCH_SDL3": "ON"
+        "AXISLY_BUILD_PLAYGROUND": "ON",
+        "AXISLY_FETCH_SDL3": "ON"
       }
     },
     {
@@ -68,8 +69,8 @@
       "displayName": "Release with SDL3 visual playground (downloads pinned SDL3)",
       "inherits": "release",
       "cacheVariables": {
-        "GRIDLY_BUILD_PLAYGROUND": "ON",
-        "GRIDLY_FETCH_SDL3": "ON"
+        "AXISLY_BUILD_PLAYGROUND": "ON",
+        "AXISLY_FETCH_SDL3": "ON"
       }
     },
     {
@@ -77,8 +78,8 @@
       "displayName": "Release with layout timing and allocation benchmarks",
       "inherits": "release",
       "cacheVariables": {
-        "GRIDLY_BUILD_BENCHMARKS": "ON",
-        "GRIDLY_BUILD_EXAMPLES": "OFF"
+        "AXISLY_BUILD_BENCHMARKS": "ON",
+        "AXISLY_BUILD_EXAMPLES": "OFF"
       }
     },
     {
@@ -86,8 +87,8 @@
       "displayName": "Debug benchmark correctness checks (not a timing baseline)",
       "inherits": "debug",
       "cacheVariables": {
-        "GRIDLY_BUILD_BENCHMARKS": "ON",
-        "GRIDLY_BUILD_EXAMPLES": "OFF"
+        "AXISLY_BUILD_BENCHMARKS": "ON",
+        "AXISLY_BUILD_EXAMPLES": "OFF"
       }
     },
     {
@@ -95,7 +96,23 @@
       "displayName": "Release comparison with pinned Taffy and Yoga",
       "inherits": "benchmark-release",
       "cacheVariables": {
-        "GRIDLY_BUILD_COMPARISON_BENCHMARKS": "ON"
+        "AXISLY_BUILD_COMPARISON_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "geeyoou-release",
+      "displayName": "GeeyoouUI Showcase / release",
+      "inherits": "release",
+      "cacheVariables": {
+        "AXISLY_BUILD_GEEYOOU_SHOWCASE": "ON"
+      }
+    },
+    {
+      "name": "geeyoou-debug",
+      "displayName": "GeeyoouUI Showcase / debug",
+      "inherits": "debug",
+      "cacheVariables": {
+        "AXISLY_BUILD_GEEYOOU_SHOWCASE": "ON"
       }
     }
   ],
@@ -135,6 +152,14 @@
     {
       "name": "comparison-release",
       "configurePreset": "comparison-release"
+    },
+    {
+      "name": "geeyoou-release",
+      "configurePreset": "geeyoou-release"
+    },
+    {
+      "name": "geeyoou-debug",
+      "configurePreset": "geeyoou-debug"
     }
   ],
   "testPresets": [
@@ -221,6 +246,26 @@
     {
       "name": "comparison-release",
       "configurePreset": "comparison-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "geeyoou-release",
+      "configurePreset": "geeyoou-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "geeyoou-debug",
+      "configurePreset": "geeyoou-debug",
       "output": {
         "outputOnFailure": true
       },

@@ -79,7 +79,7 @@ preferred = max(各条目 preferred + 此轴两侧 margin)
 
 ## 控制台示例
 
-`gridly_measurement_example` 使用独立的模拟文字度量：固有宽度 400、最小宽度 40、每行高度 20。它没有真实字体或 UI 依赖。
+`axisly_measurement_example` 使用独立的模拟文字度量：固有宽度 400、最小宽度 40、每行高度 20。它没有真实字体或 UI 依赖。
 
 外部容器有左右 padding 各 12、条目左右 margin 各 8，所以可供条目的宽度是容器宽度减 40：
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <gridly/result.hpp>
+#include <axisly/result.hpp>
 
-namespace gridly {
+namespace axisly {
 
 struct PixelRounding {
     Unit scale{1};
@@ -16,4 +16,4 @@ struct PixelRounding {
 // Invalid scale/origin or overflow returns an error with no partial geometry.
 [[nodiscard]] GridResult round_layout(GridResult result, PixelRounding rounding = {});
 
-} // namespace gridly
+} // namespace axisly

@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <array>
@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace {
-using namespace gridly;
+using namespace axisly;
 constexpr Size viewport{240, 140};
 
 void require(bool condition, const char* message) {

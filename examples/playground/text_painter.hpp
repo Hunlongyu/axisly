@@ -9,10 +9,10 @@
 #include <string_view>
 #include <unordered_map>
 
-namespace gridly::playground {
+namespace axisly::playground {
 
 // SDL-only host utility. Fonts are read from the machine, never copied into the
-// core package. The explicit override is a UTF-8 file path in GRIDLY_FONT.
+// core package. The explicit override is a UTF-8 file path in AXISLY_FONT.
 class TextPainter {
 public:
     explicit TextPainter(SDL_Renderer* renderer);
@@ -34,4 +34,4 @@ private:
     std::map<int, Font> fonts_;
     std::unordered_map<std::string, Label> labels_;
 };
-} // namespace gridly::playground
+} // namespace axisly::playground

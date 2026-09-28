@@ -1,10 +1,10 @@
 #pragma once
 
-#include <gridly/grid.hpp>
+#include <axisly/grid.hpp>
 
 #include "track_sizing.hpp"
 
-namespace gridly::detail {
+namespace axisly::detail {
 
 // Requires validated item geometry and resolved finite tracks.
 // Oversized margins collapse the inner box; preferred sizes are clipped to it.
@@ -15,4 +15,4 @@ namespace gridly::detail {
 [[nodiscard]] Unit resolved_item_width(
     const GridItem& item, const ResolvedTrack& column, Unit preferred_width) noexcept;
 
-} // namespace gridly::detail
+} // namespace axisly::detail

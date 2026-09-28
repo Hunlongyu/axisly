@@ -2,10 +2,10 @@
 
 #include <optional>
 
-#include <gridly/geometry.hpp>
-#include <gridly/grid.hpp>
+#include <axisly/geometry.hpp>
+#include <axisly/grid.hpp>
 
-namespace gridly {
+namespace axisly {
 
 struct MeasureInput {
     // nullopt means unknown; a present zero is a known zero constraint.
@@ -32,4 +32,4 @@ struct MeasureResult {
 // Do not mutate layout inputs during callbacks. No context is retained afterward.
 using MeasureCallback = MeasureResult (*)(ItemId, const MeasureInput&, void* user_data);
 
-} // namespace gridly
+} // namespace axisly

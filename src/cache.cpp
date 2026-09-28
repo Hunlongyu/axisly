@@ -1,5 +1,5 @@
-#include <gridly/cache.hpp>
-#include <gridly/measurement_cache.hpp>
+#include <axisly/cache.hpp>
+#include <axisly/measurement_cache.hpp>
 
 #include "detail/layout_workspace.hpp"
 
@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace gridly {
+namespace axisly {
 
 GridCache::GridCache(GridSpec spec, std::span<const GridItem> items)
     : spec_(std::move(spec)), items_(items.begin(), items.end()),
@@ -127,4 +127,4 @@ CachedGridResult GridCache::compute(Size available, std::uint64_t content_versio
     return {result_, false, result_.measurement_count};
 }
 
-} // namespace gridly
+} // namespace axisly

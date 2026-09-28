@@ -2,8 +2,11 @@
 
 ## Current implementation
 
-The project is named **gridly**. M0 through M10 and the listed 1.1+ feature extensions
-are implemented in `0.1.0`. See [completion and validation](22-roadmap-completion.md)
+The project is named **Axisly**. The Grid milestones M0 through M10 and the listed
+1.1+ feature extensions are implemented in `0.1.0`; Flexbox remains planned.
+See the [general layout plan](27-native-ui-layout-plan.md) and
+[Flexbox conformance matrix](28-flexbox-conformance-matrix.md). For the Grid
+history, see [completion and validation](22-roadmap-completion.md)
 and [API contracts](23-api-contract.md). The older milestone sections below retain
 their original implementation history.
 The core supports fixed, weighted, Content and Range tracks, numeric limits with redistribution,
@@ -20,7 +23,7 @@ See [initialization decisions](08-initialization.md), [fixed-layout semantics](0
 and the root README for the implemented API and build commands.
 M10 now has opt-in timing/allocation executables, 14 deterministic workloads and a measured ID-validation optimization.
 See [performance benchmarks](18-performance-benchmarks.md) for methodology and competitor benchmark boundaries.
-An additional opt-in [same-workload comparison](19-comparative-benchmarks.md) runs gridly, Taffy and Yoga with geometry checks before timing.
+An additional opt-in [same-workload comparison](19-comparative-benchmarks.md) runs axisly, Taffy and Yoga with geometry checks before timing.
 The optional [GridCache](20-layout-cache.md) reuses the last successful layout in O(1), with owned input snapshots and explicit content invalidation.
 It also [retains scratch/output capacity and validated span topology](21-workspace-optimization.md) across cache misses, while still measuring fresh content.
 Per-item measurement caches, retained trees and dirty propagation are now implemented,
@@ -34,7 +37,9 @@ separate V2 Taffy suite covers automatic placement, fixed implicit tracks,
 percentages and the compatible first-baseline subset. Retained-tree benchmarks
 include selective invalidation and real DirectWrite text measurement on Windows.
 See [extended validation](24-ci-and-extended-validation.md). The selected next host
-is [GeeyoouUI](25-geeyoou-integration-plan.md); actual host integration remains to be implemented.
+is [GeeyoouUI](25-geeyoou-integration-plan.md). Its full 19-page Showcase now uses
+the optional axisly host adapter; see [implementation and validation](26-geeyoou-showcase.md).
+Cross-monitor DPI changes and broad production qualification remain separate acceptance work.
 
 ## Phase M0 — Freeze the data model
 
@@ -257,7 +262,7 @@ Add recursion guards and clear ownership conventions.
 
 ## Phase M8 — Reference/differential validation
 
-Implemented in `0.0.9` under `tests/reference`, behind `GRIDLY_BUILD_REFERENCE_TESTS=OFF`
+Implemented in `0.0.9` under `tests/reference`, behind `AXISLY_BUILD_REFERENCE_TESTS=OFF`
 by default. The locked Taffy 0.14.0 tool and standard-library Python driver compare
 30 fixtures plus 750 deterministic random cases. Input-only eligibility rules limit
 the comparison to fixed tracks, flexible tracks with numeric floors, explicit spans,
@@ -273,7 +278,7 @@ Pipeline:
 ```text
 random/native test case
         |
-        +------ C++ gridly ------+
+        +------ C++ axisly ------+
         |                            |
         +------ Taffy reference -----+
                                      |

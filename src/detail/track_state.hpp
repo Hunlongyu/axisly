@@ -1,8 +1,8 @@
 #pragma once
 
-#include <gridly/track.hpp>
+#include <axisly/track.hpp>
 
-namespace gridly::detail {
+namespace axisly::detail {
 
 enum class TrackGrowth { Fixed, Content, Weighted };
 
@@ -21,4 +21,4 @@ struct TrackState {
 // Normalize validated public definitions without modifying or retaining them.
 [[nodiscard]] TrackState initialize_track(const Track& track, double percentage_basis = 0) noexcept;
 
-} // namespace gridly::detail
+} // namespace axisly::detail

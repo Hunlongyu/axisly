@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 namespace {
 
 // Synthetic text and sidebar dimensions; the host would supply real metrics.
-gridly::MeasureResult measure(gridly::ItemId id, const gridly::MeasureInput& input, void*) {
+axisly::MeasureResult measure(axisly::ItemId id, const axisly::MeasureInput& input, void*) {
     if (id == 2) {
         return {{40, 80}, {60, 100}};
     }
@@ -25,8 +25,8 @@ gridly::MeasureResult measure(gridly::ItemId id, const gridly::MeasureInput& inp
 } // namespace
 
 int main() {
-    const gridly::examples::ConsoleSession console_session;
-    using namespace gridly;
+    const axisly::examples::ConsoleSession console_session;
+    using namespace axisly;
     const GridSpec spec{
         .columns = {Track::fixed(80), Track::weighted(), Track::weighted(2)},
         .rows = {Track::content(), Track::content(), Track::fixed(30)},
@@ -37,7 +37,7 @@ int main() {
         GridItem{.id = 2, .row = 1, .row_span = 2, .horizontal_alignment = HorizontalAlignment::Center},
         GridItem{.id = 3, .column = 1, .row = 1, .column_span = 2, .margin = {6, 4, 6, 4}}
     };
-    std::cout << "gridly M5: column spans, row spans and text remeasurement\n";
+    std::cout << "axisly M5: column spans, row spans and text remeasurement\n";
     for (const Unit width : {500.0f, 260.0f}) {
         const auto result = compute_grid(spec, items, {width, 300}, measure);
         if (!result.succeeded()) {

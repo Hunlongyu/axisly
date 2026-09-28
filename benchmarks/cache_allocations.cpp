@@ -1,5 +1,5 @@
 #include "allocation_probe.hpp"
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -14,13 +14,13 @@ void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void run(std::size_t count, bool measured) {
-    gridly::GridSpec spec{.columns = {gridly::Track::weighted()}, .rows = {gridly::Track::weighted()}};
-    std::vector<gridly::GridItem> items;
+    axisly::GridSpec spec{.columns = {axisly::Track::weighted()}, .rows = {axisly::Track::weighted()}};
+    std::vector<axisly::GridItem> items;
     items.reserve(count);
     for (std::size_t i = 0; i < count; ++i) items.push_back({.id = i});
-    gridly::GridCache cache(spec, items);
+    axisly::GridCache cache(spec, items);
     std::size_t calls{};
-    if (measured) cache.set_measure(+[](gridly::ItemId, const gridly::MeasureInput&, void* context) -> gridly::MeasureResult {
+    if (measured) cache.set_measure(+[](axisly::ItemId, const axisly::MeasureInput&, void* context) -> axisly::MeasureResult {
         ++*static_cast<std::size_t*>(context);
         return {{}, {10, 20}};
     }, &calls);
@@ -28,14 +28,14 @@ void run(std::size_t count, bool measured) {
     require(warm.result.succeeded() && !warm.cache_hit, "Warm layout failed");
     const auto* storage = warm.result.items.data();
     const auto warm_calls = calls;
-    gridly::bench::begin_allocations();
+    axisly::bench::begin_allocations();
     bool correct = true;
     for (int i = 0; i < 1000; ++i) {
         const auto hit = cache.compute({640, 480}, 7);
         correct = correct && hit.cache_hit && hit.measurement_count == 0 &&
             hit.result.items.data() == storage && hit.result.items.size() == count;
     }
-    const auto stats = gridly::bench::end_allocations();
+    const auto stats = axisly::bench::end_allocations();
     require(correct && calls == warm_calls, "Cache hit recomputed, copied output or measured content");
     require(stats.allocations == 0 && stats.requested_bytes == 0 && stats.peak_live_bytes == 0,
             "Cache hit must not allocate, even for a large grid");
@@ -43,7 +43,7 @@ void run(std::size_t count, bool measured) {
               << stats.requested_bytes << ',' << stats.peak_live_bytes << ",0," << calls-warm_calls << '\n';
 }
 
-void equal_geometry(const gridly::GridResult& actual, const gridly::GridResult& expected) {
+void equal_geometry(const axisly::GridResult& actual, const axisly::GridResult& expected) {
     require(actual.succeeded() && expected.succeeded() && actual.size == expected.size &&
             actual.items.size() == expected.items.size() && actual.measurement_count == expected.measurement_count,
             "Reused workspace changed result metadata");
@@ -54,7 +54,7 @@ void equal_geometry(const gridly::GridResult& actual, const gridly::GridResult& 
 }
 
 void run_workspace(std::uint32_t side, bool spans) {
-    using namespace gridly;
+    using namespace axisly;
     GridSpec spec;
     for (std::uint32_t i = 0; i < side; ++i) {
         spec.columns.push_back(!spans ? Track::weighted() : i % 3 == 0 ? Track::content() :

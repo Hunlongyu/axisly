@@ -107,7 +107,7 @@ def validate_cases(cases):
 
 def protocol(cases):
     validate_cases(cases)
-    lines = [f"GRIDLY_REFERENCE_V2 {len(cases)}"]
+    lines = [f"AXISLY_REFERENCE_V2 {len(cases)}"]
     for c in cases:
         lines.append(" ".join(map(str, c["available"] + c["padding"] + c["gap"] +
                                   [len(c["columns"]), len(c["rows"]), len(c["items"])])))
@@ -149,7 +149,7 @@ def run_tool(path, cases):
 def difference(a, b):
     for x, y in zip(a["items"], b["items"]):
         if x["at"] != y["at"]:
-            return f"item {x['id']} placement: gridly={x['at']}, taffy={y['at']}"
+            return f"item {x['id']} placement: axisly={x['at']}, taffy={y['at']}"
     return compare.difference(a, b)
 
 
@@ -209,7 +209,7 @@ def load_cases(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--gridly", type=Path, required=True)
+    parser.add_argument("--axisly", type=Path, required=True)
     parser.add_argument("--taffy", type=Path, required=True)
     parser.add_argument("--fixtures", type=Path, default=Path(__file__).with_name("fixtures") / "advanced.json")
     parser.add_argument("--replay", type=Path)
@@ -224,7 +224,7 @@ def main(argv=None):
             cases += random_cases(args.seed, args.random_cases)
         validate_cases(cases)
         try:
-            native, reference = run_tool(args.gridly, cases), run_tool(args.taffy, cases)
+            native, reference = run_tool(args.axisly, cases), run_tool(args.taffy, cases)
         except (ValueError, OSError, subprocess.TimeoutExpired) as error:
             path = compare.save_failure(args.failure_dir, cases, {"error": str(error), "seed": args.seed})
             print(f"FAIL runner: {error}\nReplay fixture: {path}", file=sys.stderr)
@@ -232,7 +232,7 @@ def main(argv=None):
         for c, a, b in zip(cases, native, reference):
             mismatch = difference(a, b)
             if mismatch:
-                path = compare.save_failure(args.failure_dir, [c], {"error": mismatch, "gridly": a, "taffy": b})
+                path = compare.save_failure(args.failure_dir, [c], {"error": mismatch, "axisly": a, "taffy": b})
                 print(f"FAIL {c['name']}: {mismatch}\nReplay fixture: {path}", file=sys.stderr)
                 return 1
         families = Counter(c["name"].split("-")[1] if c["name"].startswith("random-") else "fixture" for c in cases)

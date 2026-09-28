@@ -7,10 +7,10 @@
 #include <span>
 #include <vector>
 
-#include <gridly/measurement.hpp>
-#include <gridly/rounding.hpp>
+#include <axisly/measurement.hpp>
+#include <axisly/rounding.hpp>
 
-namespace gridly {
+namespace axisly {
 
 // Process-unique, never-reused identity. Zero is an invalid handle. Handles from
 // other trees and removed nodes are rejected even if storage is later reused.

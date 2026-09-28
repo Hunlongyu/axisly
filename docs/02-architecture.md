@@ -16,7 +16,7 @@
                           |
                           v
 +-------------------------------------------------+
-|                gridly Core                  |
+|                axisly Core                  |
 |                                                 |
 | validation -> placement -> track sizing         |
 | -> span resolution -> alignment -> result       |
@@ -43,7 +43,7 @@ This makes it possible to adapt:
 - ECS entity IDs
 - game object IDs
 
-without linking any UI framework into gridly.
+without linking any UI framework into axisly.
 
 ## Stateless core first
 
@@ -178,7 +178,7 @@ GridTree
   - dirty propagation
        |
        v
-gridly Core
+axisly Core
 ```
 
 This layer remains optional. Tree callbacks translate stable internal node IDs to

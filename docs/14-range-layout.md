@@ -67,7 +67,7 @@ minimum／preferred 必须有限、非负且顺序合法；即使上限为零，
 
 ## 示例与验证
 
-新增 `gridly_range_example`，使用两个条目和模拟度量：
+新增 `axisly_range_example`，使用两个条目和模拟度量：
 
 - 第一列为 `range(fixed(80), fixed(160))`，首选宽度 240。
 - 第二列为 `range(content(), weighted())`，最小宽度 100，首选宽度 400。

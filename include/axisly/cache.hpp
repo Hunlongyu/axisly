@@ -6,11 +6,11 @@
 #include <span>
 #include <vector>
 
-#include <gridly/grid.hpp>
-#include <gridly/measurement.hpp>
-#include <gridly/result.hpp>
+#include <axisly/grid.hpp>
+#include <axisly/measurement.hpp>
+#include <axisly/result.hpp>
 
-namespace gridly {
+namespace axisly {
 
 namespace detail { struct LayoutWorkspace; }
 class MeasurementCache;
@@ -89,4 +89,4 @@ private:
     bool computing_{};
 };
 
-} // namespace gridly
+} // namespace axisly

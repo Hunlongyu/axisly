@@ -6,7 +6,7 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `include/gridly/layout.hpp` | 已安装的 C++ 回调便利重载 |
+| `include/axisly/layout.hpp` | 已安装的 C++ 回调便利重载 |
 | `examples/nested_grid_adapter.hpp` | 只依赖公开 API 的宿主侧嵌套参考实现，不安装为核心 API |
 | `examples/nested_grid.cpp` | 三层嵌套和合成换行度量的控制台示例 |
 | `tests/nested/nested_tests.cpp` | 回调、递归、坐标、错误传播和最终尺寸重排测试 |
@@ -17,8 +17,8 @@
 
 ```cpp
 int calls = 0;
-auto result = gridly::compute_grid(spec, items, available,
-    [&](gridly::ItemId id, const gridly::MeasureInput& input) -> gridly::MeasureResult {
+auto result = axisly::compute_grid(spec, items, available,
+    [&](axisly::ItemId id, const axisly::MeasureInput& input) -> axisly::MeasureResult {
         ++calls;
         return host.measure(id, input);
     });
@@ -34,8 +34,8 @@ auto result = gridly::compute_grid(spec, items, available,
 
 ```cpp
 // Include the source-only example adapter header before using these types.
-using namespace gridly;
-using namespace gridly::examples;
+using namespace axisly;
+using namespace axisly::examples;
 
 const NestedGrid child{
     .spec = {.columns = {Track::weighted()}, .rows = {Track::content()}},
@@ -112,7 +112,7 @@ Weighted 子网格会随本次可用宽度增长；该 preferred 不是无限空
 
 ## 示例和验证
 
-`gridly_nested_example` 包含固定侧栏、面板标题和三级文字条目。合成文字以 600 单位首选宽度、20 单位行高估算换行，未加载真实字体。
+`axisly_nested_example` 包含固定侧栏、面板标题和三级文字条目。合成文字以 600 单位首选宽度、20 单位行高估算换行，未加载真实字体。
 
 | 容器宽度 | 根网格占用 | 最内层文字矩形 | 核心计算／测量次数 |
 | --- | --- | --- | --- |

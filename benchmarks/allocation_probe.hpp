@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-namespace gridly::bench {
+namespace axisly::bench {
 struct AllocationStats {
     std::size_t allocations{};
     std::size_t requested_bytes{};
@@ -13,4 +13,4 @@ struct AllocationStats {
 void begin_allocations();
 [[nodiscard]] AllocationStats end_allocations() noexcept;
 void allocation_self_test();
-} // namespace gridly::bench
+} // namespace axisly::bench

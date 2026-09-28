@@ -4,7 +4,10 @@
 
 ## 名称与工程边界
 
-项目名称统一为 `gridly`。CMake 工程和包名称为 `gridly`，链接目标为 `gridly::gridly`，C++ 命名空间为 `gridly`，公共入口为 `<gridly/gridly.hpp>`。
+原始初始化阶段使用 `gridly`；当前统一名称为 `axisly`。CMake 工程和包名称为
+`axisly`，链接目标为 `axisly::axisly`，C++ 命名空间为 `axisly`，公共入口为
+`<axisly/axisly.hpp>`。以下命令和示例已更新到当前名称，早期验证数据仍是
+当时 Grid 专项阶段的结果。
 
 M0 提供 C++20/STL 静态库和公共值类型，不实现布局算法，不引入 SDL、Qt、Rust、Taffy 或外部测试库。构建目录为 `build/`，不进入版本控制。`0.0.1` 仅标识初始化阶段。
 
@@ -17,8 +20,8 @@ M0 提供 C++20/STL 静态库和公共值类型，不实现布局算法，不引
 ## Range 表示
 
 ```cpp
-auto bounded = gridly::Track::range(gridly::Track::fixed(100), gridly::Track::fixed(300));
-auto flexible = gridly::Track::range(gridly::Track::fixed(100), gridly::Track::weighted(1));
+auto bounded = axisly::Track::range(axisly::Track::fixed(100), axisly::Track::fixed(300));
+auto flexible = axisly::Track::range(axisly::Track::fixed(100), axisly::Track::weighted(1));
 ```
 
 Range 下界支持 Fixed 或 Content，上界支持 Fixed、Content 或 Weighted；不支持嵌套 Range，也不将 Weighted 解释为最小尺寸。固定上下界在工厂阶段校验顺序。使用 `std::variant` 保存各类定义，避免递归堆分配；调用者可以只读检查 `definition()`。
@@ -43,7 +46,7 @@ M1 的交付范围按原路线图：固定行列、显式放置、非对称 padd
 | Release 构建与契约测试 | 通过，8/8 |
 | 6 个公共头文件分别编译 | 两种配置均通过 |
 | API 示例运行 | 输出 3 列、3 行、3 个条目的 M0 模型 |
-| 安装后 `find_package(gridly)` 消费工程 | Release 编译、链接、运行通过，1/1 |
+| 安装后 `find_package(axisly)` 消费工程 | Release 编译、链接、运行通过，1/1 |
 | `add_subdirectory()` 消费工程 | Debug 编译、链接、运行通过，1/1；库内测试和示例默认关闭 |
 
-最终构建未产生编译告警。消费工程位于 `tests/consumer/`，可分别通过 `CMAKE_PREFIX_PATH` 或 `GRIDLY_SOURCE_DIR` 指定接入方式。尚未执行远程 CI 或 Linux/macOS 构建。
+最终构建未产生编译告警。消费工程位于 `tests/consumer/`，可分别通过 `CMAKE_PREFIX_PATH` 或 `AXISLY_SOURCE_DIR` 指定接入方式。尚未执行远程 CI 或 Linux/macOS 构建。

@@ -5,7 +5,7 @@ percentages, automatic placement, first baselines, rounding and optional retaine
 types; see [the current API contract](23-api-contract.md) and installed headers.
 
 This document is the original API proposal. The implementation uses the
-`gridly` namespace and `<gridly/gridly.hpp>`. It also defines range bounds and
+`axisly` namespace and `<axisly/axisly.hpp>`. It also defines range bounds and
 error/result status; see [initialization decisions](08-initialization.md).
 M7 provides `compute_grid(spec, items, available)` for fixed, weighted, Content and Range tracks,
 with explicit row/column spans, item margins and independent alignment from static `preferred_size`. The overload

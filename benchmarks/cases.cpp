@@ -6,7 +6,7 @@
 #include <random>
 #include <stdexcept>
 
-namespace gridly::bench {
+namespace axisly::bench {
 namespace {
 void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
@@ -169,4 +169,4 @@ Observation run(const Case& c, std::size_t iteration) {
     require(result.succeeded(),"Benchmark failed in sample");
     return {fingerprint(result),result.measurement_count,1};
 }
-} // namespace gridly::bench
+} // namespace axisly::bench

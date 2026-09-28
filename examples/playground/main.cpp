@@ -18,8 +18,8 @@
 #include <string>
 
 namespace {
-using namespace gridly;
-using namespace gridly::playground;
+using namespace axisly;
+using namespace axisly::playground;
 constexpr int initial_width = 1280;
 constexpr int initial_height = 840;
 constexpr SDL_Color background{14, 20, 31, 255};
@@ -57,7 +57,7 @@ bool contains(SDL_FRect r, float x, float y) {
 class App {
 public:
     explicit App(bool hidden) {
-        window.reset(SDL_CreateWindow("gridly Playground", initial_width, initial_height,
+        window.reset(SDL_CreateWindow("axisly Playground", initial_width, initial_height,
             SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | (hidden ? SDL_WINDOW_HIDDEN : 0)));
         require(window != nullptr, "Create window");
         require(SDL_SetWindowMinimumSize(window.get(), 960, 720), "Set minimum window size");
@@ -302,7 +302,7 @@ private:
     void draw_chrome() {
         const float w = static_cast<float>(width), h = static_cast<float>(height);
         fill({0,0,w,76}, panel);
-        text(24,22,"gridly",ink,32);
+        text(24,22,"axisly",ink,32);
         text(242,30,"LAYOUT PLAYGROUND",muted,14);
         const std::array values{show_grid, show_bounds, show_metrics};
         const std::array labels{"G GRID", "B BOUNDS", "M METRICS"};
@@ -431,7 +431,7 @@ private:
 int main(int argc, char** argv) {
     const bool smoke = argc == 3 && std::string_view(argv[1]) == "--smoke-test";
     if (argc != 1 && !smoke) {
-        SDL_Log("Usage: gridly_playground [--smoke-test capture-directory]");
+        SDL_Log("Usage: axisly_playground [--smoke-test capture-directory]");
         return 2;
     }
     try {
@@ -449,7 +449,7 @@ int main(int argc, char** argv) {
     } catch (const std::exception& error) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,"%s",error.what());
         // Double-click failures stay visible instead of looking like a silent crash.
-        if (!smoke) SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"gridly Playground",error.what(),nullptr);
+        if (!smoke) SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"axisly Playground",error.what(),nullptr);
         SDL_Quit();
         return 1;
     }

@@ -4,9 +4,9 @@
 
 ## 边界与依赖
 
-`GRIDLY_BUILD_REFERENCE_TESTS` 默认 OFF，只有显式启用时才查找 Python、Cargo 和 rustc。它要求 `GRIDLY_BUILD_TESTS=ON`，不支持跨架构运行。普通 Debug／Release 预设显式关闭该选项。
+`AXISLY_BUILD_REFERENCE_TESTS` 默认 OFF，只有显式启用时才查找 Python、Cargo 和 rustc。它要求 `AXISLY_BUILD_TESTS=ON`，不支持跨架构运行。普通 Debug／Release 预设显式关闭该选项。
 
-生产 `gridly::gridly` 的源文件、链接依赖、头文件和安装内容不引用 Taffy、Rust 或 Python。参考工具不安装、不导出为库目标，作为子目录接入时也不自动启用。
+生产 `axisly::axisly` 的源文件、链接依赖、头文件和安装内容不引用 Taffy、Rust 或 Python。参考工具不安装、不导出为库目标，作为子目录接入时也不自动启用。
 
 参考包固定为 [Taffy 0.14.0](https://docs.rs/taffy/0.14.0/taffy/struct.TaffyTree.html)，`Cargo.toml` 使用精确版本，`Cargo.lock` 锁定传递依赖。构建使用 `cargo build --release --locked`，只启用 std、taffy_tree、grid 特性。两种 C++ 构建配置均对照同一 Rust Release 配置；Cargo 首次需要访问配置的包仓库，后续可复用本机缓存。
 
@@ -16,7 +16,7 @@ Python 3.10+ 对照器仅使用标准库。Rust 使用安装好的工具链，�
 
 | 文件 | 职责 |
 | --- | --- |
-| `tests/reference/native_runner.cpp` | 读取用例，以公开 API 调用 gridly，输出 JSON 矩形 |
+| `tests/reference/native_runner.cpp` | 读取用例，以公开 API 调用 axisly，输出 JSON 矩形 |
 | `tests/reference/taffy/` | 独立 Rust 可执行程序，转换同一输入并调用 Taffy |
 | `tests/reference/compare.py` | 输入校验、随机生成、进程调用、数值比较、保存与重放失败 |
 | `tests/reference/fixtures/common.json` | 30 个可审阅的固定用例，包括适配器边距回归 |
@@ -30,7 +30,7 @@ Python 把同一份 JSON 输入编码成带版本的空白分隔协议，一次�
 
 准入规则仅根据原始输入判断，不读取任一布局结果来筛选。生成用例和手动重放都经过相同校验；不支持的输入明确报错。
 
-| gridly 输入 | Taffy 映射 | 准入条件 |
+| axisly 输入 | Taffy 映射 | 准入条件 |
 | --- | --- | --- |
 | Fixed(s) | 固定长度 s | 允许零轨道、容器不足及布局超出容器 |
 | Weighted(w, m) | `minmax(m, w fr)` | 无上限，每个权重 ≥1；该轴条目 min/preferred/margin 均为零且 Stretch |
@@ -42,19 +42,19 @@ Python 把同一份 JSON 输入编码成带版本的空白分隔协议，一次�
 
 每轴 1～16 条显式轨道，每用例至多 128 条目，每次 1～10000 个用例。数值输入范围 0～1000000；ID 为完整 uint64，包含 0 和最大值。
 
-权重都至少为 1，是为了排除 CSS 总 fraction 小于 1 时只占用部分自由空间的语义差异。条目在权重轴上的固有贡献和 margin 归零，仍保留轨道显式数值下界、冻结重新分配和最小值溢出的对照。某轴含 Content 时要求首选尺寸可容纳，避免把 gridly 的同比收缩规则当成 CSS 轨道算法。
+权重都至少为 1，是为了排除 CSS 总 fraction 小于 1 时只占用部分自由空间的语义差异。条目在权重轴上的固有贡献和 margin 归零，仍保留轨道显式数值下界、冻结重新分配和最小值溢出的对照。某轴含 Content 时要求首选尺寸可容纳，避免把 axisly 的同比收缩规则当成 CSS 轨道算法。
 
-以下仍由 gridly 原有测试验收，不纳入本阶段 Taffy 相等断言：Content 收缩、含 Content 的跨格分配、单轴 Content 与权重混合、权重上限、其他 Range 组合、超大 margin、被裁剪的非 Stretch 首选尺寸、空轴、依赖宽度换行的回调、嵌套宿主策略、自动放置、百分比及 CSS 其他特性。
+以下仍由 axisly 原有测试验收，不纳入本阶段 Taffy 相等断言：Content 收缩、含 Content 的跨格分配、单轴 Content 与权重混合、权重上限、其他 Range 组合、超大 margin、被裁剪的非 Stretch 首选尺寸、空轴、依赖宽度换行的回调、嵌套宿主策略、自动放置、百分比及 CSS 其他特性。
 
 因此，对照成功证明的是上述共同子集的一致性，不代表与 CSS Grid 完全兼容，也不能证明所有布局均无缺陷。
 
 ## 测量与几何映射
 
-用例提供恒定的 minimum/preferred 度量。gridly 回调返回它们；Taffy 在 MinContent 查询时返回 minimum，其他未知尺寸查询返回 preferred，已知尺寸按其约束返回。可用空间作为建议，不额外裁剪这份恒定度量。gridly 既有规则仍负责最终尺寸和对齐。
+用例提供恒定的 minimum/preferred 度量。axisly 回调返回它们；Taffy 在 MinContent 查询时返回 minimum，其他未知尺寸查询返回 preferred，已知尺寸按其约束返回。可用空间作为建议，不额外裁剪这份恒定度量。axisly 既有规则仍负责最终尺寸和对齐。
 
-Taffy 调用 `disable_rounding()`。根节点按输入容器使用 border-box，轨道整体对齐设为 Start，避免额外分配固定／内容轨道周围的剩余空间。叶节点最小样式尺寸显式为零，避免 CSS 自动最小值混入 gridly 的条目规则。
+Taffy 调用 `disable_rounding()`。根节点按输入容器使用 border-box，轨道整体对齐设为 Start，避免额外分配固定／内容轨道周围的剩余空间。叶节点最小样式尺寸显式为零，避免 CSS 自动最小值混入 axisly 的条目规则。
 
-Taffy 的根布局尺寸代表容器盒子，不能直接当作 gridly 的占用范围。因此先在仅包含真实条目的树上计算并保存原始矩形，再加入零固有尺寸、零 margin、Stretch 的探针：
+Taffy 的根布局尺寸代表容器盒子，不能直接当作 axisly 的占用范围。因此先在仅包含真实条目的树上计算并保存原始矩形，再加入零固有尺寸、零 margin、Stretch 的探针：
 
 - 每个条目的探针使用同一放置／跨度，取得完整 `cell_rect`。
 - 全网格探针覆盖全部显式行列，取得轨道与内部 gap 的总尺寸，再加根 padding 得到占用 `size`。
@@ -64,7 +64,7 @@ Taffy 的根布局尺寸代表容器盒子，不能直接当作 gridly 的占用
 每个分量使用：
 
 ```text
-abs(gridly - taffy) <= 0.0001 + 0.000001 * max(abs(gridly), abs(taffy))
+abs(axisly - taffy) <= 0.0001 + 0.000001 * max(abs(axisly), abs(taffy))
 ```
 
 先拒绝 NaN、无穷、负尺寸／坐标和无法表示为有限 Unit 的输出。这个误差用于 float 计算差异，不用于掩盖整像素偏移；工具自测会验证超过阈值的条目、单元格和占用差异均被检出。
@@ -79,12 +79,12 @@ cmake --build --preset reference-release
 ctest --preset reference-release
 ```
 
-Debug 替换为 `reference-debug`。预设依赖 Ninja；使用其他生成器时可手动指定 `-DGRIDLY_BUILD_REFERENCE_TESTS=ON`。默认 CTest 包含原 205 项，以及 `gridly.reference.compare`、`gridly.reference.harness` 两项；后者内部执行 22 个工具自测。
+Debug 替换为 `reference-debug`。预设依赖 Ninja；使用其他生成器时可手动指定 `-DAXISLY_BUILD_REFERENCE_TESTS=ON`。默认 CTest 包含原 205 项，以及 `axisly.reference.compare`、`axisly.reference.harness` 两项；后者内部执行 22 个工具自测。
 
 只构建和运行参考工具：
 
 ```text
-cmake --build build/reference-release --target gridly_reference_native gridly_taffy_reference
+cmake --build build/reference-release --target axisly_reference_native axisly_taffy_reference
 ctest --test-dir build/reference-release -L reference --output-on-failure
 ```
 
@@ -98,8 +98,8 @@ ctest --test-dir build/reference-release -L reference --output-on-failure
 
 ```powershell
 python tests/reference/compare.py `
-  --gridly build/reference-release/tests/reference/gridly_reference_native.exe `
-  --taffy build/reference-release/tests/reference/cargo/x86_64-pc-windows-msvc/release/gridly-taffy-reference.exe `
+  --axisly build/reference-release/tests/reference/axisly_reference_native.exe `
+  --taffy build/reference-release/tests/reference/cargo/x86_64-pc-windows-msvc/release/axisly-taffy-reference.exe `
   --replay build/reference-release/tests/reference/failures/failure.json `
   --failure-dir build/reference-release/tests/reference/replay
 ```

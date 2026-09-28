@@ -287,10 +287,10 @@ fn run() -> Result<()> {
         .map_err(|e| e.to_string())?;
     let mut reader = Reader(input.split_whitespace());
     let version = reader.token()?;
-    if version != "GRIDLY_REFERENCE_V1" && version != "GRIDLY_REFERENCE_V2" {
+    if version != "AXISLY_REFERENCE_V1" && version != "AXISLY_REFERENCE_V2" {
         return Err("Unsupported protocol version".into());
     }
-    let advanced_protocol = version == "GRIDLY_REFERENCE_V2";
+    let advanced_protocol = version == "AXISLY_REFERENCE_V2";
     let count = reader.count(10000, false)?;
     for index in 0..count {
         if advanced_protocol {

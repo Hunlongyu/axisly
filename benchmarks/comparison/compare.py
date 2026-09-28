@@ -159,7 +159,7 @@ def main():
     parser.add_argument("--rounds", type=int, default=2)
     parser.add_argument("--samples", type=int, default=9)
     parser.add_argument("--case", action="append", help="Restrict to named fixtures; repeat to select several")
-    parser.add_argument("--engines", nargs="+", choices=("gridly", "gridly_cached", "taffy", "yoga", "gridly_before", "gridly_cached_before"))
+    parser.add_argument("--engines", nargs="+", choices=("axisly", "axisly_cached", "taffy", "yoga", "axisly_before", "axisly_cached_before"))
     parser.add_argument("--mode", action="append", choices=("cold", "resize", "same"),
                         help="Restrict timing modes; repeat to select several")
     args = parser.parse_args()
@@ -172,10 +172,10 @@ def main():
             parser.error(f"Unknown fixtures: {sorted(unknown)}")
         fixtures = [f for f in fixtures if f["name"] in args.case]
     modes = list(dict.fromkeys(args.mode or ("cold", "resize", "same")))
-    available_tools = dict(gridly=args.native.resolve(), gridly_cached=args.native.resolve(),
+    available_tools = dict(axisly=args.native.resolve(), axisly_cached=args.native.resolve(),
                            taffy=args.taffy.resolve(), yoga=args.native.resolve())
     if args.baseline_native:
-        available_tools = dict(gridly_before=args.baseline_native.resolve(), gridly_cached_before=args.baseline_native.resolve(),
+        available_tools = dict(axisly_before=args.baseline_native.resolve(), axisly_cached_before=args.baseline_native.resolve(),
                                **available_tools)
     engines = list(dict.fromkeys(args.engines or available_tools))
     if any(name not in available_tools for name in engines):
@@ -225,7 +225,7 @@ def main():
                         raise ValueError(f"Invalid timing/checksum: {f['name']}/{engine}/{mode}")
                     if any(x != counts[0] or not math.isfinite(x) or x < 0 for x in counts):
                         raise ValueError("Unstable measurement count")
-                    if engine in ("gridly_cached", "gridly_cached_before") and mode == "same" and counts[0] != 0:
+                    if engine in ("axisly_cached", "axisly_cached_before") and mode == "same" and counts[0] != 0:
                         raise ValueError("GridCache hit performed measurement")
                     raw.append(dict(case=f["name"], engine=engine, mode=mode, round=round_index+1, **data))
                     rows.append(dict(case=f["name"], engine=engine, mode=mode, round=round_index+1,

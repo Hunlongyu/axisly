@@ -1,9 +1,12 @@
-# 0.1.0 API 契约与接入
+# Axisly 0.1.0 Grid API 契约与接入
 
-生产库仅依赖 C++20/STL，统一入口为 `<gridly/gridly.hpp>`。各头文件可以独立包含。
-版本号和 CMake 包保持一致；`find_package(gridly CONFIG REQUIRED)` 与
-`add_subdirectory` 都链接 `gridly::gridly`。本文件定义本次稳定下来的接口和语义，
-原始 API 提案、早期里程碑和性能报告保留历史版本信息。
+生产库仅依赖 C++20/STL，统一入口为 `<axisly/axisly.hpp>`。各头文件可以独立包含。
+版本号和 CMake 包保持一致；`find_package(axisly CONFIG REQUIRED)` 与
+`add_subdirectory` 都链接 `axisly::axisly`。本文件定义本次稳定下来的接口和语义，
+原始 API 提案、早期里程碑和性能报告保留历史版本信息。本文只描述已实现
+的 Grid API；Flexbox 和混合树尚未实现，见 [后续计划](27-native-ui-layout-plan.md)。
+从旧私有名称 `gridly` 到 `axisly` 是源码级命名迁移，旧命名空间、头文件、
+CMake 包与构建选项未保留别名；消费者需更新并重新编译。
 
 ## 兼容与所有权
 
@@ -23,18 +26,18 @@
 ## 自动放置与隐式轨道
 
 ```cpp
-gridly::GridSpec spec{
-    .columns = {gridly::Track::weighted(), gridly::Track::weighted()},
-    .rows = {gridly::Track::content()},
+axisly::GridSpec spec{
+    .columns = {axisly::Track::weighted(), axisly::Track::weighted()},
+    .rows = {axisly::Track::content()},
     .column_gap = 8,
     .row_gap = 8,
-    .auto_flow = gridly::AutoFlow::RowDense,
+    .auto_flow = axisly::AutoFlow::RowDense,
     .allow_implicit_tracks = true
 };
-gridly::GridItem item{
+axisly::GridItem item{
     .id = 7,
-    .column = gridly::auto_position,
-    .row = gridly::auto_position,
+    .column = axisly::auto_position,
+    .row = axisly::auto_position,
     .preferred_size = {120, 24}
 };
 ```
@@ -84,9 +87,9 @@ Range 的上下界均可用 Percentage；下界仍不能用 Weighted，上界 We
 ## 像素取整
 
 ```cpp
-auto result = gridly::round_layout(
-    gridly::compute_grid(spec, items, available),
-    gridly::PixelRounding{.scale = 1.25f, .origin_x = 0, .origin_y = 0});
+auto result = axisly::round_layout(
+    axisly::compute_grid(spec, items, available),
+    axisly::PixelRounding{.scale = 1.25f, .origin_x = 0, .origin_y = 0});
 ```
 
 取整只处理最终输出，测量和轨道分配仍使用逻辑坐标。先取整起止边缘再求宽高，避免
@@ -108,7 +111,7 @@ scale 必须有限且大于 0。函数按值接收结果，可移动临时结果
 `measurement_count()` 和 `hit_count()` 自构造或 `reset_statistics()` 起累积。
 
 ```cpp
-gridly::GridCache cache(spec, items);
+axisly::GridCache cache(spec, items);
 cache.set_measure(measure, context);
 cache.enable_measurement_cache();
 auto first = cache.compute({640, 360});
@@ -128,7 +131,7 @@ auto changed = cache.compute({640, 360});
 ## GridTree
 
 ```cpp
-gridly::GridTree tree;
+axisly::GridTree tree;
 auto root = tree.create_grid(spec);
 auto label = tree.create_leaf(item, measure, context);
 tree.append_child(root, label);
@@ -168,7 +171,7 @@ tree.mark_dirty(label);
 
 ## Sanitizer
 
-`GRIDLY_ENABLE_SANITIZERS=ON` 在 Windows 启用 ASan，在 Linux GCC／Clang 启用 ASan 和
+`AXISLY_ENABLE_SANITIZERS=ON` 在 Windows 启用 ASan，在 Linux GCC／Clang 启用 ASan 和
 UBSan。Windows 开发脚本发现 Visual Studio 预览工具链，Clang 模式发现自身 runtime
 目录，明确链接 ASan runtime，并临时配置 DLL 搜索路径；支持 x64 动态 CRT。
 Clang 直接调用链接器时需要显式提供运行库，见

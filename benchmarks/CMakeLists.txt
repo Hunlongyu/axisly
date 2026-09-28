@@ -1,59 +1,59 @@
-add_library(gridly_bench_cases STATIC cases.cpp)
-target_link_libraries(gridly_bench_cases PUBLIC gridly::gridly)
-target_include_directories(gridly_bench_cases PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-set_target_properties(gridly_bench_cases PROPERTIES CXX_EXTENSIONS OFF)
-gridly_enable_warnings(gridly_bench_cases)
+add_library(axisly_bench_cases STATIC cases.cpp)
+target_link_libraries(axisly_bench_cases PUBLIC axisly::axisly)
+target_include_directories(axisly_bench_cases PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+set_target_properties(axisly_bench_cases PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_bench_cases)
 
-foreach(target IN ITEMS gridly_bench gridly_bench_allocations)
+foreach(target IN ITEMS axisly_bench axisly_bench_allocations)
     add_executable(${target} main.cpp)
-    target_link_libraries(${target} PRIVATE gridly_bench_cases)
+    target_link_libraries(${target} PRIVATE axisly_bench_cases)
     target_compile_definitions(${target} PRIVATE
-        GRIDLY_BENCH_VERSION="${PROJECT_VERSION}"
-        GRIDLY_BENCH_CONFIG="$<CONFIG>"
+        AXISLY_BENCH_VERSION="${PROJECT_VERSION}"
+        AXISLY_BENCH_CONFIG="$<CONFIG>"
     )
     set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-    gridly_enable_warnings(${target})
+    axisly_enable_warnings(${target})
 endforeach()
 
 # The timed executable uses the normal allocator. Replacement new/delete exist
 # ONLY in the second executable, never in the core or consumer link interface.
-target_sources(gridly_bench_allocations PRIVATE allocation_probe.cpp)
-target_compile_definitions(gridly_bench_allocations PRIVATE GRIDLY_COUNT_ALLOCATIONS=1)
+target_sources(axisly_bench_allocations PRIVATE allocation_probe.cpp)
+target_compile_definitions(axisly_bench_allocations PRIVATE AXISLY_COUNT_ALLOCATIONS=1)
 
-add_executable(gridly_cache_allocations cache_allocations.cpp allocation_probe.cpp)
-target_link_libraries(gridly_cache_allocations PRIVATE gridly::gridly)
-set_target_properties(gridly_cache_allocations PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-gridly_enable_warnings(gridly_cache_allocations)
+add_executable(axisly_cache_allocations cache_allocations.cpp allocation_probe.cpp)
+target_link_libraries(axisly_cache_allocations PRIVATE axisly::axisly)
+set_target_properties(axisly_cache_allocations PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+axisly_enable_warnings(axisly_cache_allocations)
 
-add_executable(gridly_retained_bench retained.cpp)
-target_link_libraries(gridly_retained_bench PRIVATE gridly::gridly)
+add_executable(axisly_retained_bench retained.cpp)
+target_link_libraries(axisly_retained_bench PRIVATE axisly::axisly)
 if(WIN32)
-    target_link_libraries(gridly_retained_bench PRIVATE dwrite)
+    target_link_libraries(axisly_retained_bench PRIVATE dwrite)
 endif()
-target_compile_definitions(gridly_retained_bench PRIVATE
-    GRIDLY_BENCH_VERSION="${PROJECT_VERSION}" GRIDLY_BENCH_CONFIG="$<CONFIG>")
-set_target_properties(gridly_retained_bench PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-gridly_enable_warnings(gridly_retained_bench)
+target_compile_definitions(axisly_retained_bench PRIVATE
+    AXISLY_BENCH_VERSION="${PROJECT_VERSION}" AXISLY_BENCH_CONFIG="$<CONFIG>")
+set_target_properties(axisly_retained_bench PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+axisly_enable_warnings(axisly_retained_bench)
 
-if(GRIDLY_BUILD_TESTS)
-    add_test(NAME gridly.retained_bench.geometry_and_smoke COMMAND gridly_retained_bench --smoke)
-    add_test(NAME gridly.retained_bench.reject_zero COMMAND gridly_retained_bench --iterations 0)
-    add_test(NAME gridly.retained_bench.reject_unknown COMMAND gridly_retained_bench --invalid)
-    set_tests_properties(gridly.retained_bench.reject_zero gridly.retained_bench.reject_unknown PROPERTIES WILL_FAIL TRUE)
-    set_tests_properties(gridly.retained_bench.geometry_and_smoke gridly.retained_bench.reject_zero
-        gridly.retained_bench.reject_unknown PROPERTIES LABELS benchmark TIMEOUT 120)
-    add_test(NAME gridly.cache.no_allocations COMMAND gridly_cache_allocations)
-    set_tests_properties(gridly.cache.no_allocations PROPERTIES LABELS benchmark TIMEOUT 60)
-    add_test(NAME gridly.bench.timing_smoke COMMAND gridly_bench --smoke)
-    add_test(NAME gridly.bench.allocations_smoke COMMAND gridly_bench_allocations --smoke)
-    add_test(NAME gridly.bench.counter_contract COMMAND gridly_bench_allocations --self-test)
-    add_test(NAME gridly.bench.reject_zero COMMAND gridly_bench --iterations 0)
-    add_test(NAME gridly.bench.reject_unknown COMMAND gridly_bench --case missing)
-    set_tests_properties(gridly.bench.reject_zero gridly.bench.reject_unknown PROPERTIES WILL_FAIL TRUE)
-    set_tests_properties(gridly.bench.timing_smoke gridly.bench.allocations_smoke gridly.bench.counter_contract
-        gridly.bench.reject_zero gridly.bench.reject_unknown PROPERTIES LABELS benchmark TIMEOUT 60)
+if(AXISLY_BUILD_TESTS)
+    add_test(NAME axisly.retained_bench.geometry_and_smoke COMMAND axisly_retained_bench --smoke)
+    add_test(NAME axisly.retained_bench.reject_zero COMMAND axisly_retained_bench --iterations 0)
+    add_test(NAME axisly.retained_bench.reject_unknown COMMAND axisly_retained_bench --invalid)
+    set_tests_properties(axisly.retained_bench.reject_zero axisly.retained_bench.reject_unknown PROPERTIES WILL_FAIL TRUE)
+    set_tests_properties(axisly.retained_bench.geometry_and_smoke axisly.retained_bench.reject_zero
+        axisly.retained_bench.reject_unknown PROPERTIES LABELS benchmark TIMEOUT 120)
+    add_test(NAME axisly.cache.no_allocations COMMAND axisly_cache_allocations)
+    set_tests_properties(axisly.cache.no_allocations PROPERTIES LABELS benchmark TIMEOUT 60)
+    add_test(NAME axisly.bench.timing_smoke COMMAND axisly_bench --smoke)
+    add_test(NAME axisly.bench.allocations_smoke COMMAND axisly_bench_allocations --smoke)
+    add_test(NAME axisly.bench.counter_contract COMMAND axisly_bench_allocations --self-test)
+    add_test(NAME axisly.bench.reject_zero COMMAND axisly_bench --iterations 0)
+    add_test(NAME axisly.bench.reject_unknown COMMAND axisly_bench --case missing)
+    set_tests_properties(axisly.bench.reject_zero axisly.bench.reject_unknown PROPERTIES WILL_FAIL TRUE)
+    set_tests_properties(axisly.bench.timing_smoke axisly.bench.allocations_smoke axisly.bench.counter_contract
+        axisly.bench.reject_zero axisly.bench.reject_unknown PROPERTIES LABELS benchmark TIMEOUT 60)
 endif()
 
-if(GRIDLY_BUILD_COMPARISON_BENCHMARKS)
+if(AXISLY_BUILD_COMPARISON_BENCHMARKS)
     add_subdirectory(comparison)
 endif()

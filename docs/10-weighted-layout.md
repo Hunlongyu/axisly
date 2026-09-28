@@ -14,9 +14,9 @@ Track Track::weighted(
 原有 `Track::weighted()` 和 `Track::weighted(2)` 调用保持有效。为落实 M2 路线图的上下限、冻结和重新分配要求，增加两个可选参数；没有把 Content 或 Range 的完整语义提前引入计算入口。
 
 ```cpp
-auto plain = gridly::Track::weighted(2);
-auto at_least = gridly::Track::weighted(1, 120);
-auto bounded = gridly::Track::weighted(1, 80, 240.0f);
+auto plain = axisly::Track::weighted(2);
+auto at_least = axisly::Track::weighted(1, 120);
+auto bounded = axisly::Track::weighted(1, 80, 240.0f);
 ```
 
 权重必须为有限正数，minimum 为有限非负数，maximum 缺省表示没有用户指定的上限，指定时须有限且不小于 minimum。上下限相等合法，包括上下限均为零。工厂拒绝非法参数并抛出 `std::invalid_argument`；计算入口也校验轨道定义。
@@ -76,7 +76,7 @@ M3 下一步处理 margin 与 Start／Center／End／Stretch 对齐。M2 仍只�
 | 独立方程求解对比 | 两种配置均通过 500 组固定种子用例 |
 | 7 个公共头文件分别编译 | 两种配置均通过 |
 | 权重示例实际运行 | 640、940、190 三种容器宽度下正确分配／溢出 |
-| 安装包 `find_package(gridly)` | Release 编译、链接与固定／权重上下限计算验证通过，1/1 |
+| 安装包 `find_package(axisly)` | Release 编译、链接与固定／权重上下限计算验证通过，1/1 |
 | 子目录 `add_subdirectory()` | Debug 编译、链接与固定／权重上下限计算验证通过，1/1 |
 
 跨平台 CI、真实 UI 与 SDL3 渲染不属于此次验证范围。

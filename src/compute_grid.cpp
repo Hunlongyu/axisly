@@ -1,4 +1,4 @@
-#include <gridly/layout.hpp>
+#include <axisly/layout.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -15,7 +15,7 @@
 #include "detail/layout_workspace.hpp"
 #include "detail/measurement_validation.hpp"
 
-namespace gridly {
+namespace axisly {
 namespace {
 
 bool is_nonnegative_finite(Unit value) noexcept {
@@ -350,4 +350,4 @@ void compute_grid_into(const GridSpec& input_spec, std::span<const GridItem> inp
 }
 
 } // namespace detail
-} // namespace gridly
+} // namespace axisly

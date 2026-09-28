@@ -1,8 +1,8 @@
 #pragma once
-#include <gridly/measurement.hpp>
+#include <axisly/measurement.hpp>
 #include <cmath>
 
-namespace gridly::detail {
+namespace axisly::detail {
 inline bool valid_measurement(const MeasureResult& r) noexcept {
     const auto valid = [](Unit x) { return std::isfinite(x) && x >= 0; };
     return valid(r.minimum.width) && valid(r.minimum.height)

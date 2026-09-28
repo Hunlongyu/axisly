@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON -DGRIDLY_BUILD_BENCHMARKS=ON
+        run: cmake -S . -B build/ci -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=ON -DAXISLY_BUILD_BENCHMARKS=ON
       - name: Build
         run: cmake --build build/ci --config ${{ matrix.configuration }} --parallel
       - name: Test
@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure instrumented core and tests
-        run: cmake -S . -B build/sanitizers -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGRIDLY_ENABLE_SANITIZERS=ON -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON
+        run: cmake -S . -B build/sanitizers -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAXISLY_ENABLE_SANITIZERS=ON -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=ON
       - name: Build
         run: cmake --build build/sanitizers --parallel
       - name: Run regression and randomized cases
@@ -95,10 +95,28 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: gridly-playground-failure
+          name: axisly-playground-failure
           path: |
             build/playground-release/examples/playground/captures/
             build/playground-release/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+
+  geeyoou:
+    name: Windows GeeyoouUI showcase
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build host adapter and exercise all Showcase pages
+        shell: pwsh
+        run: ./scripts/build-msvc.ps1 -Preset geeyoou-release
+      - name: Preserve host captures and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: axisly-geeyoou-acceptance
+          path: |
+            build/geeyoou-release/examples/geeyoou/acceptance/
+            build/geeyoou-release/Testing/Temporary/LastTest.log
           if-no-files-found: ignore
 
   reference:
@@ -112,16 +130,16 @@ jobs:
       - name: Check Rust formatting
         run: cargo fmt --manifest-path tests/reference/taffy/Cargo.toml -- --check
       - name: Configure optional reference tooling
-        run: cmake -S . -B build/reference -DCMAKE_BUILD_TYPE=Release -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=OFF -DGRIDLY_BUILD_REFERENCE_TESTS=ON
+        run: cmake -S . -B build/reference -DCMAKE_BUILD_TYPE=Release -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=OFF -DAXISLY_BUILD_REFERENCE_TESTS=ON
       - name: Build reference tools
-        run: cmake --build build/reference --target gridly_reference_native gridly_taffy_reference --parallel
+        run: cmake --build build/reference --target axisly_reference_native axisly_taffy_reference --parallel
       - name: Compare and test the harness
         run: ctest --test-dir build/reference -L reference --output-on-failure --no-tests=error
       - name: Preserve failure fixtures and logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: gridly-reference-failure
+          name: axisly-reference-failure
           path: |
             build/reference/tests/reference/failures/
             build/reference/tests/reference/advanced-failures/

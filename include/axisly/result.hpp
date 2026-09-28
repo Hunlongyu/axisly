@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 
-#include <gridly/geometry.hpp>
-#include <gridly/grid.hpp>
+#include <axisly/geometry.hpp>
+#include <axisly/grid.hpp>
 
-namespace gridly {
+namespace axisly {
 
 enum class GridErrorCode : std::uint8_t {
     NotComputed,
@@ -61,4 +61,4 @@ struct GridResult {
     [[nodiscard]] bool succeeded() const noexcept { return error.code == GridErrorCode::None; }
 };
 
-} // namespace gridly
+} // namespace axisly

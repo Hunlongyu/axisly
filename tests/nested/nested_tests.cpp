@@ -11,8 +11,8 @@
 
 namespace {
 
-using namespace gridly;
-using namespace gridly::examples;
+using namespace axisly;
+using namespace axisly::examples;
 
 void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);

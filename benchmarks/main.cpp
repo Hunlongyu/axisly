@@ -13,7 +13,7 @@
 #include <string_view>
 
 namespace {
-using namespace gridly::bench;
+using namespace axisly::bench;
 struct Options {
     std::size_t iterations{100}, samples{11}, warmup{3};
     std::string name, output;
@@ -59,7 +59,7 @@ std::string compiler() {
 struct Sample { double us{}, checksum{}, measurements{}, layouts{}; AllocationStats memory; };
 Sample sample(const Case& c,std::size_t iterations) {
     Sample s;
-#ifdef GRIDLY_COUNT_ALLOCATIONS
+#ifdef AXISLY_COUNT_ALLOCATIONS
     begin_allocations();
 #endif
     const auto start = std::chrono::steady_clock::now();
@@ -71,13 +71,13 @@ Sample sample(const Case& c,std::size_t iterations) {
             s.layouts += static_cast<double>(observed.layouts);
         }
     } catch (...) {
-#ifdef GRIDLY_COUNT_ALLOCATIONS
+#ifdef AXISLY_COUNT_ALLOCATIONS
         (void)end_allocations();
 #endif
         throw;
     }
     const auto end = std::chrono::steady_clock::now();
-#ifdef GRIDLY_COUNT_ALLOCATIONS
+#ifdef AXISLY_COUNT_ALLOCATIONS
     s.memory = end_allocations();
     if (s.memory.live_allocations != 0 || s.memory.live_bytes != 0)
         throw std::runtime_error("Benchmark allocations escaped the measured call lifetime");
@@ -100,11 +100,11 @@ void report(std::ostream& out,const Case& c,const Options& options) {
             s.memory.allocations != first.memory.allocations || s.memory.requested_bytes != first.memory.requested_bytes ||
             s.memory.peak_live_bytes != first.memory.peak_live_bytes)
             throw std::runtime_error("Benchmark samples are not repeatable: "+c.name);
-    out << c.name << ',' << (c.nested ? "host_adapter" : "core") << ',' << GRIDLY_BENCH_VERSION << ',' << GRIDLY_BENCH_CONFIG << ',' << compiler()
+    out << c.name << ',' << (c.nested ? "host_adapter" : "core") << ',' << AXISLY_BENCH_VERSION << ',' << AXISLY_BENCH_CONFIG << ',' << compiler()
         << ',' << (c.nested ? 5 : c.items.size()) << ',' << (c.nested ? 2 : c.spec.columns.size())
         << ',' << (c.nested ? 1 : c.spec.rows.size()) << ',' << c.containers.size() << ',' << options.iterations
         << ',' << options.samples << ',' << options.warmup << ',';
-#ifdef GRIDLY_COUNT_ALLOCATIONS
+#ifdef AXISLY_COUNT_ALLOCATIONS
     out << "allocations,,," << static_cast<double>(first.memory.allocations)/static_cast<double>(options.iterations) << ','
         << static_cast<double>(first.memory.requested_bytes)/static_cast<double>(options.iterations) << ',' << first.memory.peak_live_bytes;
 #else
@@ -125,17 +125,17 @@ int main(int argc,char** argv) {
     try {
         const auto options = parse(argc,argv);
         if (options.help) {
-            std::cout << "gridly benchmark [--case NAME] [--iterations N] [--samples N] [--warmup N] [--output CSV]\n"
+            std::cout << "axisly benchmark [--case NAME] [--iterations N] [--samples N] [--warmup N] [--output CSV]\n"
                          "                 [--list] [--smoke] [--self-test (allocation executable only)]\n";
             return 0;
         }
         if (options.self_test) {
-#ifdef GRIDLY_COUNT_ALLOCATIONS
+#ifdef AXISLY_COUNT_ALLOCATIONS
             allocation_self_test();
             std::cout << "PASS allocation probe contracts\n";
             return 0;
 #else
-            throw std::invalid_argument("Use gridly_bench_allocations --self-test");
+            throw std::invalid_argument("Use axisly_bench_allocations --self-test");
 #endif
         }
         const auto cases = make_cases();

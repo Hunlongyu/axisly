@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 #include <yoga/Yoga.h>
 
 #include <algorithm>
@@ -15,8 +15,8 @@
 #include <vector>
 
 namespace {
-using gridly::Rect;
-using gridly::Size;
+using axisly::Rect;
+using axisly::Size;
 struct Track { char kind{}; float value{}; };
 struct Item { unsigned column{}, row{}, column_span{}, row_span{}; Size preferred; };
 struct Fixture {
@@ -85,25 +85,25 @@ public:
         return fingerprint(rect(0)) + fingerprint(rect(count/2)) + fingerprint(rect(count-1));
     }
 };
-class Gridly final : public Engine {
+class Axisly final : public Engine {
     const Fixture& fixture;
-    gridly::GridSpec spec;
-    std::vector<gridly::GridItem> items;
-    gridly::GridResult result;
-    std::unique_ptr<gridly::GridCache> cache;
-    const gridly::GridResult* output{};
-    static gridly::MeasureResult measure(gridly::ItemId id, const gridly::MeasureInput&, void* context) {
-        auto& self = *static_cast<Gridly*>(context);
+    axisly::GridSpec spec;
+    std::vector<axisly::GridItem> items;
+    axisly::GridResult result;
+    std::unique_ptr<axisly::GridCache> cache;
+    const axisly::GridResult* output{};
+    static axisly::MeasureResult measure(axisly::ItemId id, const axisly::MeasureInput&, void* context) {
+        auto& self = *static_cast<Axisly*>(context);
         ++self.measurements;
         const auto size = self.fixture.items[static_cast<std::size_t>(id)].preferred;
         return {size, size};
     }
 public:
-    explicit Gridly(const Fixture& f, bool cached = false) : fixture(f) {
+    explicit Axisly(const Fixture& f, bool cached = false) : fixture(f) {
         auto track = [](Track t) {
-            if (t.kind == 'F') return gridly::Track::fixed(t.value);
-            if (t.kind == 'W') return gridly::Track::weighted(t.value);
-            return gridly::Track::content();
+            if (t.kind == 'F') return axisly::Track::fixed(t.value);
+            if (t.kind == 'W') return axisly::Track::weighted(t.value);
+            return axisly::Track::content();
         };
         for (auto t : f.columns) spec.columns.push_back(track(t));
         for (auto t : f.rows) spec.rows.push_back(track(t));
@@ -113,9 +113,9 @@ public:
         for (const auto& item : f.items) items.push_back({.id = items.size(), .column = item.column, .row = item.row,
             .column_span = item.column_span, .row_span = item.row_span, .preferred_size = item.preferred});
         if (cached) {
-            cache = std::make_unique<gridly::GridCache>(std::move(spec), items);
+            cache = std::make_unique<axisly::GridCache>(std::move(spec), items);
             cache->set_measure(fixture.measured ? measure : nullptr, this);
-            std::vector<gridly::GridItem>{}.swap(items);
+            std::vector<axisly::GridItem>{}.swap(items);
         }
     }
     void calculate(Size size) override {
@@ -125,10 +125,10 @@ public:
             output = &call.result;
             require(call.measurement_count == measurements, "Cached callback count mismatch");
         } else {
-            result = gridly::compute_grid(spec,items,size,fixture.measured ? measure : nullptr,this);
+            result = axisly::compute_grid(spec,items,size,fixture.measured ? measure : nullptr,this);
             output = &result;
         }
-        require(output->succeeded(), "gridly failed");
+        require(output->succeeded(), "axisly failed");
     }
     Rect rect(std::size_t index) const override { return output->items[index].rect; }
     // Cached output belongs to the cache. Its replacement on a miss is timed.
@@ -204,15 +204,15 @@ public:
 }
 int main(int argc,char** argv) {
     try {
-        require(argc == 6, "Usage: native gridly|gridly_cached|yoga fixture verify|cold|resize|same iterations samples");
+        require(argc == 6, "Usage: native axisly|axisly_cached|yoga fixture verify|cold|resize|same iterations samples");
         const std::string engine(argv[1]), mode(argv[3]);
-        require(engine == "gridly" || engine == "gridly_cached" || engine == "yoga", "Unknown engine");
+        require(engine == "axisly" || engine == "axisly_cached" || engine == "yoga", "Unknown engine");
         require(mode == "verify" || mode == "cold" || mode == "resize" || mode == "same", "Unknown mode");
         const auto f = read(argv[2]);
         const auto iterations = positive(argv[4]), samples = positive(argv[5]);
         auto create = [&]() -> std::unique_ptr<Engine> {
-            if (engine == "gridly") return std::make_unique<Gridly>(f);
-            if (engine == "gridly_cached") return std::make_unique<Gridly>(f, true);
+            if (engine == "axisly") return std::make_unique<Axisly>(f);
+            if (engine == "axisly_cached") return std::make_unique<Axisly>(f, true);
             return std::make_unique<Yoga>(f);
         };
         std::cout << std::setprecision(12);
@@ -224,7 +224,7 @@ int main(int argc,char** argv) {
                 if (frame >= f.sizes.size()) instance = create();
                 instance->release_result();
                 instance->calculate(f.sizes[frame%f.sizes.size()]);
-                if (engine == "gridly_cached") {
+                if (engine == "axisly_cached") {
                     // Validate every retained rectangle on hits as well as all
                     // sizes/fresh cache instances; this is outside all timers.
                     instance->calculate(f.sizes[frame%f.sizes.size()]);
@@ -265,8 +265,8 @@ int main(int argc,char** argv) {
             checksums.push_back(checksum);
             counts.push_back(measurements/static_cast<double>(iterations));
         }
-        std::cout << "{\"build\":\"" << GRIDLY_BENCH_CONFIG << "\",\"gridly_version\":\""
-                  << GRIDLY_BENCH_VERSION << "\",\"samples_us\":[";
+        std::cout << "{\"build\":\"" << AXISLY_BENCH_CONFIG << "\",\"axisly_version\":\""
+                  << AXISLY_BENCH_VERSION << "\",\"samples_us\":[";
         auto values = [](const auto& items) { for (std::size_t i=0;i<items.size();++i) { if(i) std::cout << ','; std::cout << items[i]; } };
         values(times); std::cout << "],\"checksums\":["; values(checksums);
         std::cout << "],\"measurements\":["; values(counts); std::cout << "]}\n";

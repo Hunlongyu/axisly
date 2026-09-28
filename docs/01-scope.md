@@ -1,8 +1,12 @@
 # 01 — Scope and Product Definition
 
+> 此文档记录最初的 Grid 专项范围。当前产品已定名 Axisly，目标扩展为
+> 原生 UI 通用布局；Flexbox 的新范围见 [实施计划](27-native-ui-layout-plan.md)
+> 和 [规范矩阵](28-flexbox-conformance-matrix.md)。下文的 V1 限制是历史决策。
+
 ## Product definition
 
-gridly is a standalone native C++ layout algorithm library.
+axisly is a standalone native C++ layout algorithm library.
 
 Its only responsibility is:
 

@@ -13,7 +13,7 @@ struct Header { void* base; std::size_t requested; std::uint64_t epoch; };
 struct Counter {
     bool enabled{};
     std::uint64_t epoch{};
-    gridly::bench::AllocationStats stats;
+    axisly::bench::AllocationStats stats;
 };
 thread_local Counter counter;
 std::atomic<std::uint64_t> next_epoch{};
@@ -77,7 +77,7 @@ void* operator new[](std::size_t size,std::align_val_t alignment,const std::noth
 void operator delete(void* pointer,std::align_val_t,const std::nothrow_t&) noexcept { release(pointer); }
 void operator delete[](void* pointer,std::align_val_t,const std::nothrow_t&) noexcept { release(pointer); }
 
-namespace gridly::bench {
+namespace axisly::bench {
 void begin_allocations() {
     if (counter.enabled) throw std::logic_error("Allocation probes cannot nest");
     counter.stats = {};
@@ -113,4 +113,4 @@ void allocation_self_test() {
     if (zero.allocations != 1 || zero.requested_bytes != 0 || zero.live_allocations != 0)
         throw std::runtime_error("Zero-sized allocation contract failed");
 }
-} // namespace gridly::bench
+} // namespace axisly::bench

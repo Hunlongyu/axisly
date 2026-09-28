@@ -5,15 +5,15 @@
 #include <utility>
 #include <vector>
 
-#include <gridly/grid.hpp>
-#include <gridly/measurement.hpp>
-#include <gridly/result.hpp>
+#include <axisly/grid.hpp>
+#include <axisly/measurement.hpp>
+#include <axisly/result.hpp>
 
 #include "span_resolution.hpp"
 #include "track_sizing.hpp"
 #include "placement.hpp"
 
-namespace gridly::detail {
+namespace axisly::detail {
 
 // Per-call for the stateless API; owned by one GridCache for repeated layouts.
 // No process-wide/thread-local storage and no caller-owned input references.
@@ -45,4 +45,4 @@ void compute_grid_into(const GridSpec& spec, std::span<const GridItem> items, Si
                        MeasureCallback measure, void* user_data, LayoutWorkspace& workspace, GridResult& result,
                        bool retain_scratch);
 
-} // namespace gridly::detail
+} // namespace axisly::detail

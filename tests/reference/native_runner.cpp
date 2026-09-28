@@ -1,5 +1,5 @@
-// Development-only whitespace protocol. No JSON/parser dependency in gridly.
-#include <gridly/gridly.hpp>
+// Development-only whitespace protocol. No JSON/parser dependency in axisly.
+#include <axisly/axisly.hpp>
 
 #include <charconv>
 #include <cmath>
@@ -15,7 +15,7 @@
 #include <vector>
 
 namespace {
-using namespace gridly;
+using namespace axisly;
 
 std::string token() {
     std::string value;
@@ -130,16 +130,16 @@ int main() {
     try {
         std::cin.imbue(std::locale::classic());
         std::cout.imbue(std::locale::classic());
-        std::cout << std::setprecision(std::numeric_limits<gridly::Unit>::max_digits10);
+        std::cout << std::setprecision(std::numeric_limits<axisly::Unit>::max_digits10);
         const auto protocol = token();
-        if (protocol != "GRIDLY_REFERENCE_V1" && protocol != "GRIDLY_REFERENCE_V2") throw std::runtime_error("Unsupported protocol version");
+        if (protocol != "AXISLY_REFERENCE_V1" && protocol != "AXISLY_REFERENCE_V2") throw std::runtime_error("Unsupported protocol version");
         const auto cases = count(10000, false);
-        for (; index < cases; ++index) run_case(index, protocol == "GRIDLY_REFERENCE_V2");
+        for (; index < cases; ++index) run_case(index, protocol == "AXISLY_REFERENCE_V2");
         std::string extra;
         if (std::cin >> extra) throw std::runtime_error("Unexpected trailing input");
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "gridly reference case " << index << ": " << error.what() << '\n';
+        std::cerr << "axisly reference case " << index << ": " << error.what() << '\n';
         return 1;
     }
 }

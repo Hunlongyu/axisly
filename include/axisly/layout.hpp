@@ -5,11 +5,11 @@
 #include <span>
 #include <type_traits>
 
-#include <gridly/grid.hpp>
-#include <gridly/measurement.hpp>
-#include <gridly/result.hpp>
+#include <axisly/grid.hpp>
+#include <axisly/measurement.hpp>
+#include <axisly/result.hpp>
 
-namespace gridly {
+namespace axisly {
 
 // Fixed/weighted/content/range/percentage tracks, spans, margins and alignment.
 // Optional automatic placement expands permitted implicit tracks first.
@@ -58,4 +58,4 @@ template<class Measure>
         }, std::addressof(invoke));
 }
 
-} // namespace gridly
+} // namespace axisly

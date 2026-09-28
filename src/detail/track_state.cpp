@@ -4,7 +4,7 @@
 #include <limits>
 #include <variant>
 
-namespace gridly::detail {
+namespace axisly::detail {
 
 TrackState initialize_track(const Track& track, double percentage_basis) noexcept {
     constexpr double unbounded = std::numeric_limits<double>::infinity();
@@ -40,4 +40,4 @@ TrackState initialize_track(const Track& track, double percentage_basis) noexcep
             fixed_minimum == nullptr && percent_minimum == nullptr, weighted == nullptr};
 }
 
-} // namespace gridly::detail
+} // namespace axisly::detail

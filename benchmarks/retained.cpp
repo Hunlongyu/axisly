@@ -1,5 +1,5 @@
 // Development-only retained-tree benchmark. No renderer or window is created.
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <array>
@@ -24,7 +24,7 @@
 #endif
 
 namespace {
-using namespace gridly;
+using namespace axisly;
 constexpr std::size_t group_size = 25;
 constexpr ItemId root_item = 1'000'000;
 void require(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
@@ -278,7 +278,7 @@ void report(std::ostream& out, std::ostream* raw, std::size_t count, TextMetrics
         const auto p95 = times[static_cast<std::size_t>(std::ceil(static_cast<double>(times.size()) * .95)) - 1];
         const auto& first = results[engine][0];
         out << metrics.name() << ',' << mode << ',' << count << ',' << count / group_size << ','
-            << (engine ? "full_invalidation" : "targeted") << ',' << GRIDLY_BENCH_CONFIG << ',' << GRIDLY_BENCH_VERSION << ','
+            << (engine ? "full_invalidation" : "targeted") << ',' << AXISLY_BENCH_CONFIG << ',' << AXISLY_BENCH_VERSION << ','
             << config.iterations << ',' << config.samples << ',' << median << ',' << p95 << ','
             << first.measurements << ',' << first.layouts << ',' << first.checksum << '\n';
     }

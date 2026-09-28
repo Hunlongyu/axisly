@@ -3,7 +3,7 @@
 Implemented in M9. Build instructions and validation details are in
 [M9 SDL3 playground](17-sdl3-playground.md).
 
-SDL3 is a consumer of gridly. The installed core remains C++20 / STL-only;
+SDL3 is a consumer of axisly. The installed core remains C++20 / STL-only;
 neither SDL nor font types enter its public headers or link interface.
 
 ## Scenes

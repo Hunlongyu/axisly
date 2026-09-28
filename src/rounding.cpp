@@ -1,10 +1,10 @@
-#include <gridly/rounding.hpp>
+#include <axisly/rounding.hpp>
 #include "detail/rounding.hpp"
 
 #include <cmath>
 #include <limits>
 
-namespace gridly::detail {
+namespace axisly::detail {
 bool valid_rounding(PixelRounding r) noexcept {
     return std::isfinite(r.scale) && r.scale > 0
         && std::isfinite(r.origin_x) && std::isfinite(r.origin_y);
@@ -43,7 +43,7 @@ bool snap_size(Size& size, PixelRounding r) noexcept {
 }
 }
 
-namespace gridly {
+namespace axisly {
 GridResult round_layout(GridResult result, PixelRounding rounding) {
     if (!result.succeeded()) return result;
     const auto fail = [&](GridErrorCode code) {

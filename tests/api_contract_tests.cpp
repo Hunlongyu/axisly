@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <array>
 #include <cstdint>
@@ -14,7 +14,7 @@
 
 namespace {
 
-using namespace gridly;
+using namespace axisly;
 
 // Checks deliberately remain active in Release builds.
 void require(bool condition, const char* message) {

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gridly {
+namespace axisly {
 
 using Unit = float;
 
@@ -29,4 +29,4 @@ struct Insets {
     bool operator==(const Insets&) const = default;
 };
 
-} // namespace gridly
+} // namespace axisly

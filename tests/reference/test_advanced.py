@@ -101,7 +101,7 @@ class AdvancedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)
             source = a.compare.save_failure(folder / "source", [c], {})
-            args = ["--gridly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source), "--failure-dir", str(folder / "fail")]
+            args = ["--axisly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source), "--failure-dir", str(folder / "fail")]
             with patch("advanced.run_tool", side_effect=[[valid], [bad]]), redirect_stderr(io.StringIO()):
                 self.assertEqual(a.main(args), 1)
             failure = folder / "fail" / "failure.json"
@@ -114,13 +114,13 @@ class AdvancedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             source = a.compare.save_failure(Path(temporary) / "source", [FIXTURES[5]], {})
             with patch("advanced.run_tool", side_effect=ValueError("runner failure")), redirect_stderr(io.StringIO()):
-                self.assertEqual(a.main(["--gridly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source),
+                self.assertEqual(a.main(["--axisly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source),
                                          "--failure-dir", str(Path(temporary) / "fail")]), 1)
 
     def test_both_runners_reject_bad_v2(self):
         valid = a.protocol([FIXTURES[5]])
         for tool in TOOLS:
-            for text in ("GRIDLY_REFERENCE_V2 0", "GRIDLY_REFERENCE_V2 1", valid + "extra", valid.replace("P 0.25", "P nan")):
+            for text in ("AXISLY_REFERENCE_V2 0", "AXISLY_REFERENCE_V2 1", valid + "extra", valid.replace("P 0.25", "P nan")):
                 result = subprocess.run([str(tool)], input=text, text=True, encoding="utf-8", capture_output=True,
                                         timeout=10, creationflags=subprocess.CREATE_NO_WINDOW if a.compare.os.name == "nt" else 0)
                 self.assertNotEqual(result.returncode, 0)
@@ -129,8 +129,8 @@ class AdvancedTests(unittest.TestCase):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gridly", type=Path, required=True)
+    parser.add_argument("--axisly", type=Path, required=True)
     parser.add_argument("--taffy", type=Path, required=True)
     args = parser.parse_args()
-    TOOLS = [args.gridly, args.taffy]
+    TOOLS = [args.axisly, args.taffy]
     unittest.main(argv=[__file__], verbosity=2)

@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 namespace {
 
 // Synthetic host metrics, independent of fonts or a UI framework.
-gridly::MeasureResult measure(gridly::ItemId id, const gridly::MeasureInput& input, void*) {
+axisly::MeasureResult measure(axisly::ItemId id, const axisly::MeasureInput& input, void*) {
     if (id == 1) return {{60, 24}, {240, 24}};
     const float lines = input.known_width && *input.known_width > 0
         ? std::max(1.0f, std::ceil(400.0f / *input.known_width)) : 1.0f;
@@ -20,8 +20,8 @@ gridly::MeasureResult measure(gridly::ItemId id, const gridly::MeasureInput& inp
 } // namespace
 
 int main() {
-    const gridly::examples::ConsoleSession console_session;
-    using namespace gridly;
+    const axisly::examples::ConsoleSession console_session;
+    using namespace axisly;
     const GridSpec spec{
         .columns = {Track::range(Track::fixed(80), Track::fixed(160)),
                     Track::range(Track::content(), Track::weighted())},
@@ -32,7 +32,7 @@ int main() {
         GridItem{.id = 1, .vertical_alignment = VerticalAlignment::Center},
         GridItem{.id = 2, .column = 1, .vertical_alignment = VerticalAlignment::Start}
     };
-    std::cout << "gridly M6: bounded Content and content-minimum Weighted ranges\n";
+    std::cout << "axisly M6: bounded Content and content-minimum Weighted ranges\n";
     for (const Unit width : {600.0f, 300.0f, 180.0f}) {
         const auto result = compute_grid(spec, items, {width, 300}, measure);
         if (!result.succeeded()) {

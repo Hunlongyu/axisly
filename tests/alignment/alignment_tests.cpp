@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <array>
 #include <cmath>
@@ -12,7 +12,7 @@
 
 namespace {
 
-using namespace gridly;
+using namespace axisly;
 
 constexpr std::array horizontal_modes{HorizontalAlignment::Start, HorizontalAlignment::Center,
                                       HorizontalAlignment::End, HorizontalAlignment::Stretch};

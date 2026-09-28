@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace gridly::playground {
+namespace axisly::playground {
 namespace {
 std::string utf8(const std::filesystem::path& path) {
     const auto bytes = path.u8string();
@@ -17,9 +17,9 @@ std::filesystem::path from_utf8(const char* value) {
     return std::filesystem::path(std::u8string(bytes.begin(), bytes.end()));
 }
 std::string find_font() {
-    if (const char* specified = SDL_getenv("GRIDLY_FONT"); specified && *specified) {
+    if (const char* specified = SDL_getenv("AXISLY_FONT"); specified && *specified) {
         if (!std::filesystem::is_regular_file(from_utf8(specified)))
-            throw std::runtime_error("GRIDLY_FONT does not name a readable font file: " + std::string(specified));
+            throw std::runtime_error("AXISLY_FONT does not name a readable font file: " + std::string(specified));
         return specified;
     }
     std::vector<std::filesystem::path> roots;
@@ -42,7 +42,7 @@ std::string find_font() {
                             "/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Monaco.ttf"}) {
         if (std::filesystem::is_regular_file(path)) return path;
     }
-    throw std::runtime_error("No monospace font found. Set GRIDLY_FONT to a .ttf or .otf font file.");
+    throw std::runtime_error("No monospace font found. Set AXISLY_FONT to a .ttf or .otf font file.");
 }
 void require(bool ok, const char* action) {
     if (!ok) throw std::runtime_error(std::string(action) + ": " + SDL_GetError());
@@ -114,4 +114,4 @@ void TextPainter::draw(float x, float y, std::string_view value, SDL_Color color
     const SDL_FRect destination{x,y,label.width,label.height};
     require(SDL_RenderTexture(renderer_,label.texture.get(),nullptr,&destination),"Draw text");
 }
-} // namespace gridly::playground
+} // namespace axisly::playground

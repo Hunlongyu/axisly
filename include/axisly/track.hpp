@@ -4,9 +4,9 @@
 #include <optional>
 #include <variant>
 
-#include <gridly/geometry.hpp>
+#include <axisly/geometry.hpp>
 
-namespace gridly {
+namespace axisly {
 
 enum class TrackKind : std::uint8_t {
     Fixed,
@@ -78,4 +78,4 @@ private:
     Definition definition_;
 };
 
-} // namespace gridly
+} // namespace axisly

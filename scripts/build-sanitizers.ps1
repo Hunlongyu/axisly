@@ -1,6 +1,7 @@
 param(
     [ValidateSet('Clang', 'MSVC')]
-    [string]$Compiler = 'Clang'
+    [string]$Compiler = 'Clang',
+    [switch]$Geeyoou
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,6 +18,7 @@ $compilerPath = 'cl'
 $savedPath = $env:PATH
 $savedAsan = $env:ASAN_OPTIONS
 $output = 'build/asan-' + $Compiler.ToLowerInvariant()
+if ($Geeyoou) { $output = 'build/geeyoou-asan-' + $Compiler.ToLowerInvariant() }
 try {
     if ($Compiler -eq 'Clang') {
         $compilerPath = 'C:/Program Files/LLVM/bin/clang-cl.exe'
@@ -33,8 +35,19 @@ try {
     Push-Location $projectRoot
     try {
         $configure = 'call "' + $vcvars + '" >nul && "' + $cmake + '" -S . -B ' + $output +
-            ' -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGRIDLY_ENABLE_SANITIZERS=ON -DGRIDLY_BUILD_TESTS=ON -DGRIDLY_BUILD_EXAMPLES=ON' +
+            ' -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAXISLY_ENABLE_SANITIZERS=ON -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=ON' +
             ' "-DCMAKE_CXX_COMPILER=' + $compilerPath + '" "-DCMAKE_MAKE_PROGRAM=' + $ninja + '"'
+        if ($Geeyoou) {
+            $configure += ' -DAXISLY_BUILD_GEEYOOU_SHOWCASE=ON'
+            # Reuse fetched, pinned source archives when available; each build
+            # still compiles to its own binary tree and writes its own overlay.
+            foreach ($dependency in @('geeyoou', 'blend2d', 'asmjit')) {
+                $sourcePath = Join-Path $projectRoot "build/geeyoou-release/_deps/$dependency-src"
+                if (Test-Path -LiteralPath $sourcePath) {
+                    $configure += ' "-DFETCHCONTENT_SOURCE_DIR_' + $dependency.ToUpperInvariant() + '=' + $sourcePath + '"'
+                }
+            }
+        }
         & $env:ComSpec /d /s /c $configure
         if ($LASTEXITCODE) { throw 'Sanitizer configuration failed.' }
         $build = 'call "' + $vcvars + '" >nul && "' + $cmake + '" --build ' + $output

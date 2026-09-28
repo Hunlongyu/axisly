@@ -5,7 +5,7 @@
 #include <map>
 #include <utility>
 
-namespace gridly::detail {
+namespace axisly::detail {
 namespace {
 using Index = std::uint64_t;
 using Interval = std::pair<Index, Index>;

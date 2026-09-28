@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <array>
@@ -16,7 +16,7 @@
 
 namespace {
 
-using namespace gridly;
+using namespace axisly;
 
 void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);

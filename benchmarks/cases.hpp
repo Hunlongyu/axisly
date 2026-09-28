@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include "../examples/nested_grid_adapter.hpp"
 
-namespace gridly::bench {
+namespace axisly::bench {
 struct NestedScene {
     examples::NestedGrid leaf;
     examples::NestedGrid panel;
@@ -34,4 +34,4 @@ struct Observation {
 void validate(const Case& scenario);
 // Includes calculation, O(1) result consumption and result destruction.
 [[nodiscard]] Observation run(const Case& scenario, std::size_t iteration);
-} // namespace gridly::bench
+} // namespace axisly::bench

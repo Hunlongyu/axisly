@@ -8,15 +8,15 @@ Windows 推荐：
 
 ```powershell
 ./scripts/build-msvc.ps1 -Preset playground-release
-./build/playground-release/gridly_playground.exe
+./build/playground-release/axisly_playground.exe
 ```
 
 脚本通过 `vswhere -prerelease` 找到当前 MSVC x64 与 Visual Studio CMake/Ninja。
 Debug 替换为 `playground-debug`。普通 `debug` / `release` 预设不启用图形依赖。
 其他平台可按 README 运行 CMake 预设。
 
-独立启用 `GRIDLY_BUILD_PLAYGROUND=ON` 默认使用 `find_package` 查找 SDL3 3.4+、
-SDL_ttf 3.2+；`GRIDLY_FETCH_SDL3=ON` 才下载下表中的源码，校验 SHA-256 后构建。
+独立启用 `AXISLY_BUILD_PLAYGROUND=ON` 默认使用 `find_package` 查找 SDL3 3.4+、
+SDL_ttf 3.2+；`AXISLY_FETCH_SDL3=ON` 才下载下表中的源码，校验 SHA-256 后构建。
 这个选项同时管理演示的图形和字体依赖。
 
 | 依赖 | 固定来源 | SHA-256 |
@@ -26,7 +26,7 @@ SDL_ttf 3.2+；`GRIDLY_FETCH_SDL3=ON` 才下载下表中的源码，校验 SHA-2
 | FreeType | SDL_ttf 3.2.2 引用的 `9973564cfa63763a3e4ac67c09147899539b1e07` | `026a05a49d114a1235d2926f4c03a9330e4b1a6efe7c217ec9607904c32907d4` |
 
 下载构建使用静态库，不要求额外 SDL DLL。已有的动态开发包会复制 CMake 声明的运行时 DLL；
-系统包若有未声明的动态依赖，需要由该包的运行环境提供。图形目标不会安装到 gridly 核心包中。
+系统包若有未声明的动态依赖，需要由该包的运行环境提供。图形目标不会安装到 axisly 核心包中。
 
 本机某套 CMake 的 TLS 根证书配置不完整。遇到证书验证失败时，应修正证书配置或使用
 已校验的本地源码，不关闭 TLS 校验。例如 SDL 源码准备好后：
@@ -47,8 +47,8 @@ Linux 支持 DejaVu Sans Mono / Liberation Mono，macOS 支持 Menlo / Monaco。
 指定其他本机字体：
 
 ```powershell
-$env:GRIDLY_FONT = "$env:WINDIR/Fonts/consola.ttf"
-./build/playground-release/gridly_playground.exe
+$env:AXISLY_FONT = "$env:WINDIR/Fonts/consola.ttf"
+./build/playground-release/axisly_playground.exe
 ```
 
 字体文件不会复制进仓库或分发物；找不到字体或显式路径无效时显示错误。
@@ -82,15 +82,15 @@ $env:GRIDLY_FONT = "$env:WINDIR/Fonts/consola.ttf"
 
 ## 验证范围
 
-- `gridly.playground.scenes`：十场景乘五种容器，检查有限非负几何、重复计算一致性，
+- `axisly.playground.scenes`：十场景乘五种容器，检查有限非负几何、重复计算一致性，
   并断言权重比例、跨格间隙、16 种对齐、Content 换行、Range 上下限和嵌套坐标。
-- `gridly.playground.runtime`：隐藏 dummy 窗口、software 渲染器，遍历十场景乘三种
+- `axisly.playground.runtime`：隐藏 dummy 窗口、software 渲染器，遍历十场景乘三种
   窗口大小（1280×840、960×720、1600×1000），检查直接/循环导航、键盘检查、鼠标命中、
   图层、窄画布溢出、复位、Esc、实际事件循环等待与退出；保存 PNG。
 - 原生窗口渲染可单独运行：
 
 ```powershell
-./build/playground-release/gridly_playground.exe --smoke-test ./build/native-captures
+./build/playground-release/axisly_playground.exe --smoke-test ./build/native-captures
 ```
 
 CTest 设置 dummy/software 环境；上述直接运行在未设置驱动覆盖时使用本机窗口后端，

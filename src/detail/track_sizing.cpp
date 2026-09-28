@@ -5,7 +5,7 @@
 #include <limits>
 #include <variant>
 
-namespace gridly::detail {
+namespace axisly::detail {
 namespace {
 
 bool fits_unit(double value) noexcept {
@@ -200,4 +200,4 @@ bool resolve_tracks(
     return true;
 }
 
-} // namespace gridly::detail
+} // namespace axisly::detail

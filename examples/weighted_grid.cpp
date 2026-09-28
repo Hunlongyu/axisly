@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <iostream>
 #include <vector>
@@ -6,8 +6,8 @@
 #include "console_session.hpp"
 
 int main() {
-    const gridly::examples::ConsoleSession console_session;
-    using namespace gridly;
+    const axisly::examples::ConsoleSession console_session;
+    using namespace axisly;
     const GridSpec spec{
         .columns = {Track::fixed(180), Track::weighted(1), Track::weighted(2)},
         .rows = {Track::fixed(80), Track::weighted()},
@@ -26,7 +26,7 @@ int main() {
             std::cerr << result.error.message << '\n';
             return 1;
         }
-        std::cout << "gridly M2: available " << width << " x 360, occupied "
+        std::cout << "axisly M2: available " << width << " x 360, occupied "
                   << result.size.width << " x " << result.size.height << '\n';
         for (const auto& item : result.items) {
             std::cout << "item " << item.id << ": x=" << item.rect.x << " y=" << item.rect.y

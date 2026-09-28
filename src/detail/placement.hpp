@@ -1,8 +1,8 @@
 #pragma once
-#include <gridly/result.hpp>
+#include <axisly/result.hpp>
 #include <span>
 
-namespace gridly::detail {
+namespace axisly::detail {
 struct PlacementWorkspace {
     GridSpec spec;
     std::vector<GridItem> items;

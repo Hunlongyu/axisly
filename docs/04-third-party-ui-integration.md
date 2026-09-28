@@ -2,7 +2,7 @@
 
 ## Core principle
 
-A third-party UI library should not need to inherit from gridly classes.
+A third-party UI library should not need to inherit from axisly classes.
 
 Integration is an **adapter**, not a framework dependency.
 
@@ -45,7 +45,7 @@ for (const auto& item : result.items) {
 }
 ```
 
-This means gridly never needs to know whether the item is a `QWidget*`, `HWND`, game entity, or custom widget.
+This means axisly never needs to know whether the item is a `QWidget*`, `HWND`, game entity, or custom widget.
 
 ---
 
@@ -148,7 +148,7 @@ for (const auto& layout : result.items) {
 
 # Recommended optional C++ convenience layer
 
-Implemented in M7 (`0.0.8`) in `<gridly/layout.hpp>` and available through the umbrella header.
+Implemented in M7 (`0.0.8`) in `<axisly/layout.hpp>` and available through the umbrella header.
 The low-level callback API remains available with its original signature.
 
 The convenience overload accepts a callable returning `MeasureResult` from the two arguments:
@@ -180,7 +180,7 @@ auto result = compute_grid(
 
 ---
 
-# Integration rule: keep widget lifetime outside gridly
+# Integration rule: keep widget lifetime outside axisly
 
 Do not store:
 
@@ -224,12 +224,12 @@ When the parent measures the child-grid item:
 2. map its occupied sizes into minimum/preferred measurements using an explicit host policy
 3. after the parent resolves the final child rectangle, recompute/layout the child grid with that exact allocated size
 
-This keeps nesting outside the core algorithm and prevents gridly from becoming a full UI tree framework.
+This keeps nesting outside the core algorithm and prevents axisly from becoming a full UI tree framework.
 
 M7 supplies a tested reference implementation in
 [`examples/nested_grid_adapter.hpp`](../examples/nested_grid_adapter.hpp), with a runnable
 [`nested_grid.cpp`](../examples/nested_grid.cpp) example. This adapter is source-only;
-it is not an installed gridly API. Its finite-space probing policy, full-path identities,
+it is not an installed axisly API. Its finite-space probing policy, full-path identities,
 ownership rules, error propagation, recursion/work limits and coordinate translation are
 specified in [M7 integration semantics](15-nested-grid-integration.md).
 

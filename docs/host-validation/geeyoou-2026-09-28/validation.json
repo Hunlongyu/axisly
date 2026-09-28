@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-28",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "compiler": "MSVC 19.51.36257.0",
+  "upstream_commit": "4cadaf6479b663ce6633e59bfbac28332de495fc",
+  "base_commit": "fd446b7f4011d13049ae4f3f51180d22e9339df6",
+  "working_tree_changes": true,
+  "executable": "build/geeyoou-release/bin/gridly_geeyoou_showcase.exe",
+  "executable_sha256": "8bbf40ea8e8e18f18f346acb769a95684d662ea992c9963e31412f507d30510e",
+  "adapter_scenarios": 16,
+  "validation": {
+    "release": {
+      "full_regression_passed": 269,
+      "final_host_tests_passed": 2,
+      "full_log_sha256": "05e8181d4a25bc6f4c174df9bd81d9121ec1cc57ccdb3c7ffe9037d8f70ee20b",
+      "final_log_sha256": "f0156882f289a7cf22626b5b9cb794bc132dc635453c322e44265ac7a24b8ba4"
+    },
+    "debug": {
+      "full_regression_passed": 269,
+      "final_host_tests_passed": 2,
+      "full_log_sha256": "740b3e9735469c9e41e62dfcfa4d88fd36d9c81031f39576ad41024611ae0350",
+      "final_log_sha256": "16c853d22c4bbee1b3b862655b2c50a945385049429a483ddbd325ea31350ceb"
+    },
+    "asan-msvc": {
+      "full_regression_passed": 269,
+      "final_host_tests_passed": 2,
+      "full_log_sha256": "e832693ded6722697fab51247652842d0459996c1c5324bf75344b6c185d8c34",
+      "final_log_sha256": "6ff5c34c4c52a8cc74677a36efea82a3a5079250acb3fbc1a9ff8594989b8499"
+    }
+  },
+  "normal_startup": {
+    "startup_mode": "normal_without_arguments",
+    "observation_seconds": 3,
+    "responsive": true,
+    "visible": false,
+    "close_message": "WM_CLOSE",
+    "exit_code": 0
+  },
+  "installation": {
+    "headers": 11,
+    "files": 16,
+    "host_dependencies_exported": false
+  },
+  "native_dpi_scale": 1,
+  "synthetic_rounding_scales": [
+    1,
+    1.25,
+    1.5,
+    2
+  ],
+  "cross_monitor_dpi": "not tested",
+  "remote_ci": "workflow added; not run for this working tree"
+}

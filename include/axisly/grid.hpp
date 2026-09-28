@@ -6,10 +6,10 @@
 #include <optional>
 #include <vector>
 
-#include <gridly/geometry.hpp>
-#include <gridly/track.hpp>
+#include <axisly/geometry.hpp>
+#include <axisly/track.hpp>
 
-namespace gridly {
+namespace axisly {
 
 using ItemId = std::uint64_t;
 
@@ -68,4 +68,4 @@ struct GridItem {
     bool operator==(const GridItem&) const = default;
 };
 
-} // namespace gridly
+} // namespace axisly

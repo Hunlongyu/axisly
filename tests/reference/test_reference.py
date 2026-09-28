@@ -163,7 +163,7 @@ class ReferenceTests(unittest.TestCase):
             source = compare.save_failure(directory / "input", [simple()], {})
             bad = result()
             bad["size"][0] += 1
-            args = ["--gridly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source),
+            args = ["--axisly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source),
                     "--failure-dir", str(directory / "failure")]
             with patch("compare.run_tool", side_effect=[[result()], [bad]]), redirect_stderr(io.StringIO()):
                 self.assertEqual(compare.main(args), 1)
@@ -178,7 +178,7 @@ class ReferenceTests(unittest.TestCase):
             directory = Path(folder)
             source = compare.save_failure(directory / "input", [simple()], {})
             with patch("compare.run_tool", side_effect=ValueError("simulated protocol failure")), redirect_stderr(io.StringIO()):
-                code = compare.main(["--gridly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source),
+                code = compare.main(["--axisly", str(TOOLS[0]), "--taffy", str(TOOLS[1]), "--replay", str(source),
                                      "--failure-dir", str(directory / "failure")])
             self.assertEqual(code, 1)
             self.assertEqual(compare.load_cases(directory / "failure" / "failure.json"), [simple()])
@@ -191,8 +191,8 @@ class ReferenceTests(unittest.TestCase):
     def test_both_runners_reject_bad_protocol(self):
         valid = compare.protocol([simple()])
         for tool in TOOLS:
-            for text in ("wrong 1", "GRIDLY_REFERENCE_V1 0", "GRIDLY_REFERENCE_V1 10001", valid + "extra",
-                         "GRIDLY_REFERENCE_V1 1\n", valid.replace("F 100", "F nan"), valid.replace("F 100", "F -1")):
+            for text in ("wrong 1", "AXISLY_REFERENCE_V1 0", "AXISLY_REFERENCE_V1 10001", valid + "extra",
+                         "AXISLY_REFERENCE_V1 1\n", valid.replace("F 100", "F nan"), valid.replace("F 100", "F -1")):
                 with self.subTest(tool=tool.name, text=text[:30]):
                     completed = subprocess.run([str(tool)], input=text, text=True, encoding="utf-8", capture_output=True,
                                                timeout=10, creationflags=subprocess.CREATE_NO_WINDOW if compare.os.name == "nt" else 0)
@@ -202,8 +202,8 @@ class ReferenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gridly", type=Path, required=True)
+    parser.add_argument("--axisly", type=Path, required=True)
     parser.add_argument("--taffy", type=Path, required=True)
     args = parser.parse_args()
-    TOOLS = [args.gridly, args.taffy]
+    TOOLS = [args.axisly, args.taffy]
     unittest.main(argv=[__file__], verbosity=2)

@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 #include "../../examples/nested_grid_adapter.hpp"
 
 #include <array>
@@ -10,7 +10,7 @@
 #include <string_view>
 
 namespace {
-using namespace gridly;
+using namespace axisly;
 void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
 void near(Unit a, Unit b) { check(std::abs(a - b) < .002f, "Unexpected geometry"); }
 template<class E, class F> void throws(F f) {
@@ -74,7 +74,7 @@ void targeted_dirty() {
     check(tree.compute(root, {200, 100}).measurement_count == 4, "Grid content invalidation did not reach descendants");
 }
 void nested_reference() {
-    using namespace gridly::examples;
+    using namespace axisly::examples;
     GridTree tree; Text text;
     auto root_spec = fixed(); root_spec.columns = {Track::weighted()}; root_spec.rows = {Track::content()}; root_spec.padding = {3, 4, 5, 6};
     auto child_spec = content(); child_spec.columns = {Track::weighted()}; child_spec.padding = {2, 3, 4, 5};

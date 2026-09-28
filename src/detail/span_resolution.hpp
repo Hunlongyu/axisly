@@ -4,11 +4,11 @@
 #include <span>
 #include <vector>
 
-#include <gridly/measurement.hpp>
+#include <axisly/measurement.hpp>
 
 #include "track_sizing.hpp"
 
-namespace gridly::detail {
+namespace axisly::detail {
 
 struct SpanContribution {
     std::size_t start{};
@@ -50,4 +50,4 @@ void collect_track_contributions(
 [[nodiscard]] ResolvedTrack spanned_track(
     std::span<const ResolvedTrack> tracks, std::size_t start, std::size_t span, Unit gap) noexcept;
 
-} // namespace gridly::detail
+} // namespace axisly::detail

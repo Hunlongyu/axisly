@@ -65,9 +65,9 @@ preferred_size 的两个分量必须有限且非负，即使条目使用 Stretch
 
 这三个 example 打印布局结果，尚不是 SDL3 图形演示：
 
-- `gridly_api_example`：固定布局。
-- `gridly_weighted_example`：三个容器宽度下的固定／权重布局。
-- `gridly_alignment_example`：四种对齐的 cell_rect 和 rect。
+- `axisly_api_example`：固定布局。
+- `axisly_weighted_example`：三个容器宽度下的固定／权重布局。
+- `axisly_alignment_example`：四种对齐的 cell_rect 和 rect。
 
 此前双击运行后窗口立即关闭，是输出完成后退出；本机检查旧固定／权重示例均返回退出码 0，未复现崩溃。
 

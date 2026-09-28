@@ -4,12 +4,12 @@
 
 ## 构建和运行
 
-默认关闭 `GRIDLY_BUILD_BENCHMARKS`，不下载第三方库，不安装／导出基准目标。Windows：
+默认关闭 `AXISLY_BUILD_BENCHMARKS`，不下载第三方库，不安装／导出基准目标。Windows：
 
 ```powershell
 ./scripts/build-msvc.ps1 -Preset benchmark-release
-./build/benchmark-release/gridly_bench.exe --output build/benchmark-release/timing.csv
-./build/benchmark-release/gridly_bench_allocations.exe --output build/benchmark-release/allocations.csv
+./build/benchmark-release/axisly_bench.exe --output build/benchmark-release/timing.csv
+./build/benchmark-release/axisly_bench_allocations.exe --output build/benchmark-release/allocations.csv
 ```
 
 已有编译器环境的终端以及 Linux/macOS：
@@ -20,7 +20,7 @@ cmake --build --preset benchmark-release
 ctest --preset benchmark-release
 ```
 
-其他平台运行 `build/benchmark-release/gridly_bench` 和 `gridly_bench_allocations`，不带 `.exe`。`--output` 的父目录须已存在，默认向标准输出写 CSV。`benchmark-debug` 只检查功能，不能与 Release 的速度混比。
+其他平台运行 `build/benchmark-release/axisly_bench` 和 `axisly_bench_allocations`，不带 `.exe`。`--output` 的父目录须已存在，默认向标准输出写 CSV。`benchmark-debug` 只检查功能，不能与 Release 的速度混比。
 
 两个程序共用参数：
 
@@ -60,9 +60,9 @@ ctest --preset benchmark-release
 
 场景构造、每种尺寸的完整几何校验、重复结果校验、预热、CSV 格式化均在计时区间外。每次计时包含 `compute_grid` 的输入校验、内部临时分配、布局、常数规模的结果校验值计算以及结果析构。输入规格和条目数组重复使用；核心没有跨调用缓存。
 
-`gridly_bench` 使用正常分配器。`steady_clock` 测量整批调用再除以次数，报告各批均值的中位数 `median_us` 和最近秩法的 `p95_batch_us`。后者不是单次调用延迟的 P95；默认 11 批时它等于最大的批均值。默认每场景 3 次预热，然后 11×100 次正式调用。17 个尺寸循环会在每批从头开始。
+`axisly_bench` 使用正常分配器。`steady_clock` 测量整批调用再除以次数，报告各批均值的中位数 `median_us` 和最近秩法的 `p95_batch_us`。后者不是单次调用延迟的 P95；默认 11 批时它等于最大的批均值。默认每场景 3 次预热，然后 11×100 次正式调用。17 个尺寸循环会在每批从头开始。
 
-`gridly_bench_allocations` 单独链接替换的全局 `new`／`delete`，覆盖数组、sized、aligned 和 nothrow 形式；其 CSV 的耗时列留空，避免分配计数成本污染性能结论：
+`axisly_bench_allocations` 单独链接替换的全局 `new`／`delete`，覆盖数组、sized、aligned 和 nothrow 形式；其 CSV 的耗时列留空，避免分配计数成本污染性能结论：
 
 - `allocations_per_layout`：测量区间内 C++ 堆分配次数除以宿主调用次数。
 - `requested_bytes_per_layout`：请求字节累计值除以调用次数，不是峰值内存。
@@ -85,7 +85,7 @@ ctest --preset benchmark-release
 
 本轮复用 Taffy wide 的**规模档位**，没有声称原场景等价，也没有运行上游性能程序。已有 M8 的 780 个 Taffy 用例验证正确性，Python 启动进程／序列化／探针的耗时不能拿来代表布局性能。
 
-后续跨库对比应固定版本、编译配置与共同子集输入，先逐条验证几何一致，再明确分开：首次布局、强制重算、连续缩放、缓存命中、建树／销毁、结果提取。计时应在各自进程内部完成，并注明是否清除叶节点缓存、是否取整和测量函数成本。不能将 Taffy 缓存命中与 gridly 完整计算直接作为算法快慢结论。百分比、自动放置和超过 M7 递归预算的深树先标为不支持。
+后续跨库对比应固定版本、编译配置与共同子集输入，先逐条验证几何一致，再明确分开：首次布局、强制重算、连续缩放、缓存命中、建树／销毁、结果提取。计时应在各自进程内部完成，并注明是否清除叶节点缓存、是否取整和测量函数成本。不能将 Taffy 缓存命中与 axisly 完整计算直接作为算法快慢结论。百分比、自动放置和超过 M7 递归预算的深树先标为不支持。
 
 ## 2026-09-28 本机数据
 

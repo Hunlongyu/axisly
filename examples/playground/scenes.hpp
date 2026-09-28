@@ -6,9 +6,9 @@
 #include <string_view>
 #include <vector>
 
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
-namespace gridly::playground {
+namespace axisly::playground {
 
 struct SceneInfo { std::string_view title; std::string_view description; std::string_view hint; };
 inline constexpr std::array<SceneInfo, 10> scenes{{
@@ -52,4 +52,4 @@ struct Frame {
 // Host-only scene construction and metadata. Uses installed public APIs only.
 [[nodiscard]] Frame arrange_scene(std::size_t index, Size available);
 
-} // namespace gridly::playground
+} // namespace axisly::playground

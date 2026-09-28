@@ -1,33 +1,34 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(gridly VERSION 0.1.0 LANGUAGES CXX)
+project(axisly VERSION 0.1.0 LANGUAGES CXX)
 
 include(cmake/DetectMsvcIncludes.cmake)
-gridly_detect_msvc_includes()
+axisly_detect_msvc_includes()
 
 include(GNUInstallDirs)
 
-option(GRIDLY_BUILD_TESTS "Build the gridly contract tests" ${PROJECT_IS_TOP_LEVEL})
-option(GRIDLY_ENABLE_SANITIZERS "Instrument development builds with ASan (and UBSan on GCC/Clang Unix)" OFF)
-if(GRIDLY_ENABLE_SANITIZERS AND MSVC)
+option(AXISLY_BUILD_TESTS "Build the axisly contract tests" ${PROJECT_IS_TOP_LEVEL})
+option(AXISLY_ENABLE_SANITIZERS "Instrument development builds with ASan (and UBSan on GCC/Clang Unix)" OFF)
+if(AXISLY_ENABLE_SANITIZERS AND MSVC)
     # /RTC is incompatible with AddressSanitizer. Retain normal Debug behavior
     # when the explicit sanitizer option is off.
     string(REGEX REPLACE "/RTC[1su]+" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 endif()
-option(GRIDLY_BUILD_EXAMPLES "Build the gridly API example" ${PROJECT_IS_TOP_LEVEL})
-option(GRIDLY_BUILD_REFERENCE_TESTS "Build developer-only Taffy differential tooling (requires Cargo and Python)" OFF)
-option(GRIDLY_BUILD_PLAYGROUND "Build the optional SDL3 visual playground" OFF)
-option(GRIDLY_FETCH_SDL3 "Download pinned SDL3 sources for the playground" OFF)
-option(GRIDLY_BUILD_BENCHMARKS "Build developer-only layout timing and allocation benchmarks" OFF)
-option(GRIDLY_BUILD_COMPARISON_BENCHMARKS "Build opt-in Taffy/Yoga benchmarks (downloads Yoga; requires Cargo/Python)" OFF)
-if(GRIDLY_BUILD_COMPARISON_BENCHMARKS AND NOT GRIDLY_BUILD_BENCHMARKS)
-    message(FATAL_ERROR "GRIDLY_BUILD_COMPARISON_BENCHMARKS requires GRIDLY_BUILD_BENCHMARKS=ON")
+option(AXISLY_BUILD_EXAMPLES "Build the axisly API example" ${PROJECT_IS_TOP_LEVEL})
+option(AXISLY_BUILD_REFERENCE_TESTS "Build developer-only Taffy differential tooling (requires Cargo and Python)" OFF)
+option(AXISLY_BUILD_PLAYGROUND "Build the optional SDL3 visual playground" OFF)
+option(AXISLY_BUILD_GEEYOOU_SHOWCASE "Build the optional Windows GeeyoouUI showcase (downloads pinned sources)" OFF)
+option(AXISLY_FETCH_SDL3 "Download pinned SDL3 sources for the playground" OFF)
+option(AXISLY_BUILD_BENCHMARKS "Build developer-only layout timing and allocation benchmarks" OFF)
+option(AXISLY_BUILD_COMPARISON_BENCHMARKS "Build opt-in Taffy/Yoga benchmarks (downloads Yoga; requires Cargo/Python)" OFF)
+if(AXISLY_BUILD_COMPARISON_BENCHMARKS AND NOT AXISLY_BUILD_BENCHMARKS)
+    message(FATAL_ERROR "AXISLY_BUILD_COMPARISON_BENCHMARKS requires AXISLY_BUILD_BENCHMARKS=ON")
 endif()
-if(GRIDLY_BUILD_REFERENCE_TESTS AND NOT GRIDLY_BUILD_TESTS)
-    message(FATAL_ERROR "GRIDLY_BUILD_REFERENCE_TESTS requires GRIDLY_BUILD_TESTS=ON")
+if(AXISLY_BUILD_REFERENCE_TESTS AND NOT AXISLY_BUILD_TESTS)
+    message(FATAL_ERROR "AXISLY_BUILD_REFERENCE_TESTS requires AXISLY_BUILD_TESTS=ON")
 endif()
 
-add_library(gridly STATIC
+add_library(axisly STATIC
     src/track.cpp
     src/compute_grid.cpp
     src/cache.cpp
@@ -40,24 +41,24 @@ add_library(gridly STATIC
     src/detail/span_resolution.cpp
     src/detail/item_alignment.cpp
 )
-add_library(gridly::gridly ALIAS gridly)
-set_target_properties(gridly PROPERTIES
-    EXPORT_NAME gridly
+add_library(axisly::axisly ALIAS axisly)
+set_target_properties(axisly PROPERTIES
+    EXPORT_NAME axisly
     CXX_EXTENSIONS OFF
 )
-target_compile_features(gridly PUBLIC cxx_std_20)
-target_include_directories(gridly PUBLIC
+target_compile_features(axisly PUBLIC cxx_std_20)
+target_include_directories(axisly PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-function(gridly_enable_warnings target)
+function(axisly_enable_warnings target)
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
     else()
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
     endif()
-    if(GRIDLY_ENABLE_SANITIZERS)
+    if(AXISLY_ENABLE_SANITIZERS)
         if(MSVC)
             target_compile_options(${target} PRIVATE /fsanitize=address /Zi)
             target_link_options(${target} PRIVATE /INCREMENTAL:NO)
@@ -65,14 +66,14 @@ function(gridly_enable_warnings target)
             target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
             target_link_options(${target} PRIVATE -fsanitize=address,undefined)
         else()
-            message(FATAL_ERROR "GRIDLY_ENABLE_SANITIZERS requires MSVC, Clang or GCC")
+            message(FATAL_ERROR "AXISLY_ENABLE_SANITIZERS requires MSVC, Clang or GCC")
         endif()
     endif()
 endfunction()
-gridly_enable_warnings(gridly)
-if(GRIDLY_ENABLE_SANITIZERS AND NOT MSVC)
-    target_link_options(gridly INTERFACE -fsanitize=address,undefined)
-elseif(GRIDLY_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+axisly_enable_warnings(axisly)
+if(AXISLY_ENABLE_SANITIZERS AND NOT MSVC)
+    target_link_options(axisly INTERFACE -fsanitize=address,undefined)
+elseif(AXISLY_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # CMake invokes lld-link directly, bypassing clang-cl's ASan driver linkage.
     # Discover the compiler's own runtimes, never a hard-coded LLVM version.
     if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR CMAKE_SYSTEM_PROCESSOR MATCHES "ARM|arm|aarch")
@@ -82,97 +83,101 @@ elseif(GRIDLY_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         message(FATAL_ERROR "Windows clang-cl sanitizers require the dynamic CRT (/MD or /MDd)")
     endif()
     execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
-        OUTPUT_VARIABLE gridly_clang_resource OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
-    set(gridly_asan_dir "${gridly_clang_resource}/lib/windows")
-    set(gridly_asan_runtime "${gridly_asan_dir}/clang_rt.asan_dynamic-x86_64.lib")
-    set(gridly_asan_thunk "${gridly_asan_dir}/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib")
-    if(NOT EXISTS "${gridly_asan_runtime}" OR NOT EXISTS "${gridly_asan_thunk}")
-        message(FATAL_ERROR "Clang AddressSanitizer runtimes are missing from ${gridly_asan_dir}")
+        OUTPUT_VARIABLE axisly_clang_resource OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+    set(axisly_asan_dir "${axisly_clang_resource}/lib/windows")
+    set(axisly_asan_runtime "${axisly_asan_dir}/clang_rt.asan_dynamic-x86_64.lib")
+    set(axisly_asan_thunk "${axisly_asan_dir}/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib")
+    if(NOT EXISTS "${axisly_asan_runtime}" OR NOT EXISTS "${axisly_asan_thunk}")
+        message(FATAL_ERROR "Clang AddressSanitizer runtimes are missing from ${axisly_asan_dir}")
     endif()
-    target_link_libraries(gridly INTERFACE "${gridly_asan_runtime}")
-    target_link_options(gridly INTERFACE "/wholearchive:${gridly_asan_thunk}" /include:__asan_seh_interceptor)
+    target_link_libraries(axisly INTERFACE "${axisly_asan_runtime}")
+    target_link_options(axisly INTERFACE "/wholearchive:${axisly_asan_thunk}" /include:__asan_seh_interceptor)
 endif()
 
-if(GRIDLY_BUILD_TESTS)
+if(AXISLY_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-if(GRIDLY_BUILD_EXAMPLES)
-    add_executable(gridly_api_example examples/fixed_grid.cpp)
-    target_link_libraries(gridly_api_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_api_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_api_example)
+if(AXISLY_BUILD_EXAMPLES)
+    add_executable(axisly_api_example examples/fixed_grid.cpp)
+    target_link_libraries(axisly_api_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_api_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_api_example)
 
-    add_executable(gridly_weighted_example examples/weighted_grid.cpp)
-    target_link_libraries(gridly_weighted_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_weighted_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_weighted_example)
+    add_executable(axisly_weighted_example examples/weighted_grid.cpp)
+    target_link_libraries(axisly_weighted_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_weighted_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_weighted_example)
 
-    add_executable(gridly_alignment_example examples/alignment_grid.cpp)
-    target_link_libraries(gridly_alignment_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_alignment_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_alignment_example)
+    add_executable(axisly_alignment_example examples/alignment_grid.cpp)
+    target_link_libraries(axisly_alignment_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_alignment_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_alignment_example)
 
-    add_executable(gridly_measurement_example examples/measurement_grid.cpp)
-    target_link_libraries(gridly_measurement_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_measurement_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_measurement_example)
+    add_executable(axisly_measurement_example examples/measurement_grid.cpp)
+    target_link_libraries(axisly_measurement_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_measurement_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_measurement_example)
 
-    add_executable(gridly_spanning_example examples/spanning_grid.cpp)
-    target_link_libraries(gridly_spanning_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_spanning_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_spanning_example)
+    add_executable(axisly_spanning_example examples/spanning_grid.cpp)
+    target_link_libraries(axisly_spanning_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_spanning_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_spanning_example)
 
-    add_executable(gridly_range_example examples/range_grid.cpp)
-    target_link_libraries(gridly_range_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_range_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_range_example)
+    add_executable(axisly_range_example examples/range_grid.cpp)
+    target_link_libraries(axisly_range_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_range_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_range_example)
 
-    add_executable(gridly_nested_example examples/nested_grid.cpp)
-    target_link_libraries(gridly_nested_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_nested_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_nested_example)
+    add_executable(axisly_nested_example examples/nested_grid.cpp)
+    target_link_libraries(axisly_nested_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_nested_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_nested_example)
 
-    add_executable(gridly_retained_example examples/retained_grid.cpp)
-    target_link_libraries(gridly_retained_example PRIVATE gridly::gridly)
-    set_target_properties(gridly_retained_example PROPERTIES CXX_EXTENSIONS OFF)
-    gridly_enable_warnings(gridly_retained_example)
-    if(GRIDLY_BUILD_TESTS)
-        add_test(NAME gridly.retained.example COMMAND gridly_retained_example)
+    add_executable(axisly_retained_example examples/retained_grid.cpp)
+    target_link_libraries(axisly_retained_example PRIVATE axisly::axisly)
+    set_target_properties(axisly_retained_example PROPERTIES CXX_EXTENSIONS OFF)
+    axisly_enable_warnings(axisly_retained_example)
+    if(AXISLY_BUILD_TESTS)
+        add_test(NAME axisly.retained.example COMMAND axisly_retained_example)
     endif()
 endif()
 
-if(GRIDLY_BUILD_PLAYGROUND)
+if(AXISLY_BUILD_PLAYGROUND)
     add_subdirectory(examples/playground)
 endif()
 
-if(GRIDLY_BUILD_BENCHMARKS)
+if(AXISLY_BUILD_GEEYOOU_SHOWCASE)
+    add_subdirectory(examples/geeyoou)
+endif()
+
+if(AXISLY_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
 include(CMakePackageConfigHelpers)
 
-install(TARGETS gridly EXPORT gridlyTargets
+install(TARGETS axisly EXPORT axislyTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(EXPORT gridlyTargets
-    FILE gridlyTargets.cmake
-    NAMESPACE gridly::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/gridly
+install(EXPORT axislyTargets
+    FILE axislyTargets.cmake
+    NAMESPACE axisly::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/axisly
 )
-configure_package_config_file(cmake/gridlyConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/gridlyConfig.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/gridly
+configure_package_config_file(cmake/axislyConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/axislyConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/axisly
 )
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/gridlyConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/axislyConfigVersion.cmake
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY ExactVersion
 )
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/gridlyConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/gridlyConfigVersion.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/gridly
+    ${CMAKE_CURRENT_BINARY_DIR}/axislyConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/axislyConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/axisly
 )

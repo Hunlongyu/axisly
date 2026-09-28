@@ -12,7 +12,7 @@
 #include <windows.h>
 #endif
 
-namespace gridly::examples {
+namespace axisly::examples {
 
 class ConsoleSession {
 public:
@@ -42,4 +42,4 @@ private:
     bool wait_on_exit_{};
 };
 
-} // namespace gridly::examples
+} // namespace axisly::examples

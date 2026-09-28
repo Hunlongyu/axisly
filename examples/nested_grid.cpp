@@ -6,9 +6,9 @@
 #include "nested_grid_adapter.hpp"
 
 int main() {
-    const gridly::examples::ConsoleSession console_session;
-    using namespace gridly;
-    using namespace gridly::examples;
+    const axisly::examples::ConsoleSession console_session;
+    using namespace axisly;
+    using namespace axisly::examples;
 
     const NestedGrid article{
         .spec = {.columns = {Track::weighted()}, .rows = {Track::content()}, .padding = {8, 8, 8, 8}},
@@ -33,7 +33,7 @@ int main() {
     };
     // All pointers refer to host-owned, stable local objects that outlive every
     // synchronous calculation below.
-    std::cout << "gridly M7: nested host adapter, scoped IDs and recursive measurement\n";
+    std::cout << "axisly M7: nested host adapter, scoped IDs and recursive measurement\n";
     for (const Unit width : {640.0f, 360.0f, 220.0f}) {
         const auto result = compute_nested_grid(root, {width, 400});
         if (!result.succeeded()) {

@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 #include <string_view>
 
 namespace {
-using namespace gridly;
+using namespace axisly;
 void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
 void near(Unit a, Unit b) { check(std::abs(a - b) < 0.002f, "Unexpected geometry"); }
 template<class E, class F> void throws(F f) {

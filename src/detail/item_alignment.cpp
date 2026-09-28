@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace gridly::detail {
+namespace axisly::detail {
 namespace {
 
 struct AxisPlacement {
@@ -56,4 +56,4 @@ Unit resolved_item_width(const GridItem& item, const ResolvedTrack& column, Unit
                       anchor(item.horizontal_alignment), item.horizontal_alignment == HorizontalAlignment::Stretch).size;
 }
 
-} // namespace gridly::detail
+} // namespace axisly::detail

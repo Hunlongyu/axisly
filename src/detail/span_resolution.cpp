@@ -4,7 +4,7 @@
 #include <limits>
 #include <utility>
 
-namespace gridly::detail {
+namespace axisly::detail {
 namespace {
 
 std::pair<double, double> requirements(const GridItem& item, const MeasureResult& measured,
@@ -221,4 +221,4 @@ ResolvedTrack spanned_track(std::span<const ResolvedTrack> tracks, std::size_t s
     return {tracks[start].offset, std::min(size, static_cast<double>(std::numeric_limits<Unit>::max()))};
 }
 
-} // namespace gridly::detail
+} // namespace axisly::detail

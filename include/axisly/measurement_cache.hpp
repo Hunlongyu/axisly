@@ -2,9 +2,9 @@
 
 #include <cstddef>
 #include <memory>
-#include <gridly/measurement.hpp>
+#include <axisly/measurement.hpp>
 
-namespace gridly {
+namespace axisly {
 
 // Optional bounded LRU per item. Keys include all known/available dimensions.
 // The host must invalidate an item when text/font/DPI or other external content

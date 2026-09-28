@@ -31,10 +31,10 @@ tests/
 
 Never make visual SDL output the only test.
 
-M9 adds `gridly.playground.scenes` (50 scene/container contracts plus semantic checks)
-and `gridly.playground.runtime` (30 rendered scene/size combinations and scripted SDL
-events). These exist only with `GRIDLY_BUILD_PLAYGROUND=ON`. CTest uses a hidden dummy
-video driver and software renderer; running `gridly_playground --smoke-test <directory>`
+M9 adds `axisly.playground.scenes` (50 scene/container contracts plus semantic checks)
+and `axisly.playground.runtime` (30 rendered scene/size combinations and scripted SDL
+events). These exist only with `AXISLY_BUILD_PLAYGROUND=ON`. CTest uses a hidden dummy
+video driver and software renderer; running `axisly_playground --smoke-test <directory>`
 without those driver overrides exercises the native hidden window/renderer. Saved PNGs
 are inspected separately; a render pass is not a pixel-perfect golden-image comparison.
 
@@ -70,10 +70,10 @@ Use Taffy only in developer tooling.
 Map the feature intersection:
 
 ```text
-gridly Fixed      -> equivalent fixed length
-gridly Weighted   -> equivalent flexible fraction
-gridly Content    -> compatible intrinsic sizing case
-gridly Span       -> equivalent grid span
+axisly Fixed      -> equivalent fixed length
+axisly Weighted   -> equivalent flexible fraction
+axisly Content    -> compatible intrinsic sizing case
+axisly Span       -> equivalent grid span
 ```
 
 Compare final rectangles with a documented epsilon.
@@ -95,7 +95,7 @@ harness checks. The original 780 V1 cases and their replay protocol remain intac
 See [extended validation](24-ci-and-extended-validation.md) for the baseline
 MinContent boundary and the sparse spanning-placement regression it found.
 
-The `GRIDLY_ENABLE_SANITIZERS` option and `scripts/build-sanitizers.ps1` instrument
+The `AXISLY_ENABLE_SANITIZERS` option and `scripts/build-sanitizers.ps1` instrument
 local developer builds. CI has separate Linux Clang and GCC ASan+UBSan jobs.
 Exact local results are recorded in [the completion report](22-roadmap-completion.md);
 configured remote jobs are not a claim of an executed remote CI run.
@@ -122,7 +122,7 @@ Use sanitizers in CI:
 ## Benchmarks
 
 The optional complete-layout cache has dedicated invalidation, lifetime, failure
-recovery and randomized update tests. The separate `gridly_cache_allocations`
+recovery and randomized update tests. The separate `axisly_cache_allocations`
 executable checks that hits allocate nothing and make no measurement callbacks,
 including a 10,000-item grid. `comparison-release` checks every cached rectangle
 against the same independent geometry oracle as the stateless and competitor paths.
@@ -137,7 +137,7 @@ The comparison runner optionally accepts `--baseline-native` to run a preserved
 pre-optimization binary with the same output-retirement timing contract.
 See [workspace validation and measurements](21-workspace-optimization.md).
 
-The first implementation is available through `GRIDLY_BUILD_BENCHMARKS` and the
+The first implementation is available through `AXISLY_BUILD_BENCHMARKS` and the
 `benchmark-release` / `benchmark-debug` presets. See [M10 benchmark methodology](18-performance-benchmarks.md).
 CI runs only correctness smoke tests and allocation-counter contracts; noisy shared-runner timings are not pass/fail gates.
 Taffy correctness comparisons do not measure performance. Its upstream Grid bench covers a larger CSS feature set;

@@ -1,4 +1,4 @@
-#include <gridly/gridly.hpp>
+#include <axisly/axisly.hpp>
 #include "console_session.hpp"
 
 #include <algorithm>
@@ -7,13 +7,13 @@
 #include <vector>
 
 namespace {
-struct Label { gridly::Unit text_width, line_height, baseline; };
-gridly::MeasureResult measure(gridly::ItemId, const gridly::MeasureInput& input, void* raw) {
+struct Label { axisly::Unit text_width, line_height, baseline; };
+axisly::MeasureResult measure(axisly::ItemId, const axisly::MeasureInput& input, void* raw) {
     const auto& label = *static_cast<Label*>(raw);
     const float lines = input.known_width ? std::max(1.f, std::ceil(label.text_width / std::max(1.f, *input.known_width))) : 1.f;
     return {{0, label.line_height}, {label.text_width, lines * label.line_height}, label.baseline};
 }
-bool print(const gridly::TreeResult& result) {
+bool print(const axisly::TreeResult& result) {
     if (!result.succeeded()) { std::cerr << result.error.message << '\n'; return false; }
     std::cout << "layouts=" << result.layout_count << " host measurements=" << result.measurement_count
               << " full cache hit=" << result.cache_hit << '\n';
@@ -24,8 +24,8 @@ bool print(const gridly::TreeResult& result) {
 }
 
 int main() {
-    gridly::examples::ConsoleSession console;
-    using namespace gridly;
+    axisly::examples::ConsoleSession console;
+    using namespace axisly;
     GridSpec spec{.columns = {Track::percentage(.3f), Track::weighted(), Track::weighted()},
         .rows = {Track::content()}, .column_gap = 8, .row_gap = 8, .padding = {8, 8, 8, 8},
         .auto_flow = AutoFlow::RowDense, .allow_implicit_tracks = true};

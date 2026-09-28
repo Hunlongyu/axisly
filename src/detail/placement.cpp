@@ -57,7 +57,13 @@ public:
                 candidate = next;
             }
             set_minor(item, candidate);
-            locked_cursor_[major(item)] = candidate + minor_span(item);
+            // Sparse packing must follow earlier auto-placed items in every
+            // row they span, not only the row at which those items start.
+            for (Index row = major(item); !dense_ && row < major(item) + major_span(item); ++row) {
+                if (!tick()) return false;
+                auto& cursor = locked_cursor_[row];
+                cursor = std::max(cursor, candidate + minor_span(item));
+            }
             if (!occupy(item)) return false;
         }
         Index cursor_major = 0, cursor_minor = 0;

@@ -128,7 +128,7 @@ add_executable(gridly_advanced_tests advanced/advanced_tests.cpp)
 target_link_libraries(gridly_advanced_tests PRIVATE gridly::gridly)
 set_target_properties(gridly_advanced_tests PROPERTIES CXX_EXTENSIONS OFF)
 gridly_enable_warnings(gridly_advanced_tests)
-foreach(behavior IN ITEMS placement_row placement_column placement_locked implicit_tracks placement_limits placement_randomized
+foreach(behavior IN ITEMS placement_row placement_column placement_locked placement_locked_spans implicit_tracks placement_limits placement_randomized
     percentage percentage_ranges baseline_static baseline_reflow baseline_spans_and_clipping baseline_extreme_caps rounding rounding_shared_edges
     measurement_keys measurement_lru measurement_failures grid_measurement_cache cache_exception_identity advanced_cache_equivalence)
     add_test(NAME gridly.advanced.${behavior} COMMAND gridly_advanced_tests ${behavior})

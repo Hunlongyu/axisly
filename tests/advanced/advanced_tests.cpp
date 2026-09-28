@@ -59,6 +59,28 @@ void placement_locked() {
     check(r.items[1].column == 1 && r.items[1].row == 0, "Locked row did not reserve before automatic");
     check(r.items[0].row == 1 && r.items[0].column == 0 && r.items[3].row == 1, "Locked column placement failed");
 }
+void placement_locked_spans() {
+    for (const auto flow : {AutoFlow::Row, AutoFlow::Column, AutoFlow::RowDense, AutoFlow::ColumnDense}) {
+        const bool column = flow == AutoFlow::Column || flow == AutoFlow::ColumnDense;
+        const bool dense = flow == AutoFlow::RowDense || flow == AutoFlow::ColumnDense;
+        auto s = automatic(flow);
+        s.columns.assign(4, Track::fixed(10)); s.rows.assign(3, Track::fixed(20));
+        std::array items{GridItem{.id = 0, .column_span = 2},
+            GridItem{.id = 1, .column = auto_position, .row = 0, .column_span = 2, .row_span = 2},
+            GridItem{.id = 2, .column = auto_position, .row = 1}};
+        if (column) {
+            std::swap(s.columns, s.rows);
+            for (auto& item : items) {
+                std::swap(item.column, item.row); std::swap(item.column_span, item.row_span);
+            }
+        }
+        const auto r = compute_grid(s, items, {200, 200});
+        check(r.succeeded(), "Locked span placement failed");
+        check((column ? r.items[1].row : r.items[1].column) == 2, "Locked item did not avoid explicit cells");
+        check((column ? r.items[2].row : r.items[2].column) == (dense ? 0u : 4u),
+              "Sparse cursor failed to follow a preceding item across all spanned tracks");
+    }
+}
 void implicit_tracks() {
     auto s = automatic(); s.auto_flow = AutoFlow::Explicit;
     const std::array items{GridItem{.id = 7, .column = 4, .row = 3, .column_span = 2}};
@@ -328,6 +350,7 @@ int main(int argc, char** argv) {
         if (argc != 2) throw std::runtime_error("Expected case name");
         const std::pair<std::string_view, void(*)()> cases[]{
             {"placement_row", placement_row}, {"placement_column", placement_column}, {"placement_locked", placement_locked},
+            {"placement_locked_spans", placement_locked_spans},
             {"implicit_tracks", implicit_tracks}, {"placement_limits", placement_limits}, {"placement_randomized", placement_randomized},
             {"percentage", percentage}, {"percentage_ranges", percentage_ranges}, {"baseline_static", baseline_static},
             {"baseline_reflow", baseline_reflow}, {"baseline_spans_and_clipping", baseline_spans_and_clipping}, {"rounding", rounding},

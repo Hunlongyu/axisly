@@ -111,6 +111,10 @@ void run_workspace(std::uint32_t side, bool spans) {
             const auto stats = bench::end_allocations();
             require(!computed.cache_hit && computed.result.succeeded() && computed.result.items.data() == storage,
                     "Workspace miss must recompute into retained output storage");
+            if (stats.allocations != 0 || stats.requested_bytes != 0 || stats.peak_live_bytes != 0) {
+                std::cerr << name << ',' << items.size() << ',' << mode << ",iteration=" << i
+                          << ",allocations=" << stats.allocations << ",bytes=" << stats.requested_bytes << '\n';
+            }
             require(stats.allocations == 0 && stats.requested_bytes == 0 && stats.peak_live_bytes == 0,
                     "Warm workspace miss allocated for an unchanged-capacity layout");
             require(computed.measurement_count == (spans ? 2 * items.size() : 0) &&

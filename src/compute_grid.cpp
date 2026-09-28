@@ -205,7 +205,11 @@ void compute_grid_into(const GridSpec& input_spec, std::span<const GridItem> inp
                        bool retain_scratch) {
     result.items.clear();
     result.size = {};
-    result.error = {};
+    // Reuse the message's storage, including the MSVC Debug string iterator
+    // proxy. Assigning a temporary GridError allocates that proxy on every miss.
+    result.error.code = GridErrorCode::NotComputed;
+    result.error.message.clear();
+    result.error.item_id.reset();
     result.measurement_count = 0;
     // Container errors keep priority, including after a prepared layout or an
     // invalid input update. Never treat a previous successful size as validation.

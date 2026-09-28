@@ -10,22 +10,28 @@ impl Reader<'_> {
     fn number<T: std::str::FromStr>(&mut self) -> Result<T> {
         self.next()?.parse().map_err(|_| "Invalid number".into())
     }
-    fn tracks(&mut self, count: usize) -> Result<Vec<GridTemplateComponent<String>>> {
-        (0..count)
-            .map(|_| {
-                let kind = self.next()?.to_owned();
-                let value: f32 = self.number()?;
-                if !value.is_finite() || value < 0.0 {
-                    return Err("Invalid track".into());
-                }
-                match kind.as_str() {
-                    "F" => Ok(length(value)),
-                    "W" if value >= 1.0 => Ok(minmax(length(0.0), fr(value))),
-                    "C" => Ok(minmax(min_content(), max_content())),
-                    _ => Err("Unsupported track".into()),
-                }
-            })
-            .collect()
+    fn tracks(
+        &mut self,
+        count: usize,
+    ) -> Result<(Vec<GridTemplateComponent<String>>, Vec<(char, f32)>)> {
+        let mut raw = Vec::with_capacity(count);
+        let mut grid = Vec::with_capacity(count);
+        for _ in 0..count {
+            let kind = self.next()?.chars().next().ok_or("Missing track kind")?;
+            let value: f32 = self.number()?;
+            if !value.is_finite() || value < 0.0 {
+                return Err("Invalid track".into());
+            }
+            let component = match kind {
+                'F' => length(value),
+                'W' if value >= 1.0 => minmax(length(0.0), fr(value)),
+                'C' => minmax(min_content(), max_content()),
+                _ => return Err("Unsupported track".into()),
+            };
+            raw.push((kind, value));
+            grid.push(component);
+        }
+        Ok((grid, raw))
     }
 }
 struct Item {
@@ -35,10 +41,20 @@ struct Item {
     row_span: u16,
     preferred: Size<f32>,
 }
+struct NestedNode {
+    parent: i32,
+    kind: char,
+    sizing: char,
+    value: f32,
+}
 struct Fixture {
+    kind: String,
     columns: Vec<GridTemplateComponent<String>>,
     rows: Vec<GridTemplateComponent<String>>,
+    raw_columns: Vec<(char, f32)>,
+    raw_rows: Vec<(char, f32)>,
     items: Vec<Item>,
+    nested: Vec<NestedNode>,
     sizes: Vec<Size<f32>>,
     measured: bool,
     padding: f32,
@@ -47,7 +63,73 @@ struct Fixture {
 fn read(path: &str) -> Result<Fixture> {
     let text = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let mut r = Reader(text.split_whitespace());
-    if r.next()? != "GLCMP1" {
+    let magic = r.next()?;
+    if magic == "FLCMP1" {
+        let _name = r.next()?;
+        if r.next()? != "nested" {
+            return Err("Invalid nested kind".into());
+        }
+        let count: usize = r.number()?;
+        let frames: usize = r.number()?;
+        let padding: f32 = r.number()?;
+        let gap: f32 = r.number()?;
+        if !(2..=10000).contains(&count)
+            || !(2..=100).contains(&frames)
+            || !padding.is_finite()
+            || padding < 0.0
+            || !gap.is_finite()
+            || gap < 0.0
+        {
+            return Err("Invalid nested header".into());
+        }
+        let mut nested: Vec<NestedNode> = Vec::with_capacity(count);
+        for i in 0..count {
+            let parent: i32 = r.number()?;
+            let kind = r.next()?.chars().next().ok_or("Missing node kind")?;
+            let sizing = r.next()?.chars().next().ok_or("Missing sizing")?;
+            let value: f32 = r.number()?;
+            if !['R', 'C', 'L'].contains(&kind)
+                || !['F', 'W'].contains(&sizing)
+                || !value.is_finite()
+                || value < 0.0
+                || (i == 0 && (parent != -1 || kind == 'L'))
+                || (i > 0 && (parent < 0 || parent as usize >= i))
+                || (i > 0 && nested[parent as usize].kind == 'L')
+            {
+                return Err("Invalid nested node".into());
+            }
+            nested.push(NestedNode {
+                parent,
+                kind,
+                sizing,
+                value,
+            });
+        }
+        let mut sizes = Vec::with_capacity(frames);
+        for _ in 0..frames {
+            sizes.push(Size {
+                width: r.number()?,
+                height: r.number()?,
+            });
+        }
+        if r.0.next().is_some() {
+            return Err("Trailing nested data".into());
+        }
+        return Ok(Fixture {
+            kind: "nested".into(),
+            columns: Vec::new(),
+            rows: Vec::new(),
+            raw_columns: Vec::new(),
+            raw_rows: Vec::new(),
+            items: Vec::new(),
+            nested,
+            sizes,
+            measured: false,
+            padding,
+            gap,
+        });
+    }
+    if magic != "GLCMP1" {
         return Err("Invalid fixture magic".into());
     }
     let _name = r.next()?;
@@ -67,8 +149,8 @@ fn read(path: &str) -> Result<Fixture> {
     let measured: u8 = r.number()?;
     let padding = r.number()?;
     let gap = r.number()?;
-    let columns = r.tracks(cols)?;
-    let row_tracks = r.tracks(rows)?;
+    let (columns, raw_columns) = r.tracks(cols)?;
+    let (row_tracks, raw_rows) = r.tracks(rows)?;
     let mut items = Vec::with_capacity(count);
     for _ in 0..count {
         let column: i16 = r.number()?;
@@ -107,9 +189,13 @@ fn read(path: &str) -> Result<Fixture> {
         return Err("Trailing fixture data".into());
     }
     Ok(Fixture {
+        kind,
         columns,
         rows: row_tracks,
+        raw_columns,
+        raw_rows,
         items,
+        nested: Vec::new(),
         sizes,
         measured: measured != 0,
         padding,
@@ -122,14 +208,67 @@ struct Engine {
     children: Vec<NodeId>,
     measured: bool,
     measurements: usize,
+    parents: Vec<i32>,
 }
 impl Engine {
-    fn new(f: &Fixture) -> Self {
+    fn new(f: &Fixture, flex: bool) -> Self {
+        if f.kind == "nested" {
+            let mut tree = TaffyTree::with_capacity(f.nested.len());
+            tree.disable_rounding();
+            let mut ids: Vec<Option<NodeId>> = vec![None; f.nested.len()];
+            let mut children: Vec<Vec<usize>> = vec![Vec::new(); f.nested.len()];
+            for i in 1..f.nested.len() {
+                children[f.nested[i].parent as usize].push(i);
+            }
+            for i in (0..f.nested.len()).rev() {
+                let node = &f.nested[i];
+                let mut style = Style {
+                    min_size: length(0.0),
+                    flex_shrink: 0.0,
+                    align_items: Some(AlignItems::STRETCH),
+                    ..Default::default()
+                };
+                if node.kind != 'L' {
+                    style.display = Display::Flex;
+                    style.flex_direction = if node.kind == 'R' {
+                        FlexDirection::Row
+                    } else {
+                        FlexDirection::Column
+                    };
+                    style.padding = length(f.padding);
+                    style.gap = length(f.gap);
+                }
+                if i == 0 {
+                    style.size = percent(1.0);
+                } else if node.sizing == 'F' {
+                    style.flex_basis = length(node.value);
+                } else {
+                    style.flex_basis = length(0.0);
+                    style.flex_grow = node.value;
+                }
+                let child_ids: Vec<_> = children[i].iter().map(|&j| ids[j].unwrap()).collect();
+                ids[i] = Some(if child_ids.is_empty() {
+                    tree.new_leaf(style).unwrap()
+                } else {
+                    tree.new_with_children(style, &child_ids).unwrap()
+                });
+            }
+            return Self {
+                tree,
+                root: ids[0].unwrap(),
+                children: ids.into_iter().skip(1).map(Option::unwrap).collect(),
+                measured: false,
+                measurements: 0,
+                parents: f.nested.iter().map(|n| n.parent).collect(),
+            };
+        }
+        assert!(!flex || f.kind == "row" || f.kind == "column");
+        let row = f.kind == "row";
         let mut tree = TaffyTree::with_capacity(f.items.len() + 1);
         tree.disable_rounding();
         let mut children = Vec::with_capacity(f.items.len());
         for item in &f.items {
-            let style = Style {
+            let mut style = Style {
                 grid_column: Line {
                     start: line(item.column + 1),
                     end: span(item.column_span),
@@ -143,6 +282,30 @@ impl Engine {
                 align_self: Some(AlignItems::STRETCH),
                 ..Default::default()
             };
+            if flex {
+                let main = if row {
+                    f.raw_columns[item.column as usize]
+                } else {
+                    f.raw_rows[item.row as usize]
+                };
+                let cross = if row { f.raw_rows[0] } else { f.raw_columns[0] };
+                assert_eq!(cross.0, 'F');
+                style.flex_shrink = 0.0;
+                if row {
+                    style.size.height = length(cross.1);
+                } else {
+                    style.size.width = length(cross.1);
+                }
+                match main.0 {
+                    'F' => style.flex_basis = length(main.1),
+                    'W' => {
+                        style.flex_basis = length(0.0);
+                        style.flex_grow = main.1;
+                    }
+                    'C' => {}
+                    _ => unreachable!(),
+                }
+            }
             let node = if f.measured {
                 tree.new_leaf_with_context(style, item.preferred).unwrap()
             } else {
@@ -153,7 +316,12 @@ impl Engine {
         let root = tree
             .new_with_children(
                 Style {
-                    display: Display::Grid,
+                    display: if flex { Display::Flex } else { Display::Grid },
+                    flex_direction: if row {
+                        FlexDirection::Row
+                    } else {
+                        FlexDirection::Column
+                    },
                     box_sizing: BoxSizing::BorderBox,
                     size: percent(1.0),
                     min_size: length(0.0),
@@ -163,6 +331,7 @@ impl Engine {
                     gap: length(f.gap),
                     justify_content: Some(AlignContent::START),
                     align_content: Some(AlignContent::START),
+                    align_items: Some(AlignItems::START),
                     ..Default::default()
                 },
                 &children,
@@ -174,6 +343,7 @@ impl Engine {
             children,
             measured: f.measured,
             measurements: 0,
+            parents: Vec::new(),
         }
     }
     fn calculate(&mut self, size: Size<f32>) {
@@ -207,12 +377,21 @@ impl Engine {
     }
     fn rect(&self, i: usize) -> [f64; 4] {
         let r = self.tree.layout(self.children[i]).unwrap();
-        [
-            r.location.x as f64,
-            r.location.y as f64,
-            r.size.width as f64,
-            r.size.height as f64,
-        ]
+        let mut x = r.location.x as f64;
+        let mut y = r.location.y as f64;
+        if !self.parents.is_empty() {
+            let mut parent = self.parents[i + 1];
+            while parent > 0 {
+                let ancestor = self
+                    .tree
+                    .layout(self.children[parent as usize - 1])
+                    .unwrap();
+                x += ancestor.location.x as f64;
+                y += ancestor.location.y as f64;
+                parent = self.parents[parent as usize];
+            }
+        }
+        [x, y, r.size.width as f64, r.size.height as f64]
     }
     fn consume(&self) -> f64 {
         [0, self.children.len() / 2, self.children.len() - 1]
@@ -233,10 +412,13 @@ fn positive(arg: &str) -> Result<usize> {
 }
 fn run() -> Result<()> {
     let args: Vec<_> = env::args().collect();
-    if args.len() != 6 || args[1] != "taffy" {
-        return Err("Usage: taffy fixture verify|cold|resize|same iterations samples".into());
+    if args.len() != 6
+        || (args[1] != "taffy" && args[1] != "taffy_flex" && args[1] != "taffy_nested")
+    {
+        return Err("Usage: taffy|taffy_flex|taffy_nested fixture verify|cold|resize|same iterations samples".into());
     }
     let f = read(&args[2])?;
+    let flex = args[1] != "taffy";
     let mode = args[3].as_str();
     if !["verify", "cold", "resize", "same"].contains(&mode) {
         return Err("Unknown mode".into());
@@ -244,15 +426,19 @@ fn run() -> Result<()> {
     let iterations = positive(&args[4])?;
     let samples = positive(&args[5])?;
     if mode == "verify" {
-        let mut engine = Engine::new(&f);
+        let mut engine = Engine::new(&f, flex);
         let mut frames = Vec::new();
         for i in 0..f.sizes.len() * 2 {
             if i >= f.sizes.len() {
-                engine = Engine::new(&f);
+                engine = Engine::new(&f, flex);
             }
             engine.calculate(f.sizes[i % f.sizes.len()]);
             frames.push(
-                (0..f.items.len())
+                (0..if f.kind == "nested" {
+                    f.nested.len() - 1
+                } else {
+                    f.items.len()
+                })
                     .map(|j| engine.rect(j))
                     .collect::<Vec<_>>(),
             );
@@ -261,14 +447,14 @@ fn run() -> Result<()> {
         return Ok(());
     }
     for size in &f.sizes {
-        let mut e = Engine::new(&f);
+        let mut e = Engine::new(&f, flex);
         e.calculate(*size);
     }
     let mut times = Vec::new();
     let mut checksums = Vec::new();
     let mut counts = Vec::new();
     for _ in 0..samples {
-        let mut engine = Engine::new(&f);
+        let mut engine = Engine::new(&f, flex);
         if mode != "cold" {
             engine.calculate(*f.sizes.last().unwrap());
         }
@@ -277,7 +463,7 @@ fn run() -> Result<()> {
         let mut measurements = 0;
         for i in 0..iterations {
             if mode == "cold" {
-                engine = Engine::new(&f);
+                engine = Engine::new(&f, flex);
             }
             let size = if mode != "same" {
                 f.sizes[i % f.sizes.len()]

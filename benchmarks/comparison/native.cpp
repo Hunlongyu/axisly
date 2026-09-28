@@ -19,12 +19,14 @@ using axisly::Rect;
 using axisly::Size;
 struct Track { char kind{}; float value{}; };
 struct Item { unsigned column{}, row{}, column_span{}, row_span{}; Size preferred; };
+struct NestedNode { int parent{}; char kind{}, sizing{}; float value{}; };
 struct Fixture {
     std::string name, kind;
     bool measured{};
     float padding{}, gap{};
     std::vector<Track> columns, rows;
     std::vector<Item> items;
+    std::vector<NestedNode> nested;
     std::vector<Size> sizes;
 };
 void require(bool ok, const char* message) {
@@ -43,7 +45,34 @@ Fixture read(const char* path) {
     Fixture f;
     std::string magic;
     std::size_t cols{}, rows{}, count{}, frames{};
-    in >> magic >> f.name >> f.kind >> cols >> rows >> count >> frames >> f.measured >> f.padding >> f.gap;
+    in >> magic;
+    if (magic == "FLCMP1") {
+        in >> f.name >> f.kind >> count >> frames >> f.padding >> f.gap;
+        require(in.good() && f.kind == "nested" && count >= 2 && count <= 10000
+            && frames > 1 && frames <= 100 && std::isfinite(f.padding) && f.padding >= 0
+            && std::isfinite(f.gap) && f.gap >= 0, "Invalid nested fixture header");
+        f.nested.resize(count);
+        for (std::size_t i = 0; i < count; ++i) {
+            auto& node = f.nested[i];
+            in >> node.parent >> node.kind >> node.sizing >> node.value;
+            require(!in.fail() && (node.kind == 'R' || node.kind == 'C' || node.kind == 'L')
+                && (node.sizing == 'F' || node.sizing == 'W') && std::isfinite(node.value)
+                && node.value >= 0 && (i == 0 ? node.parent == -1 && node.kind != 'L'
+                    : node.parent >= 0 && static_cast<std::size_t>(node.parent) < i),
+                "Invalid nested fixture node");
+        }
+        for (std::size_t i = 1; i < count; ++i)
+            require(f.nested[static_cast<std::size_t>(f.nested[i].parent)].kind != 'L',
+                "Nested leaf has children");
+        f.items.resize(count - 1);
+        f.sizes.resize(frames);
+        for (auto& size : f.sizes) in >> size.width >> size.height;
+        require(!in.fail(), "Truncated nested fixture");
+        std::string extra;
+        require(!(in >> extra), "Trailing nested fixture data");
+        return f;
+    }
+    in >> f.name >> f.kind >> cols >> rows >> count >> frames >> f.measured >> f.padding >> f.gap;
     require(in.good() && magic == "GLCMP1" && cols > 0 && cols <= 1000 && rows > 0 && rows <= 1000 &&
         count > 0 && count <= 100000 && frames > 1 && frames <= 100 &&
         (f.kind == "row" || f.kind == "column" || f.kind == "grid"), "Invalid fixture header");
@@ -134,6 +163,108 @@ public:
     // Cached output belongs to the cache. Its replacement on a miss is timed.
     void release_result() override { if (!cache) result = {}; }
 };
+class AxislyFlex final : public Engine {
+    const Fixture& fixture;
+    axisly::FlexSpec spec;
+    std::vector<axisly::FlexItem> items;
+    axisly::FlexResult result;
+    static axisly::FlexMeasureResult measure(axisly::ItemId id, const axisly::FlexMeasureInput&, void* context) {
+        auto& self = *static_cast<AxislyFlex*>(context);
+        ++self.measurements;
+        const auto size = self.fixture.items[static_cast<std::size_t>(id)].preferred;
+        return {size, size, size};
+    }
+public:
+    explicit AxislyFlex(const Fixture& f) : fixture(f) {
+        require(f.kind == "row" || f.kind == "column", "Flex needs single-axis fixture");
+        const bool row = f.kind == "row";
+        require(row ? f.rows.size() == 1 : f.columns.size() == 1, "Invalid flex fixture");
+        spec.direction = row ? axisly::FlexDirection::Row : axisly::FlexDirection::Column;
+        spec.align_items.value = axisly::FlexAlign::FlexStart;
+        spec.padding = {f.padding, f.padding, f.padding, f.padding};
+        spec.column_gap = spec.row_gap = f.gap;
+        items.reserve(f.items.size());
+        for (const auto& source : f.items) {
+            require(source.column_span == 1 && source.row_span == 1, "Flex fixture cannot span");
+            const auto main = row ? f.columns[source.column] : f.rows[source.row];
+            const auto cross = row ? f.rows[0] : f.columns[0];
+            require(cross.kind == 'F', "Unsupported flex cross axis");
+            axisly::FlexItem item;
+            item.id = items.size();
+            item.shrink = 0;
+            item.minimum_width = item.minimum_height = axisly::FlexLength::fixed(0);
+            if (row) item.height = axisly::FlexLength::fixed(cross.value);
+            else item.width = axisly::FlexLength::fixed(cross.value);
+            if (main.kind == 'F') item.basis = axisly::FlexLength::fixed(main.value);
+            else if (main.kind == 'W') {
+                item.basis = axisly::FlexLength::fixed(0);
+                item.grow = main.value;
+            }
+            item.min_content = item.max_content = item.preferred_size = source.preferred;
+            items.push_back(item);
+        }
+    }
+    void calculate(Size size) override {
+        measurements = 0;
+        result = axisly::compute_flex(spec, items, size, fixture.measured ? measure : nullptr, this);
+        require(result.succeeded(), "Axisly Flex failed");
+        require(result.measurement_count == measurements, "Flex callback count mismatch");
+    }
+    Rect rect(std::size_t index) const override { return result.items[index].rect; }
+    void release_result() override { result = {}; }
+};
+class AxislyNested final : public Engine {
+    const Fixture& fixture;
+    std::vector<std::vector<std::size_t>> children;
+    std::vector<axisly::FlexSpec> specs;
+    std::vector<std::vector<axisly::FlexItem>> node_items;
+    std::vector<Rect> rectangles;
+public:
+    explicit AxislyNested(const Fixture& f) : fixture(f), children(f.nested.size()),
+        specs(f.nested.size()), node_items(f.nested.size()),
+        rectangles(f.nested.size()) {
+        require(f.kind == "nested", "Expected nested fixture");
+        for (std::size_t i = 1; i < f.nested.size(); ++i)
+            children[static_cast<std::size_t>(f.nested[i].parent)].push_back(i);
+        for (std::size_t parent = 0; parent < children.size(); ++parent) {
+            auto& spec = specs[parent];
+            spec.direction = fixture.nested[parent].kind == 'R'
+                ? axisly::FlexDirection::Row : axisly::FlexDirection::Column;
+            spec.padding = {f.padding, f.padding, f.padding, f.padding};
+            spec.column_gap = spec.row_gap = f.gap;
+            auto& items = node_items[parent];
+            items.reserve(children[parent].size());
+            for (auto child : children[parent]) {
+                const auto& node = f.nested[child];
+                axisly::FlexItem item;
+                item.id = child;
+                item.shrink = 0;
+                item.minimum_width = item.minimum_height = axisly::FlexLength::fixed(0);
+                item.basis = axisly::FlexLength::fixed(node.sizing == 'F' ? node.value : 0);
+                if (node.sizing == 'W') item.grow = node.value;
+                items.push_back(item);
+            }
+        }
+    }
+    void calculate(Size size) override {
+        measurements = 0;
+        rectangles[0] = {0, 0, size.width, size.height};
+        for (std::size_t parent = 0; parent < children.size(); ++parent) {
+            if (children[parent].empty()) continue;
+            const auto& outer = rectangles[parent];
+            auto result = axisly::compute_flex(specs[parent], node_items[parent],
+                {outer.width, outer.height});
+            require(result.succeeded(), "Axisly nested Flex failed");
+            for (std::size_t i = 0; i < children[parent].size(); ++i) {
+                auto rect = result.items[i].rect;
+                rect.x += outer.x;
+                rect.y += outer.y;
+                rectangles[children[parent][i]] = rect;
+            }
+        }
+    }
+    Rect rect(std::size_t index) const override { return rectangles[index + 1]; }
+};
 class Yoga final : public Engine {
     struct Context { Yoga* owner; Size preferred; };
     YGConfigRef config{};
@@ -201,18 +332,77 @@ public:
             YGNodeLayoutGetWidth(children[i]),YGNodeLayoutGetHeight(children[i])};
     }
 };
+class YogaNested final : public Engine {
+    const Fixture& fixture;
+    YGConfigRef config{};
+    std::vector<YGNodeRef> nodes;
+public:
+    explicit YogaNested(const Fixture& f) : fixture(f) {
+        require(f.kind == "nested", "Expected nested fixture");
+        config = YGConfigNew();
+        YGConfigSetPointScaleFactor(config, 0);
+        nodes.reserve(f.nested.size());
+        for (std::size_t i = 0; i < f.nested.size(); ++i) {
+            const auto& source = f.nested[i];
+            auto node = YGNodeNewWithConfig(config);
+            YGNodeStyleSetMinWidth(node, 0);
+            YGNodeStyleSetMinHeight(node, 0);
+            YGNodeStyleSetFlexShrink(node, 0);
+            if (source.kind != 'L') {
+                YGNodeStyleSetFlexDirection(node, source.kind == 'R'
+                    ? YGFlexDirectionRow : YGFlexDirectionColumn);
+                YGNodeStyleSetPadding(node, YGEdgeAll, f.padding);
+                YGNodeStyleSetGap(node, YGGutterAll, f.gap);
+            }
+            if (i == 0) {
+                YGNodeStyleSetWidthPercent(node, 100);
+                YGNodeStyleSetHeightPercent(node, 100);
+            } else {
+                const auto& parent = f.nested[static_cast<std::size_t>(source.parent)];
+                if (source.sizing == 'F') {
+                    if (parent.kind == 'R') YGNodeStyleSetWidth(node, source.value);
+                    else YGNodeStyleSetHeight(node, source.value);
+                } else {
+                    YGNodeStyleSetFlexBasis(node, 0);
+                    YGNodeStyleSetFlexGrow(node, source.value);
+                }
+                YGNodeInsertChild(nodes[static_cast<std::size_t>(source.parent)], node,
+                    YGNodeGetChildCount(nodes[static_cast<std::size_t>(source.parent)]));
+            }
+            nodes.push_back(node);
+        }
+    }
+    ~YogaNested() override { YGNodeFreeRecursive(nodes[0]); YGConfigFree(config); }
+    void calculate(Size size) override {
+        measurements = 0;
+        YGNodeCalculateLayout(nodes[0], size.width, size.height, YGDirectionLTR);
+    }
+    Rect rect(std::size_t index) const override {
+        const auto node = nodes[index + 1];
+        Rect r{0, 0, YGNodeLayoutGetWidth(node), YGNodeLayoutGetHeight(node)};
+        for (std::size_t i = index + 1; i != 0; i = static_cast<std::size_t>(fixture.nested[i].parent)) {
+            r.x += YGNodeLayoutGetLeft(nodes[i]);
+            r.y += YGNodeLayoutGetTop(nodes[i]);
+        }
+        return r;
+    }
+};
 }
 int main(int argc,char** argv) {
     try {
-        require(argc == 6, "Usage: native axisly|axisly_cached|yoga fixture verify|cold|resize|same iterations samples");
+        require(argc == 6, "Usage: native axisly|axisly_cached|axisly_flex|yoga fixture verify|cold|resize|same iterations samples");
         const std::string engine(argv[1]), mode(argv[3]);
-        require(engine == "axisly" || engine == "axisly_cached" || engine == "yoga", "Unknown engine");
+        require(engine == "axisly" || engine == "axisly_cached" || engine == "axisly_flex"
+            || engine == "axisly_nested" || engine == "yoga", "Unknown engine");
         require(mode == "verify" || mode == "cold" || mode == "resize" || mode == "same", "Unknown mode");
         const auto f = read(argv[2]);
         const auto iterations = positive(argv[4]), samples = positive(argv[5]);
         auto create = [&]() -> std::unique_ptr<Engine> {
             if (engine == "axisly") return std::make_unique<Axisly>(f);
             if (engine == "axisly_cached") return std::make_unique<Axisly>(f, true);
+            if (engine == "axisly_flex") return std::make_unique<AxislyFlex>(f);
+            if (engine == "axisly_nested") return std::make_unique<AxislyNested>(f);
+            if (f.kind == "nested") return std::make_unique<YogaNested>(f);
             return std::make_unique<Yoga>(f);
         };
         std::cout << std::setprecision(12);

@@ -57,10 +57,67 @@ def cases():
     for name, track in (("fixed", "F"), ("weighted", "W")):
         make(f"{name}_spans_50x50", "grid", [(track, 16 if track == "F" else 1)] * 50,
              [(track, 24 if track == "F" else 1)] * 50, spans=True)
+
+    def nested(name, nodes):
+        result.append(dict(name=name, kind="nested", nodes=nodes, columns=[], rows=[],
+                           items=[None] * (len(nodes) - 1), measured=False, padding=4, gap=2,
+                           sizes=[[1600 + i * 100, 900 + i * 20] for i in range(17)]))
+
+    def dashboard(panels, leaves):
+        nodes = [[-1, "C", "F", 0]]
+        def add(parent, kind, sizing, value):
+            nodes.append([parent, kind, sizing, value])
+            return len(nodes) - 1
+        header = add(0, "R", "F", 52)
+        body = add(0, "R", "W", 1)
+        footer = add(0, "R", "F", 28)
+        add(header, "L", "F", 120)
+        add(header, "L", "W", 1)
+        add(header, "L", "F", 180)
+        nav = add(body, "C", "F", 180)
+        workspace = add(body, "C", "W", 1)
+        inspector = add(body, "C", "F", 220)
+        for _ in range(8):
+            add(nav, "L", "F", 30)
+        add(nav, "L", "W", 1)
+        tabs = add(workspace, "R", "F", 36)
+        canvas = add(workspace, "R", "W", 1)
+        for _ in range(6):
+            add(tabs, "L", "F", 90)
+        add(tabs, "L", "W", 1)
+        for _ in range(8):
+            add(inspector, "L", "F", 30)
+        add(inspector, "L", "W", 1)
+        add(footer, "L", "W", 1)
+        add(footer, "L", "F", 120)
+        for _ in range(panels):
+            panel = add(canvas, "C", "W", 1)
+            for _ in range(leaves):
+                add(panel, "L", "W", 1)
+        return nodes
+
+    nested("nested_dashboard_6x12", dashboard(6, 12))
+    nested("nested_dashboard_16x36", dashboard(16, 36))
+    deep = [[-1, "C", "F", 0]]
+    parent = 0
+    for level in range(11):
+        next_kind = "R" if level % 2 == 0 else "C"
+        deep.append([parent, next_kind, "W", 1])
+        next_parent = len(deep) - 1
+        deep.append([parent, "L", "F", 16])
+        parent = next_parent
+    for _ in range(100):
+        deep.append([parent, "L", "W", 1])
+    nested("nested_deep_12", deep)
     return result
 
 
 def serialize(f):
+    if f["kind"] == "nested":
+        lines = [f"FLCMP1 {f['name']} nested {len(f['nodes'])} {len(f['sizes'])} {f['padding']} {f['gap']}"]
+        lines.extend(" ".join(map(str, node)) for node in f["nodes"])
+        lines.extend(" ".join(map(str, size)) for size in f["sizes"])
+        return "\n".join(lines) + "\n"
     lines = [f"GLCMP1 {f['name']} {f['kind']} {len(f['columns'])} {len(f['rows'])} {len(f['items'])} {len(f['sizes'])} {int(f['measured'])} {f['padding']} {f['gap']}"]
     lines.extend(f"{t} {v}" for t, v in f["columns"] + f["rows"])
     lines.extend(" ".join(map(str, item)) for item in f["items"])
@@ -69,6 +126,29 @@ def serialize(f):
 
 
 def expected(f, size):
+    if f["kind"] == "nested":
+        nodes = f["nodes"]
+        children = [[] for _ in nodes]
+        for i in range(1, len(nodes)):
+            children[nodes[i][0]].append(i)
+        rectangles = [[0, 0, *size]] + [None] * (len(nodes) - 1)
+        for parent, siblings in enumerate(children):
+            if not siblings:
+                continue
+            x, y, width, height = rectangles[parent]
+            row = nodes[parent][1] == "R"
+            available = (width if row else height) - 2 * f["padding"] - f["gap"] * (len(siblings) - 1)
+            fixed = sum(nodes[i][3] for i in siblings if nodes[i][2] == "F")
+            weight = sum(nodes[i][3] for i in siblings if nodes[i][2] == "W")
+            assert available >= fixed
+            cursor = (x if row else y) + f["padding"]
+            cross = (height if row else width) - 2 * f["padding"]
+            for i in siblings:
+                _, _, sizing, value = nodes[i]
+                extent = value if sizing == "F" else (available - fixed) * value / weight
+                rectangles[i] = [cursor, y + f["padding"], extent, cross] if row else [x + f["padding"], cursor, cross, extent]
+                cursor += extent + f["gap"]
+        return rectangles[1:]
     def axis(tracks, horizontal):
         content = [max((item[4 if horizontal else 5] for item in f["items"]
                         if item[0 if horizontal else 1] == i), default=0) if t == "C" else 0
@@ -159,7 +239,7 @@ def main():
     parser.add_argument("--rounds", type=int, default=2)
     parser.add_argument("--samples", type=int, default=9)
     parser.add_argument("--case", action="append", help="Restrict to named fixtures; repeat to select several")
-    parser.add_argument("--engines", nargs="+", choices=("axisly", "axisly_cached", "taffy", "yoga", "axisly_before", "axisly_cached_before"))
+    parser.add_argument("--engines", nargs="+", choices=("axisly", "axisly_cached", "axisly_flex", "axisly_nested", "taffy", "taffy_flex", "taffy_nested", "yoga", "axisly_before", "axisly_cached_before"))
     parser.add_argument("--mode", action="append", choices=("cold", "resize", "same"),
                         help="Restrict timing modes; repeat to select several")
     args = parser.parse_args()
@@ -173,7 +253,9 @@ def main():
         fixtures = [f for f in fixtures if f["name"] in args.case]
     modes = list(dict.fromkeys(args.mode or ("cold", "resize", "same")))
     available_tools = dict(axisly=args.native.resolve(), axisly_cached=args.native.resolve(),
-                           taffy=args.taffy.resolve(), yoga=args.native.resolve())
+                           axisly_flex=args.native.resolve(), axisly_nested=args.native.resolve(),
+                           taffy=args.taffy.resolve(), taffy_flex=args.taffy.resolve(),
+                           taffy_nested=args.taffy.resolve(), yoga=args.native.resolve())
     if args.baseline_native:
         available_tools = dict(axisly_before=args.baseline_native.resolve(), axisly_cached_before=args.baseline_native.resolve(),
                                **available_tools)
@@ -183,7 +265,10 @@ def main():
     tools = {name: available_tools[name] for name in engines}
 
     def engines_for(fixture):
-        return [engine for engine in tools if fixture["kind"] != "grid" or engine != "yoga"]
+        if fixture["kind"] == "nested":
+            return [engine for engine in tools if engine in ("axisly_nested", "taffy_nested", "yoga")]
+        return [engine for engine in tools if engine not in ("axisly_nested", "taffy_nested")
+                and (fixture["kind"] != "grid" or engine not in ("yoga", "axisly_flex", "taffy_flex"))]
 
     if any(not engines_for(f) for f in fixtures):
         parser.error("Selected engines do not support all requested fixtures (Yoga has no Grid support)")

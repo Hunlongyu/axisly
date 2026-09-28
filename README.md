@@ -121,7 +121,7 @@ Windows 同样先初始化 MSVC 环境。Debug 使用 `reference-debug`。对照
 
 覆盖 3×3 固定网格、20／31／50／100／316 阶权重网格、乱序 ID、连续缩放、Content、Range、密集跨格和宿主嵌套。计时程序使用普通分配器；分配程序单独统计，不混用其耗时。Taffy 原生 bench、计时范围、CSV 含义及本机结果见 [M10 性能基准](docs/18-performance-benchmarks.md)。
 
-另有独立的 `comparison-release` 预设，对相同输入比较无缓存 axisly、`GridCache`、Taffy 0.14.0 和 Yoga 3.2.1。它需要 Rust/Cargo、Python，首次构建下载锁定的 Yoga 源码。先校验全部矩形，再分别测新树首次布局、复用树连续缩放、输入不变的重复调用；Yoga 仅参与能映射为单轴 Flexbox 的场景。历史基线见 [同场景性能对比](docs/19-comparative-benchmarks.md)，缓存接口见 [完整布局缓存](docs/20-layout-cache.md)，工作区优化记录见 [0.0.13 复测](docs/21-workspace-optimization.md)，最新数据见 [0.1.0 完成记录](docs/22-roadmap-completion.md)。比较工具同样默认关闭，不安装或链接进生产核心。
+另有独立的 `comparison-release` 预设，对相同输入比较 Axisly Grid／Flex、`GridCache`、Taffy 0.14.0 的 Grid／Flex 和 Yoga 3.2.1 的 Flex。它需要 Rust/Cargo、Python，首次构建下载锁定的 Yoga 源码。先校验全部矩形，再分别测新树首次布局、复用树连续缩放、输入不变的重复调用；Yoga 不参加二维 Grid 场景。当前的平面 Flex 与嵌套 Flex 复测见 [Flex 与嵌套同场景比较](docs/30-flex-nested-comparison.md)。历史基线见 [同场景性能对比](docs/19-comparative-benchmarks.md)，缓存接口见 [完整布局缓存](docs/20-layout-cache.md)，工作区优化记录见 [0.0.13 复测](docs/21-workspace-optimization.md)，Grid 阶段数据见 [0.1.0 完成记录](docs/22-roadmap-completion.md)。比较工具同样默认关闭，不安装或链接进生产核心。
 
 ## 接入
 
@@ -383,3 +383,4 @@ docs/               产品、架构、路线图和初始化决策
 - [axisly／Taffy／Yoga 同场景性能对比](docs/19-comparative-benchmarks.md)
 - [完整布局缓存、失效契约与优化后对比](docs/20-layout-cache.md)
 - [工作区复用、预处理缓存与同场景复测](docs/21-workspace-optimization.md)
+- [Flex 与嵌套布局三方同场景复测](docs/30-flex-nested-comparison.md)

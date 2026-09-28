@@ -1,0 +1,27 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "taffy": "0.14.0",
+  "yoga": "3.2.1",
+  "rounds": 4,
+  "smoke": false,
+  "engines": [
+    "axisly_flex",
+    "taffy_flex",
+    "yoga"
+  ],
+  "cases": [
+    "column_weighted_1000"
+  ],
+  "modes": [
+    "resize"
+  ],
+  "executable_sha256": {
+    "axisly_flex": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a",
+    "taffy_flex": "b02fdfdf7ae433fb98d239b3a90e3e3d30c68d2a1f20c2c73e3d6aaedb701717",
+    "yoga": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a"
+  },
+  "geometry_tolerance": "abs 1e-4 + rel 1e-6",
+  "timers": "in-process steady_clock/Instant; setup and engine destruction excluded; old output retirement included for ALL reused-instance paths",
+  "cache": "cold=fresh tree, resize=reused tree changing viewport, same=reused tree unchanged viewport"
+}

@@ -1,0 +1,52 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "taffy": "0.14.0",
+  "yoga": "3.2.1",
+  "rounds": 2,
+  "smoke": false,
+  "engines": [
+    "axisly",
+    "axisly_cached",
+    "axisly_flex",
+    "axisly_nested",
+    "taffy",
+    "taffy_flex",
+    "taffy_nested",
+    "yoga"
+  ],
+  "cases": [
+    "row_fixed_100",
+    "column_fixed_100",
+    "row_weighted_100",
+    "row_weighted_1000",
+    "column_weighted_1000",
+    "row_content_100",
+    "fixed_grid_20x20",
+    "weighted_grid_20x20",
+    "weighted_grid_100x100",
+    "fixed_spans_50x50",
+    "weighted_spans_50x50",
+    "nested_dashboard_6x12",
+    "nested_dashboard_16x36",
+    "nested_deep_12"
+  ],
+  "modes": [
+    "cold",
+    "resize",
+    "same"
+  ],
+  "executable_sha256": {
+    "axisly": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a",
+    "axisly_cached": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a",
+    "axisly_flex": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a",
+    "axisly_nested": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a",
+    "taffy": "b02fdfdf7ae433fb98d239b3a90e3e3d30c68d2a1f20c2c73e3d6aaedb701717",
+    "taffy_flex": "b02fdfdf7ae433fb98d239b3a90e3e3d30c68d2a1f20c2c73e3d6aaedb701717",
+    "taffy_nested": "b02fdfdf7ae433fb98d239b3a90e3e3d30c68d2a1f20c2c73e3d6aaedb701717",
+    "yoga": "2f640bb87d78a56b98c8bcb346f04405bf94935b41ed1f19024c94c877386b6a"
+  },
+  "geometry_tolerance": "abs 1e-4 + rel 1e-6",
+  "timers": "in-process steady_clock/Instant; setup and engine destruction excluded; old output retirement included for ALL reused-instance paths",
+  "cache": "cold=fresh tree, resize=reused tree changing viewport, same=reused tree unchanged viewport"
+}

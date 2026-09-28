@@ -1,0 +1,23 @@
+[
+  {
+    "case": "column_weighted_1000",
+    "engine": "axisly_flex",
+    "frames": 34,
+    "items": 1000,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "column_weighted_1000",
+    "engine": "taffy_flex",
+    "frames": 34,
+    "items": 1000,
+    "max_abs_error": 3.814697265625e-06
+  },
+  {
+    "case": "column_weighted_1000",
+    "engine": "yoga",
+    "frames": 34,
+    "items": 1000,
+    "max_abs_error": 0.0
+  }
+]

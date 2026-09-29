@@ -172,6 +172,30 @@ ContentAlignment alignment_fallback(ContentAlignment alignment,
     return alignment;
 }
 
+ContentAlignment flex_justify_alignment(ContentAlignment alignment,
+                                        double free, std::size_t count,
+                                        bool reverse_direction) {
+    // Taffy treats justify-content: stretch as flex-start for one item.
+    // For several items its zero distribution offset follows writing start
+    // even when the flex direction is reversed.
+    if (alignment.position == ContentPosition::Stretch && count <= 1 && free > 0) {
+        alignment.position = ContentPosition::FlexStart;
+    }
+    alignment = alignment_fallback(alignment, free, count);
+    if (reverse_direction) {
+        // Start/End follow the writing direction; FlexStart/FlexEnd follow
+        // the main axis. The output placement loop uses flex-start as origin.
+        if (alignment.position == ContentPosition::Start) {
+            alignment.position = ContentPosition::FlexEnd;
+        } else if (alignment.position == ContentPosition::End) {
+            alignment.position = ContentPosition::FlexStart;
+        } else if (alignment.position == ContentPosition::Stretch) {
+            alignment.position = ContentPosition::FlexEnd;
+        }
+    }
+    return alignment;
+}
+
 double bounded_main_size(const FlexItem& item, double value) {
     if (item.maximum) value = std::min(value, static_cast<double>(*item.maximum));
     return std::max(value, static_cast<double>(item.minimum));
@@ -298,6 +322,8 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
 Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                       const ResolvedBox& box, std::size_t depth) {
     const bool row = is_row(node.style.flex_direction);
+    const bool reverse_direction = node.style.flex_direction == FlexDirection::RowReverse
+        || node.style.flex_direction == FlexDirection::ColumnReverse;
     const bool main_reverse = row
         ? (node.style.flex_direction == FlexDirection::RowReverse)
             != (node.style.box.direction == Direction::Rtl)
@@ -709,7 +735,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         const Unit auto_share = auto_margins && remaining > 0
             ? checked(remaining / auto_margins, node.id) : 0;
         const auto distribution = auto_share == 0
-            ? distribute(checked(remaining, node.id), line.items.size(), justify) : Distribution{};
+            ? distribute(checked(remaining, node.id), line.items.size(),
+                flex_justify_alignment(justify, remaining, line.items.size(), reverse_direction))
+            : Distribution{};
         double main_cursor = distribution.offset;
         for (const auto index : line.items) {
             auto& item = items[index];

@@ -39,8 +39,8 @@
 | `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 的九种关键字及七种安全位置、容器与项目 LTR／RTL、确定／越界／自动尺寸已按两个轴差分；Flex 单条反向换行的交叉轴尺寸与列向基线物理边、双项目基线组到行底的距离已修正；多层嵌套与自动边距组合仍需验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline、test_item_alignment_matrix.py、test_baseline_matrix.py |
 | `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 默认 End 与单项 Start 覆盖、SafeCenter／Center 在轨道小于项目时的位置已差分；非拉伸的嵌套 Grid 在自动轨道与弹性轨道中按区域可用空间和固有贡献确定尺寸；其他安全值与复杂组合未完整 | P3 | 已建：grid-justify-items-end、grid-justify-safe／unsafe-overflow、test_mixed_nested.py |
 | `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 九种关键字及七种安全位置已与确定／越界／自动尺寸、容器与项目方向组合差分；self-start／self-end 按项目方向解析，多项目基线及嵌套组合仍未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr、test_item_alignment_matrix.py |
-| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；Flex 即使只有一条换行后的行，也先保留其内容交叉尺寸，再应用 stretch；Block 将正常流子项作为单组垂直对齐，含安全回退及浮动，同时其子树建立独立格式化上下文；作为祖先浮动旁的 Block 项目时，Taffy 仍允许它的盒与浮动重叠；Flex 的 Start／End 在反向换行时按书写方向对齐，FlexStart／FlexEnd 按行堆叠方向对齐；复杂组合未验收 | P2/P3/P4 | 已建：grid-content-alignment、648 组 Flex 方向／换行／对齐组合差分、block-align-matrix、test_item_alignment_matrix.py |
-| `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
+| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 换行与 Grid 固定轨道的九种位置／分布关键字、五种安全位置、空间充足／不足、LTR／RTL 已组合差分；Flex 单条换行也保留内容交叉尺寸，再应用 stretch，反向换行的 Start／End 与 FlexStart／FlexEnd 按不同方向解析；Block 将正常流子项作为单组垂直对齐，含安全回退及浮动，子树建立独立格式化上下文，在祖先浮动旁仍可与其盒重叠；更多自动轨道、嵌套和浮动组合未验收 | P2/P3/P4 | 已建：grid-content-alignment、648 组 Flex 方向／换行／对齐组合差分、block-align-matrix、test_item_alignment_matrix.py、test_content_alignment_matrix.py |
+| `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 四种主轴方向与 Grid 固定轨道的九种关键字、五种安全位置、正负剩余空间、LTR／RTL 已组合差分；Flex Start／End 按书写方向，FlexStart／FlexEnd 按主轴方向解析，分布值在空间不足时回退安全起始边；复杂自动边距与嵌套组合未验收 | P2/P3 | 已建：grid-content-alignment、test_content_alignment_matrix.py |
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；Flex 自动容器固有尺寸阶段以零为 `calc` 间隙百分比基准，保留固定长度项，尺寸确定后重算主轴分配；Grid 自动容器先按零间隙确定轨道尺寸，再重算偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、calc-flex-gap-basis／auto-gap、calc-grid-gap-item／auto-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；ColumnReverse 的居中、换列、RTL 反向换列与自动外边距已差分，复杂尺寸交互未验收 | P2 | 已建：flex-row-grow、flex-column-reverse-center／wrap／rtl-wrap-reverse／auto-margin |
@@ -226,6 +226,12 @@ Grid 另比较轨道及占用线号。反向换行即使仅有一条行，行高
 三种换行、容器与项目方向、宽裕／主轴紧张／交叉轴紧张空间以及四种
 基线覆盖关系，共 576 组。反向换行的行内基线组依据各项目到行底的
 最大距离定位；这两组测试固定的是 Taffy 0.14.0 的可观察行为。
+`test_content_alignment_matrix.py` 组合 Flex 的四种主轴方向、三种换行、
+行与主轴两类容器级对齐，及 Grid 的行列轨道对齐，共 26 种模式；
+每种模式遍历九种关键字、五种安全位置、宽裕／交叉轴不足／单项目或
+主轴不足、LTR／RTL，共 2,184 组，比较节点几何、局部溢出及 Grid
+轨道。反向 Flex 主轴将书写方向的 Start／End 与轴方向的 FlexStart／
+FlexEnd 分开解析；`stretch` 在单项目和多项目行的 Taffy 回退不同。
 `test_flex_bounds.py` 在确定父级空间、`max-content`、`min-content` 三种
 查询下，分别组合四种主轴方向、五种换行、五组项目主轴尺寸与盒边配置、
 LTR／RTL，以及明确尺寸、自动尺寸、自动尺寸受最大／最小主轴尺寸约束、
@@ -338,6 +344,19 @@ min/max、盒边、content-box、确定／未定基准、Flex basis／间隙、G
 更多固有尺寸、百分比循环和跨算法组合尚未验收，不能据此宣称全覆盖。
 
 ### 已裁决的参考实现差异
+
+逐项输入、规范版本与 WPT 对接状态见
+[规范／WPT／Taffy 用例索引](32-css-normative-case-index.md)。
+
+`justify-content: stretch` 在反向 Flex 主轴上还有版本差异。固定宽度的
+四个项目在 90px 的 `row-reverse wrap` 容器中每行两个，主轴间隙为 4px。
+Taffy 0.14.0 的 `content-alignment-11-5-0-0` 把两行项目放在左边
+`[44, 0]`；本机 Chrome 153.0.8010.53 执行
+[`flex_reverse_justify_stretch.html`](../tests/spec/flex_reverse_justify_stretch.html)
+得到 `[50, 6]`，符合
+[CSS Box Alignment §4.3](https://www.w3.org/TR/2026/WD-css-align-3-20260130/#distribution-values)
+的 `flex-start` 回退。Axisly 保留 Taffy 0.14 兼容结果，此差分通过不算
+CSS 规范通过。
 
 `flex-grow`／`flex-shrink` 系数和小于 1 且存在主轴 `gap` 时，锁定的
 Taffy 0.14.0 `src/compute/flexbox.rs` 在已扣除间隙的初始剩余空间乘以系数和

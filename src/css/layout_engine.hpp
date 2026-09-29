@@ -21,6 +21,7 @@ struct Constraints {
     AvailableSize available;
     std::optional<Unit> containing_width, containing_height;
     bool ignore_preferred_width{}, ignore_preferred_height{};
+    bool content_based_width{};
     bool operator==(const Constraints&) const = default;
 };
 
@@ -100,6 +101,8 @@ private:
                                 const ResolvedBox& box);
     [[nodiscard]] Fragment block(const LayoutNode& node, const Constraints& constraints,
                                  const ResolvedBox& box, std::size_t depth);
+    [[nodiscard]] Unit block_content_based_width(const LayoutNode& node,
+        AvailableSpace available, std::size_t depth);
     [[nodiscard]] Fragment flex(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box, std::size_t depth);
     [[nodiscard]] Fragment grid(const LayoutNode& node, const Constraints& constraints,

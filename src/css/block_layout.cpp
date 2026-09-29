@@ -31,8 +31,18 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     }
     const auto preferred_width = constraints.known_width ? constraints.known_width : box.preferred.width;
     const auto available_width = constraints.available.width.definite_value();
+    const bool content_based_width = !preferred_width
+        && (constraints.content_based_width
+            || node.style.float_side != FloatSide::None
+            || node.style.item_is_table || node.style.box.replaced
+            || !available_width);
+    const Unit measured_width = content_based_width
+        ? checked(static_cast<double>(block_content_based_width(node,
+            subtract_decoration(constraints.available.width, *decoration_width),
+            depth)) + *decoration_width, node.id) : Unit{0};
     const Unit outer_width = constrain_axis(
-        preferred_width.value_or(available_width.value_or(Unit{0})),
+        preferred_width.value_or(content_based_width
+            ? measured_width : available_width.value_or(Unit{0})),
         box.minimum.width, box.maximum.width);
     const Unit content_width = std::max(Unit{0}, outer_width - *decoration_width);
     auto preferred_height = constraints.known_height
@@ -254,6 +264,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
     }
     if (!node.parent || node.style.display == Display::FlowRoot
+        || node.style.float_side != FloatSide::None
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y)) {

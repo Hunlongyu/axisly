@@ -93,6 +93,13 @@ CASES = (
     "block-float-flex-context",
     "block-float-grid-context",
     "block-float-self-clear",
+    "block-float-intrinsic-child",
+    "block-float-intrinsic-overflow",
+    "block-float-intrinsic-pair",
+    "block-max-content-width",
+    "block-min-content-width",
+    "block-float-intrinsic-flex",
+    "block-float-intrinsic-grid",
     "mixed-block-flex-grid",
 )
 

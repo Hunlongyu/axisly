@@ -179,7 +179,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     }
     auto border_width = constraints.known_width ? constraints.known_width : box.preferred.width;
     auto border_height = constraints.known_height ? constraints.known_height : box.preferred.height;
-    if (!border_width && constraints.available.width.kind == AvailableKind::Definite) {
+    if (!border_width && !constraints.content_based_width
+        && constraints.available.width.kind == AvailableKind::Definite) {
         border_width = constraints.available.width.value;
     }
     if (border_width) {

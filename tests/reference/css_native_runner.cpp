@@ -1288,6 +1288,78 @@ void block_float_self_clear() {
         {{1310, root}, {1311, left}, {1312, right}});
 }
 
+void block_intrinsic_width_case(std::string_view name) {
+    const bool floating = name.starts_with("block-float-intrinsic-");
+    const bool overflow = name == "block-float-intrinsic-overflow";
+    const bool pair = name == "block-float-intrinsic-pair";
+    const bool minimum = name == "block-min-content-width";
+    const bool flex = name == "block-float-intrinsic-flex";
+    const bool grid = name == "block-float-intrinsic-grid";
+    const int id = flex ? 1370 : grid ? 1380
+        : pair ? 1340 : overflow ? 1330 : floating ? 1320
+        : minimum ? 1360 : 1350;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    if (floating) root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    NodeId parent = root;
+    if (floating) {
+        Style float_style;
+        float_style.display = Display::Block;
+        float_style.float_side = FloatSide::Left;
+        parent = tree.create_node(float_style);
+        tree.append_child(root, parent);
+        nodes.emplace_back(id + 1, parent);
+    }
+    if (flex || grid) {
+        Style container_style;
+        container_style.display = flex ? Display::Flex : Display::Grid;
+        const auto container = tree.create_node(container_style);
+        tree.append_child(parent, container);
+        nodes.emplace_back(id + 2, container);
+        parent = container;
+    }
+    if (pair) {
+        Style float_style;
+        float_style.display = Display::Block;
+        float_style.float_side = FloatSide::Left;
+        float_style.box.size = {Length::length(30), Length::length(10)};
+        for (int index = 0; index < 2; ++index) {
+            const auto child = tree.create_node(float_style);
+            tree.append_child(parent, child);
+            nodes.emplace_back(id + index + 2, child);
+        }
+    } else {
+        const int child_count = floating || minimum ? 1 : 2;
+        for (int index = 0; index < child_count; ++index) {
+            Style child_style;
+            child_style.display = flex || grid ? Display::Flex : Display::Block;
+            const Unit intrinsic_min = index == 0 ? 20.0f : 30.0f;
+            const Unit intrinsic_max = overflow ? 150.0f
+                : index == 0 ? 40.0f : 70.0f;
+            const auto child = tree.create_node(child_style,
+                [intrinsic_min, intrinsic_max](const MeasureRequest& request) {
+                    const Unit width = request.known_content_width.value_or(
+                        request.available_width.kind == AvailableKind::MinContent
+                            ? intrinsic_min : intrinsic_max);
+                    return Measurement{{width,
+                        request.known_content_height.value_or(10.0f)},
+                        {}, {}, Size{intrinsic_max, 10}};
+                });
+            tree.append_child(parent, child);
+            nodes.emplace_back(id + index + (flex || grid ? 3
+                : floating ? 2 : 1), child);
+        }
+    }
+    print(name.data(), tree.compute(root,
+        {floating ? AvailableSpace::definite(100)
+            : minimum ? AvailableSpace::min_content()
+            : AvailableSpace::max_content(),
+            AvailableSpace::max_content()}), nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1334,6 +1406,13 @@ int main(int argc, char** argv) {
         else if (name == "hidden-and-positioned") hidden_and_positioned();
         else if (name == "block-float-clear") block_float_clear();
         else if (name == "block-float-self-clear") block_float_self_clear();
+        else if (name == "block-float-intrinsic-child"
+            || name == "block-float-intrinsic-overflow"
+            || name == "block-float-intrinsic-pair"
+            || name == "block-float-intrinsic-flex"
+            || name == "block-float-intrinsic-grid"
+            || name == "block-max-content-width"
+            || name == "block-min-content-width") block_intrinsic_width_case(name);
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

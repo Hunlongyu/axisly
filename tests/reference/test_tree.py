@@ -121,6 +121,12 @@ class TreeReferenceTests(unittest.TestCase):
                 6850: [0, 0, 100, 40], 6851: [70, 0, 20, 10]},
             "rtl-block-auto-positive-right": {
                 6860: [0, 0, 100, 40], 6861: [10, 0, 20, 10]},
+            "nested-percent-block": {
+                6870: [0, 0, 30, 40], 6871: [0, 0, 30, 10]},
+            "nested-percent-flex": {
+                6880: [0, 0, 30, 40], 6881: [0, 0, 30, 10]},
+            "nested-percent-grid": {
+                6890: [0, 0, 30, 40], 6891: [0, 0, 33, 10]},
             "flex-scrollbar-reservation": {170: [0, 0, 100, 50], 171: [0, 0, 90, 20]},
             "block-legacy-text-align": {180: [0, 0, 100, 40], 181: [40, 0, 20, 10]},
             "block-contain-float": {190: [0, 0, 100, 30], 191: [0, 0, 20, 30]},

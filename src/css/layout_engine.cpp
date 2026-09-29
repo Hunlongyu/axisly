@@ -363,7 +363,15 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
     fragment.size = candidate;
     fragment.nodes.push_back(make_layout(node, candidate, box,
         measured.first_baseline, measured.last_baseline));
-    const auto padding = edges(box.padding, node.id);
+    // Intrinsic Block/Flex layout may leave percentage edges unresolved for
+    // the reported box while measuring the leaf with a definite available
+    // width. Taffy's leaf scrollable extent uses that later width.
+    const auto overflow_box = constraints.containing_width
+        || !constraints.available.width.definite_value()
+        ? box : resolve_layout_box(node,
+            constraints.available.width.definite_value(),
+            constraints.containing_height);
+    const auto padding = edges(overflow_box.padding, node.id);
     const bool scroll_container = node.style.overflow_x == Overflow::Hidden
         || node.style.overflow_x == Overflow::Scroll
         || node.style.overflow_y == Overflow::Hidden

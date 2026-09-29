@@ -988,6 +988,27 @@ void rtl_block_auto_margin_case(std::string_view name) {
         {{id, root}, {id + 1, child}});
 }
 
+void nested_percentage_case(std::string_view name) {
+    const bool block = name == "nested-percent-block";
+    const bool flex = name == "nested-percent-flex";
+    const int id = block ? 6870 : flex ? 6880 : 6890;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = block ? Display::Block : flex ? Display::Flex : Display::Grid;
+    root_style.box.size.height = Length::length(40);
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.box_sizing = BoxSizing::ContentBox;
+    child_style.box.size = {Length::length(30), Length::length(10)};
+    child_style.box.padding.left = Length::percent(0.1f);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::max_content(), AvailableSpace::definite(40)}),
+        {{id, root}, {id + 1, child}});
+}
+
 void rtl_mixed_case(std::string_view name) {
     LayoutTree tree;
     const bool block_root = name == "rtl-mixed-block-flex-grid";
@@ -2860,6 +2881,7 @@ int main(int argc, char** argv) {
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name.starts_with("rtl-block-auto-")) rtl_block_auto_margin_case(name);
+        else if (name.starts_with("nested-percent-")) nested_percentage_case(name);
         else if (name.starts_with("rtl-mixed-")) rtl_mixed_case(name);
         else if (name == "grid-justify-items-end"
             || name.starts_with("grid-justify-safe-")

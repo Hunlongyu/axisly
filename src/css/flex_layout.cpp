@@ -241,6 +241,10 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *deco_width)) : std::nullopt;
     auto inner_height = border_height
         ? std::optional<Unit>(std::max(Unit{0}, *border_height - *deco_height)) : std::nullopt;
+    // A content-sized Flex container can acquire a final size without making
+    // its children's percentage basis definite in the intrinsic pass.
+    const auto child_percentage_width = inner_width;
+    const auto child_percentage_height = inner_height;
     const auto main_available = row ? inner_width : inner_height;
     const auto cross_available = row ? inner_height : inner_width;
     Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
@@ -428,8 +432,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         for (const auto index : line.items) {
             auto& item = items[index];
             Constraints final_constraints;
-            final_constraints.containing_width = inner_width;
-            final_constraints.containing_height = inner_height;
+            final_constraints.containing_width = child_percentage_width;
+            final_constraints.containing_height = child_percentage_height;
             final_constraints.available.width = inner_width
                 ? AvailableSpace::definite(*inner_width) : AvailableSpace::indefinite();
             final_constraints.available.height = inner_height
@@ -524,8 +528,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     static_cast<double>(line.cross) - cross_margin_start - cross_margin_end,
                     item.id));
                 Constraints stretched;
-                stretched.containing_width = inner_width;
-                stretched.containing_height = inner_height;
+                stretched.containing_width = child_percentage_width;
+                stretched.containing_height = child_percentage_height;
                 stretched.available.width = inner_width
                     ? AvailableSpace::definite(*inner_width) : AvailableSpace::indefinite();
                 stretched.available.height = inner_height

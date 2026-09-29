@@ -53,6 +53,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const auto flow_decoration_width = flow_box.horizontal_decoration();
     const auto flow_decoration_height = flow_box.vertical_decoration();
     const Unit content_width = std::max(Unit{0}, outer_width - *flow_decoration_width);
+    // An intrinsic outer width provides space for placement, but it does not
+    // turn the containing block into a definite percentage basis for children.
+    const std::optional<Unit> child_percentage_width =
+        (constraints.containing_width || preferred_width)
+            ? std::optional<Unit>(content_width) : std::nullopt;
     auto preferred_height = requested.height;
     if (!preferred_height) {
         preferred_height = transfer_aspect_ratio({outer_width, std::nullopt}, box).height;
@@ -93,10 +98,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             ? AvailableSpace::max_content()
             : AvailableSpace::definite(content_width);
         child_constraints.available.height = AvailableSpace::indefinite();
-        child_constraints.containing_width = content_width;
+        child_constraints.containing_width = child_percentage_width;
         if (preferred_height) child_constraints.containing_height = content_height_basis;
         ResolvedBox child_box;
-        try { child_box = resolve_layout_box(child, content_width,
+        try { child_box = resolve_layout_box(child, child_percentage_width,
             child_constraints.containing_height); }
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, child_id, error.what());

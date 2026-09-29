@@ -69,6 +69,8 @@ CASES = (
     "overflow-border-origin",
     "grid-span-order-short-first",
     "grid-span-order-long-first",
+    "grid-equal-intrinsic-growth",
+    "grid-capped-intrinsic-growth",
     "mixed-block-flex-grid",
 )
 

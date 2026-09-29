@@ -1037,6 +1037,39 @@ void grid_span_order(bool long_first) {
         {{id, root}, {id + 1, first}, {id + 2, second}});
 }
 
+void grid_intrinsic_growth(bool capped) {
+    LayoutTree tree;
+    const Unit width = capped ? 80.0f : 100.0f;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(width), Length::length(20)};
+    root_style.grid.template_columns = {TrackSizing::automatic(),
+        TrackSizing::automatic()};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    const auto add_child = [&](int column, Unit preferred) {
+        Style style;
+        style.grid.column = {GridLine::index(static_cast<std::int16_t>(column)),
+            GridLine::span(1)};
+        style.grid.row = {GridLine::index(1), GridLine::span(1)};
+        return tree.create_node(style, [preferred](const MeasureRequest& request) {
+            const Unit intrinsic = request.available_width.kind == AvailableKind::MinContent
+                ? 20.0f : preferred;
+            return Measurement{{request.known_content_width.value_or(intrinsic),
+                request.known_content_height.value_or(10.0f)}, {}, {},
+                Size{preferred, 10}};
+        });
+    };
+    const auto first = add_child(1, 70);
+    const auto second = add_child(2, capped ? 30.0f : 70.0f);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    const int id = capped ? 1090 : 1080;
+    print(capped ? "grid-capped-intrinsic-growth" : "grid-equal-intrinsic-growth",
+        tree.compute(root, {AvailableSpace::definite(width), AvailableSpace::definite(20)}),
+        {{id, root}, {id + 1, first}, {id + 2, second}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1134,6 +1167,8 @@ int main(int argc, char** argv) {
         else if (name == "overflow-border-origin") overflow_border_origin();
         else if (name == "grid-span-order-short-first") grid_span_order(false);
         else if (name == "grid-span-order-long-first") grid_span_order(true);
+        else if (name == "grid-equal-intrinsic-growth") grid_intrinsic_growth(false);
+        else if (name == "grid-capped-intrinsic-growth") grid_intrinsic_growth(true);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

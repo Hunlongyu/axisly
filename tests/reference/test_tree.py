@@ -172,6 +172,12 @@ class TreeReferenceTests(unittest.TestCase):
             "grid-span-order-long-first": {1070: [0, 0, 150, 20],
                                            1071: [0, 0, 150, 20],
                                            1072: [0, 0, 123.33332824707031, 20]},
+            "grid-equal-intrinsic-growth": {1080: [0, 0, 100, 20],
+                                            1081: [0, 0, 50, 20],
+                                            1082: [50, 0, 50, 20]},
+            "grid-capped-intrinsic-growth": {1090: [0, 0, 80, 20],
+                                             1091: [0, 0, 50, 20],
+                                             1092: [50, 0, 30, 20]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

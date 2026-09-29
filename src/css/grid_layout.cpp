@@ -209,12 +209,20 @@ AxisPlacement axis_placement(const GridPlacement& value, const ExpandedTemplate&
     };
     const auto start = numeric_line(value.start, true);
     const auto end = numeric_line(value.end, false);
+    const auto span_size = [](const GridLine& line) {
+        return line.kind() == GridLineKind::NamedSpan ? std::int32_t{1}
+            : static_cast<std::int32_t>(line.span_count());
+    };
     std::int32_t span = 1;
-    if (value.start.kind() == GridLineKind::Span) span = value.start.span_count();
-    if (value.end.kind() == GridLineKind::Span) span = value.end.span_count();
-    if (value.start.kind() == GridLineKind::NamedSpan) span = value.start.span_count();
-    if (value.end.kind() == GridLineKind::NamedSpan) span = value.end.span_count();
-    if (start && end) return {*start, std::max<std::int32_t>(1, *end - *start)};
+    if (value.start.kind() == GridLineKind::Span
+        || value.start.kind() == GridLineKind::NamedSpan) {
+        span = span_size(value.start);
+    } else if (value.end.kind() == GridLineKind::Span
+        || value.end.kind() == GridLineKind::NamedSpan) {
+        span = span_size(value.end);
+    }
+    if (start && end) return {std::min(*start, *end),
+        std::max<std::int32_t>(1, std::abs(*end - *start))};
     if (start && value.end.kind() == GridLineKind::NamedSpan) {
         const auto target = named_span(axis, *start, value.end, true);
         return {*start, std::max<std::int32_t>(1, target - *start)};

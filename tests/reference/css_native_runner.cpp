@@ -1,5 +1,7 @@
 #include <axisly/css_tree.hpp>
 
+#include <algorithm>
+#include <array>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -655,6 +657,58 @@ void grid_auto_placement_case(std::string_view name) {
     }
     print(name.data(), tree.compute(root,
         {AvailableSpace::definite(120), AvailableSpace::definite(120)}), nodes);
+}
+
+void grid_line_conflict_case(std::string_view name) {
+    constexpr std::array<std::string_view, 11> names{
+        "grid-line-reverse-column", "grid-line-equal-column",
+        "grid-line-reverse-negative", "grid-line-reverse-named",
+        "grid-line-reverse-row", "grid-line-start-span",
+        "grid-line-both-spans", "grid-line-named-span-start-auto",
+        "grid-line-named-span-auto-end", "grid-line-absolute-reverse-column",
+        "grid-line-absolute-reverse-row"};
+    const auto found = std::find(names.begin(), names.end(), name);
+    if (found == names.end()) throw std::invalid_argument("Unknown grid line conflict fixture");
+    const auto variant = static_cast<int>(found - names.begin());
+    const int base = 6400 + variant * 10;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(120), Length::length(80)};
+    root_style.grid.template_columns.assign(4, TrackSizing::fixed(20));
+    root_style.grid.column_line_names = {{"a"}, {"b"}, {"c"}, {"d"}, {"e"}};
+    root_style.grid.template_rows.assign(2, TrackSizing::fixed(20));
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    if (variant == 4) child_style.box.size.width = Length::length(10);
+    else child_style.box.size.height = Length::length(10);
+    if (variant >= 9) {
+        child_style.position = Position::Absolute;
+        child_style.box.size.width = Length::length(10);
+        if (variant == 9) child_style.justify_self = ItemAlignment{ItemPosition::Center};
+        else child_style.align_self = ItemAlignment{ItemPosition::Center};
+    }
+    auto& placement = variant == 4 || variant == 10
+        ? child_style.grid.row : child_style.grid.column;
+    switch (variant) {
+    case 0: placement = {GridLine::index(4), GridLine::index(2)}; break;
+    case 1: placement = {GridLine::index(3), GridLine::index(3)}; break;
+    case 2: placement = {GridLine::index(-1), GridLine::index(-4)}; break;
+    case 3: placement = {GridLine::named("d"), GridLine::named("b")}; break;
+    case 4: placement = {GridLine::index(3), GridLine::index(1)}; break;
+    case 5: placement = {GridLine::span(2), GridLine::index(4)}; break;
+    case 6: placement = {GridLine::span(2), GridLine::span(3)}; break;
+    case 7: placement.start = GridLine::named_span("b", 3); break;
+    case 8: placement.end = GridLine::named_span("b", 3); break;
+    case 9: placement = {GridLine::index(4), GridLine::index(2)}; break;
+    case 10: placement = {GridLine::index(3), GridLine::index(1)}; break;
+    default: break;
+    }
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(120), AvailableSpace::definite(80)}),
+        {{base, root}, {base + 1, child}});
 }
 
 void grid_auto_margins() {
@@ -2402,6 +2456,8 @@ int main(int argc, char** argv) {
             grid_repeat_percentage_gap_case(name);
         else if (name.starts_with("placement-"))
             grid_auto_placement_case(name);
+        else if (name.starts_with("grid-line-"))
+            grid_line_conflict_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

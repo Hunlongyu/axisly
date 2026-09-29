@@ -57,8 +57,8 @@
 | `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
 | `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences |
 | `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；多次出现未完整 | P3 | 已建：named-area-placement |
-| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；区域与绝对定位通过固定差分 | P3 | 已建：named-area-placement、grid-absolute-area |
-| `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域通过差分 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences |
+| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；起止反向时交换、相同线时形成一条轨道，区域与绝对定位通过固定差分；更多命名线组合未完整 | P3 | 已建：named-area-placement、grid-absolute-area、grid-line-reverse-row |
+| `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域；双 span 采用起始 span，孤立具名 span 化为一条轨道，起止反向／相同线规则已差分；更多命名线组合未完整 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences、grid-line-reverse-column／negative／named、grid-line-equal-column、grid-line-both-spans、grid-line-named-span-start-auto／auto-end |
 | `dummy` | Rust 泛型编译占位字段 | 内部字段 | — | 无需用例 |
 
 ## 跨字段验收轴
@@ -168,6 +168,10 @@
 | `placement-row-dense-secondary`／`placement-column-dense-secondary` | Dense 模式在确定次轴的放置阶段和自动阶段重新从网格起点搜索 |
 | `placement-negative-column-start`／`placement-negative-row-start` | 负方向隐式轨道形成自动放置游标的起点 |
 | `placement-row-primary-backtrack`／`placement-column-primary-backtrack` | 稀疏流在主轴固定项目回到较早网格线时将次轴游标推进 |
+| `grid-line-reverse-column`／`grid-line-reverse-negative`／`grid-line-reverse-named`／`grid-line-reverse-row` | 指定起止线反向时交换，覆盖数字、负线、命名线及双轴 |
+| `grid-line-equal-column`／`grid-line-start-span`／`grid-line-both-spans` | 相同起止线形成一条轨道；起始 span 和结束线组合、双 span 冲突保留起始 span |
+| `grid-line-named-span-start-auto`／`grid-line-named-span-auto-end` | 无确定另一端时，孤立具名 span 归一为一条轨道 |
+| `grid-line-absolute-reverse-column`／`grid-line-absolute-reverse-row` | 绝对定位网格项的反向起止线先交换，再以所得区域作为对齐基准 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -190,8 +194,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二百一十四组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这二百一十四组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、二百二十五组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这二百二十五组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

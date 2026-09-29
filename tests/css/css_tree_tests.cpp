@@ -1,5 +1,6 @@
 #include <axisly/css_tree.hpp>
 
+#include <array>
 #include <exception>
 #include <iostream>
 #include <stdexcept>
@@ -301,6 +302,69 @@ void plain_block_single_measure() {
         && result.measurement_count == 1 && calls == 1,
         "A Block subtree without floats must use one layout pass");
 }
+
+void multi_query_leaf_cache() {
+    struct Snapshot {
+        Size size;
+        std::array<Rect, 4> rectangles;
+        std::size_t calls;
+        std::size_t layouts;
+    };
+    const auto run = [](std::size_t layout_limit,
+                        std::size_t measurement_limit) {
+        TreeLimits limits;
+        limits.maximum_cached_layouts = layout_limit;
+        limits.maximum_cached_measurements = measurement_limit;
+        LayoutTree tree(limits);
+        Style grid_style;
+        grid_style.display = Display::Grid;
+        grid_style.grid.template_columns = {
+            TrackSizing::automatic(), TrackSizing::automatic()};
+        grid_style.grid.template_rows = {TrackSizing::automatic()};
+        const auto grid = tree.create_node(grid_style);
+        Style flex_style;
+        flex_style.display = Display::Flex;
+        flex_style.flex_wrap = FlexWrap::Wrap;
+        flex_style.box.max_size.width = Length::length(38);
+        const auto flex = tree.create_node(flex_style);
+        tree.append_child(grid, flex);
+        std::size_t calls = 0;
+        const auto add_leaf = [&](Size minimum, Size preferred) {
+            const auto leaf = tree.create_node({}, [&, minimum, preferred](const MeasureRequest& request) {
+                ++calls;
+                const Size queried{
+                    request.available_width.kind == AvailableKind::MinContent
+                        ? minimum.width : preferred.width,
+                    request.available_height.kind == AvailableKind::MinContent
+                        ? minimum.height : preferred.height};
+                return Measurement{{request.known_content_width.value_or(queried.width),
+                    request.known_content_height.value_or(queried.height)}, {}, {}, preferred};
+            });
+            tree.append_child(flex, leaf);
+            return leaf;
+        };
+        const auto first = add_leaf({10, 8}, {24, 18});
+        const auto second = add_leaf({16, 11}, {29, 21});
+        const auto result = tree.compute(grid,
+            {AvailableSpace::min_content(), AvailableSpace::min_content()});
+        require(result.succeeded() && result.measurement_count == calls,
+            "Grid intrinsic measurements must count only host calls");
+        return Snapshot{result.size, {result.find(grid)->border_box,
+            result.find(flex)->border_box, result.find(first)->border_box,
+            result.find(second)->border_box}, calls, result.layout_count};
+    };
+    const auto uncached = run(1, 1);
+    const auto measured = run(1, 100'000);
+    const auto cached = run(100'000, 100'000);
+    require(cached.size == uncached.size && cached.rectangles == uncached.rectangles
+        && measured.size == uncached.size
+        && measured.rectangles == uncached.rectangles,
+        "Intrinsic query reuse must preserve final geometry");
+    require(measured.calls < uncached.calls,
+        "Identical leaf requests should reuse measurements across layout constraints");
+    require(cached.layouts < measured.layouts,
+        "Repeated layout constraints should reuse staged fragments");
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -315,6 +379,7 @@ int main(int argc, char** argv) {
         else if (name == "cache_and_dirty") cache_and_dirty();
         else if (name == "inherited_float_invalidation") inherited_float_invalidation();
         else if (name == "plain_block_single_measure") plain_block_single_measure();
+        else if (name == "multi_query_leaf_cache") multi_query_leaf_cache();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

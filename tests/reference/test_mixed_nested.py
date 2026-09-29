@@ -17,7 +17,7 @@ ITEM_POSITIONS = ("Start", "Center", "End")
 
 def make_cases(scenario):
     for root_kind, root_alignment, direction, wrap, nested_kind, nested_direction, variant, rtl in itertools.product(
-        range(2), range(3), range(4), range(3), range(2), range(2), range(2), range(2)
+        range(2), range(3), range(4), range(3), range(2), range(2), range(4), range(2)
     ):
         row = direction < 2
         width, height = (90, 80) if row else (80, 90)
@@ -48,12 +48,19 @@ def make_cases(scenario):
         }
         if nested_kind == 0:
             nested["flex_direction"] = "Row" if nested_direction == 0 else "Column"
+            if variant >= 2:
+                nested["flex_wrap"] = "Wrap"
         else:
             nested["grid_template_columns"] = "auto auto" if nested_direction == 0 else "auto"
             nested["grid_template_rows"] = "auto" if nested_direction == 0 else "auto auto"
         if variant == 1:
             nested["flex_grow"] = 1
             nested["flex_basis"] = 20
+        elif variant >= 2:
+            axis = "width" if nested_direction == 0 else "height"
+            nested["max_size"] = {axis: 38}
+            if variant == 3:
+                nested["min_size"] = {axis: 46}
         nodes = [
             {"id": 1, "parent": None, "style": root},
             {"id": 2, "parent": 0, "style": nested},
@@ -100,8 +107,8 @@ def main():
         + (["--details"] if args.details else []),
         text=True, capture_output=True, check=True,
     ).stdout)
-    assert native["protocol"] == "AXISLY_MIXED_NESTED_V1"
-    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1152
+    assert native["protocol"] == "AXISLY_MIXED_NESTED_V2"
+    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 2304
     failures = []
     for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:

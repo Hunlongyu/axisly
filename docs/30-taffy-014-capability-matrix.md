@@ -30,7 +30,7 @@
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；百分比偏移已覆盖 Block／Flex／Grid、边框内包含块和 Grid 指定区域；四向 Flex／反向换行与 Grid 指定区域中的单边／双边／未指定 inset、固定／自动尺寸及自动边距已组合差分；相对定位 Grid 项目的百分比 inset 按单元格尺寸解析；复杂百分比循环未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint、absolute-percent-basic、absolute-percent-border、absolute-percent-grid-area、test_position_matrix.py |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；嵌套 Block／Flex／Grid 容器的 min-content／max-content／fit-content 与有参 fit-content 已按双轴差分，含三层混合算法、同节点双轴固有关键字、根节点尺寸查询、Block 正常流高度及局部缓存失效；非拉伸 Block 子容器作为列向 Flex 或 Grid 项目时，自动宽度按内容确定；独立 calc 参考树验证叶子双轴及嵌套 Block／Flex／Grid 的确定基准计算；循环百分比与更多跨字段组合未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width、test_intrinsic_size.py、intrinsic_container_invalidation、test_position_matrix.py、calc-leaf-size／indefinite／partial-basis、calc-block-child、calc-flex-gap-basis、calc-grid-gap-item |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；Flex 容器同时存在最小与最大主轴约束时按最小值确定初次分行上限；叶子 calc 最小尺寸已对照；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height、calc-leaf-min-max、test_flex_bounds.py |
-| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限限制初次分行，`min-content`／`max-content` 查询保留该分行，不在最终尺寸确定后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max、test_flex_bounds.py；待建：max-size-reflow |
+| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限限制初次分行，`min-content`／`max-content` 查询保留该分行，不在最终尺寸确定后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；父 Flex 传给嵌套 Flex 的内容推导尺寸保留非确定性，最大内容查询中的子项不因此重新分行；Grid 先按列宽重测行贡献，再按行高重测内在列贡献；叶子 calc 最大尺寸已对照；其他循环百分比及复杂重排尚未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max、test_flex_bounds.py、test_mixed_nested.py 全组合 9,216 组 |
 | `aspect_ratio` | 可选宽高比 | 部分：叶子与容器分开解析比例约束；Taffy 0.14 的叶子最大尺寸不沿比例传递，容器最大尺寸传递，Flex 项目的比例最小值仅用于假设尺寸阶段，Grid 项目先将最小尺寸抬到盒边再决定最终盒；Block／Flex／Grid 的单轴指定值、内容盒、min/max 约束、未定根可用轴及混合树已差分，含 Grid 内部轨道基准与 RTL 溢出；更多替换元素、百分比及循环组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width、test_ratio_matrix.py |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Flex 主轴正剩余空间分配与交叉轴正负剩余空间分配均输出已使用边距；绝对定位边距按 Block 的 inset 约束、Flex 边框盒或 Grid 区域分别计算，Grid 显式 inset 的位置使用非自动边距；RTL Grid 正常流项目按物理右边距作为逻辑起始边距；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分；RTL Block 自动边距在正剩余空间与溢出时按物理右边定位，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：flex-auto-main-pair／cross-pair／overflow、flex-column-reverse-auto-margin、content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、rtl-block-auto-overflow-both／left／right、rtl-block-auto-positive／left／right、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins、test_position_matrix.py |
 | `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，带 calc 内边距的确定宽度 Block 嵌套树已差分；自动宽度 Block/Flex 子项的百分比内边距保持未定，Grid 按网格区域宽度解析；嵌套 Block 的后续子项排布与叶子局部可滚动范围分别验收；更多百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis、calc-block-child、nested-percent-block／flex／grid、nested-percent-depth-block／flex／grid |
@@ -274,12 +274,21 @@ Grid 子容器按参数钳制。这些版本行为由矩阵固定，不等同于
 计算宽度确定。上述规则由参考矩阵固定，不能直接泛化为所有 CSS 实现。
 
 `test_mixed_nested.py` 组合外层 Flex／Grid、三种项目对齐、四种主轴方向／
-自动流、三种换行／轨道模板、内层 Flex／Grid、两种内层排列方向、两类内层
-basis／增长策略、LTR／RTL 与明确尺寸、自动尺寸配确定父级空间、
-`max-content`、`min-content` 四种尺寸情形，共 4,608 组。叶节点的最小内容与首选
+自动流、三种换行／轨道模板、内层 Flex／Grid、两种内层排列方向、四类内层
+basis／增长／最大尺寸／最小尺寸冲突、LTR／RTL 与明确尺寸、自动尺寸配确定父级空间、
+`max-content`、`min-content` 四种尺寸情形，共 9,216 组。叶节点的最小内容与首选
 内容尺寸不同；比较嵌套节点、叶节点的盒尺寸与滚动溢出，并对两级 Grid
 比较轨道起止位置、显式及隐式范围和项目占用线号，验证固有约束
 传递、交叉轴探测、非拉伸 Grid 子容器的尺寸确定及最终双轴布局。
+四种尺寸情形各 2,304 组已纳入常规 CTest，包含 Grid 轨道细节差分。
+列向 Flex 的交叉轴宽度确定性，以及 Grid 列、行贡献的顺序重测，
+使此前的 300 组差异全部归零。这证明该矩阵覆盖的 `max_size` 组合，
+不能外推为所有循环百分比与跨算法尺寸组合均已完成。
+`multi_query_leaf_cache` 分别限制布局片段与宿主测量缓存的容量，
+逐节点比较缓存开启前后的几何和宿主调用次数；按节点失效后只重测
+受影响分支。缓存结果仅在整次布局成功后发布，容量由 `TreeLimits`
+限制。时间、分配及仍存在的首次计算回退见
+[保留布局基准](31-css-retained-benchmarks.md)。
 
 `test_block_float_matrix.py` 生成 552 组 Block／Float 组合：根容器 Block／
 FlowRoot、左右双侧浮动、四种 `clear`、普通 Block／FlowRoot／Flex／Grid
@@ -339,7 +348,7 @@ LTR／RTL、四种自动流、固定或拉伸项目，以及确定／`max-conten
 按原始数字端点估算，之后再解析具名线并扩张占用范围。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 新 CSS `GridTracks` 同时报告实际轨道尺寸、边框盒相对位置、显式轨道数、
-隐式范围和每个在流项目的起止线。上述矩阵、4,608 组混合嵌套树和
+隐式范围和每个在流项目的起止线。上述矩阵、9,216 组混合嵌套树和
 二百六十三组固定树输入已比较这些诊断；详细差分还发现并固定了空 Grid
 误建隐式轨道、非拉伸纵横比项目没有扩大列轨道的问题。
 复杂轨道取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

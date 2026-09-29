@@ -29,6 +29,7 @@ struct TreeLimits {
     std::size_t maximum_nodes{100'000};
     std::size_t maximum_measurements{100'000};
     std::size_t maximum_cached_layouts{100'000};
+    std::size_t maximum_cached_measurements{100'000};
 };
 
 enum class LayoutErrorCode {

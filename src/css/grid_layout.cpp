@@ -647,7 +647,119 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         apply_cross_axis_ratio_contributions(measured_rows, contributions, node.id);
     }
     size_axis(track_columns, contributions, true, column_space, node.id);
+    // Track contributions are axis-specific queries. Row measurements see the
+    // provisional column widths; a later column pass can in turn see row
+    // heights. Measuring both axes up front loses nested width/height reflow.
+    const auto measure_cross_dependent_contributions = [&](bool rows_axis) {
+        bool changed = false;
+        for (std::size_t i = 0; i < node.children.size(); ++i) {
+            if (!contribution_indices[i]) continue;
+            const auto id = node.children[i];
+            const auto& child = get(id);
+            const auto& place = placements[i];
+            const Unit cross_size = rows_axis
+                ? track_columns.span(place.column_start, place.column_end)
+                : track_rows.span(place.row_start, place.row_end);
+            const std::optional<Unit> containing_width = rows_axis
+                ? std::optional<Unit>{cross_size} : inner_width;
+            const std::optional<Unit> containing_height = rows_axis
+                ? inner_height : std::optional<Unit>{cross_size};
+            ResolvedBox child_box;
+            try { child_box = resolve_layout_box(child, containing_width, containing_height); }
+            catch (const std::invalid_argument& error) {
+                throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
+            }
+            const auto margin = edges(child_box.margin, id);
+            Constraints intrinsic;
+            intrinsic.containing_width = containing_width;
+            intrinsic.containing_height = containing_height;
+            auto& own_available = rows_axis ? intrinsic.available.height
+                : intrinsic.available.width;
+            auto& cross_available = rows_axis ? intrinsic.available.width
+                : intrinsic.available.height;
+            cross_available = AvailableSpace::definite(cross_size);
+            const auto alignment = rows_axis
+                ? child.style.justify_self.value_or(node.style.justify_items.value_or(
+                    ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}))
+                : child.style.align_self.value_or(node.style.align_items.value_or(
+                    ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
+            const auto& cross_style = rows_axis
+                ? child.style.box.size.width : child.style.box.size.height;
+            const auto& cross_margin_start = rows_axis
+                ? child_box.margin.left : child_box.margin.top;
+            const auto& cross_margin_end = rows_axis
+                ? child_box.margin.right : child_box.margin.bottom;
+            if (alignment.position == ItemPosition::Stretch
+                && cross_style.kind() == LengthKind::Auto
+                && cross_margin_start.kind != EdgeKind::Auto
+                && cross_margin_end.kind != EdgeKind::Auto) {
+                const Unit margin_sum = rows_axis
+                    ? checked(static_cast<double>(margin.left) + margin.right, id)
+                    : checked(static_cast<double>(margin.top) + margin.bottom, id);
+                const Unit known = constrain_axis(std::max(Unit{0}, checked(
+                    static_cast<double>(cross_size) - margin_sum, id)),
+                    rows_axis ? child_box.minimum.width : child_box.minimum.height,
+                    rows_axis ? child_box.maximum.width : child_box.maximum.height);
+                if (rows_axis) intrinsic.known_width = known;
+                else intrinsic.known_height = known;
+            }
+            own_available = AvailableSpace::min_content();
+            const auto minimum = layout(id, intrinsic, depth + 1);
+            own_available = AvailableSpace::max_content();
+            const auto maximum = layout(id, intrinsic, depth + 1);
+            auto& contribution = contributions[*contribution_indices[i]];
+            auto& min_content = rows_axis
+                ? contribution.min_content.height : contribution.min_content.width;
+            auto& max_content = rows_axis
+                ? contribution.max_content.height : contribution.max_content.width;
+            auto& minimum_contribution = rows_axis
+                ? contribution.minimum_contribution.height
+                : contribution.minimum_contribution.width;
+            const Unit measured_min = rows_axis
+                ? minimum.size.height : minimum.size.width;
+            const Unit measured_max = rows_axis
+                ? maximum.size.height : maximum.size.width;
+            const Unit measured_minimum = grid_item_minimum(child, child_box, place,
+                rows_axis ? track_rows : track_columns, measured_min, !rows_axis);
+            changed |= min_content != measured_min || max_content != measured_max
+                || minimum_contribution != measured_minimum;
+            min_content = measured_min;
+            max_content = measured_max;
+            minimum_contribution = measured_minimum;
+            if (rows_axis) {
+                changed |= contribution.margin.top != margin.top
+                    || contribution.margin.bottom != margin.bottom;
+                contribution.margin.top = margin.top;
+                contribution.margin.bottom = margin.bottom;
+            } else {
+                changed |= contribution.margin.left != margin.left
+                    || contribution.margin.right != margin.right;
+                contribution.margin.left = margin.left;
+                contribution.margin.right = margin.right;
+            }
+        }
+        return changed;
+    };
+    measure_cross_dependent_contributions(true);
     size_axis(track_rows, contributions, false, row_space, node.id);
+    const bool intrinsic_columns = std::any_of(track_columns.tracks.begin(),
+        track_columns.tracks.end(), [](const TrackState& track) {
+            return track.intrinsic_min || track.intrinsic_max;
+        });
+    if (intrinsic_columns) {
+        if (measure_cross_dependent_contributions(false)) {
+            track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+                min_column, max_column, initial_track_width, column_gap, node.id);
+            collapse_auto_fit(track_columns, columns, placements, true);
+            size_axis(track_columns, contributions, true, column_space, node.id);
+            if (measure_cross_dependent_contributions(true)) {
+                track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+                    min_row, max_row, initial_track_height, row_gap, node.id);
+                collapse_auto_fit(track_rows, rows, placements, false);
+                size_axis(track_rows, contributions, false, row_space, node.id);
+            }
+        }
+    }
     const Unit measured_width = track_columns.offsets.empty() ? 0
         : track_columns.offsets.back();
     const Unit measured_height = track_rows.offsets.empty() ? 0

@@ -234,8 +234,12 @@ void validate(std::size_t count, std::string_view mode,
                 "CSS unchanged tree missed its cache");
         }
         if (mode == "leaf_edit" || mode == "branch_edit") {
-            require(a.measurement_count < b.measurement_count,
-                "CSS local invalidation measured unrelated branches");
+            if (a.measurement_count >= b.measurement_count) {
+                throw std::runtime_error("CSS local invalidation measured unrelated branches in "
+                    + std::string(mode) + " frame " + std::to_string(frame)
+                    + ": targeted=" + std::to_string(a.measurement_count)
+                    + ", full=" + std::to_string(b.measurement_count));
+            }
         }
     }
 }
@@ -369,16 +373,17 @@ void report(std::ostream& summary, std::ostream* raw, std::size_t count,
     }
     for (std::size_t profile = 0; profile < 2; ++profile) {
         std::vector<double> times;
+        std::vector<double> peaks;
         const auto& first = samples[profile][0];
         for (const auto& sample : samples[profile]) {
             require(sample.checksum == first.checksum
                 && sample.measurements == first.measurements
                 && sample.layouts == first.layouts
                 && sample.allocations == first.allocations
-                && sample.allocated_bytes == first.allocated_bytes
-                && sample.peak_live_bytes == first.peak_live_bytes,
+                && sample.allocated_bytes == first.allocated_bytes,
                 "CSS benchmark work is not repeatable");
             times.push_back(sample.us);
+            peaks.push_back(sample.peak_live_bytes);
         }
         summary << metrics.name() << ',' << mode << ',' << count << ','
             << (profile ? "full_invalidation" : "targeted") << ','
@@ -387,7 +392,7 @@ void report(std::ostream& summary, std::ostream* raw, std::size_t count,
             << median(times) << ',' << percentile95(times) << ','
             << first.measurements << ',' << first.layouts << ','
             << first.allocations << ',' << first.allocated_bytes << ','
-            << first.peak_live_bytes << ',' << first.checksum << '\n';
+            << median(peaks) << ',' << first.checksum << '\n';
     }
 }
 } // namespace

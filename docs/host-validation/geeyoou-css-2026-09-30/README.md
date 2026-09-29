@@ -26,3 +26,11 @@ MSVC ASan 宿主构建通过 293/293 项。三种配置均含适配器单元检�
 [Showcase 摘要](showcase-summary.json)的 `css_mixed_native` 由实际窗口
 验收流程写入；旧 19 个 Showcase 页面仍使用旧 Grid 适配器，
 不能将它们计入新 CSS 树页面覆盖。
+
+本轮混合树约束重测与节点缓存改造后，重新编译 Release、Debug、
+MSVC ASan 宿主，各通过 294/294 项。Release Showcase 再次运行
+19 页 × 3 种窗口／语言／主题配置和原生 CSS 混合页，
+`css_mixed_native=passed`、`errors=0`；安装前缀的独立消费程序通过 1/1。
+CSS 混合页截图的 SHA-256 与上图相同，说明此验收输入的像素输出未变。
+[本轮验证记录](validation-parity.json)和
+[Showcase 摘要](showcase-parity-summary.json)保存了可核对结果。

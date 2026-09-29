@@ -44,7 +44,7 @@ ctest --test-dir build/benchmark-release -R axisly.css_retained_bench --output-o
 [DirectWrite 逐批分配](benchmarks/css-retained-msvc-2026-09-30/directwrite-allocations-raw.csv)、
 [环境与二进制哈希](benchmarks/css-retained-msvc-2026-09-30/environment.json)。
 
-## 结果与热点
+## 初始基线的结果与热点
 
 下表是 9 批平均耗时的中位数，单位微秒；括号内是每帧测量次数。
 
@@ -73,17 +73,60 @@ ctest --test-dir build/benchmark-release -R axisly.css_retained_bench --output-o
 
 输入不变时直接复用上次发布的结果向量，测量、布局和分配均为零。
 0.030 微秒只表示本机该批短调用的观测值，不能作为稳定的单次延迟承诺。
-单叶或单面板编辑时，384 叶树仍平均探测约 2400 次；外层 Grid 对
-各面板的固有尺寸查询是后续优化对象。384 叶单叶编辑的申请次数为
+在这份初始基线中，单叶或单面板编辑时，384 叶树仍平均探测约 2400 次；
+外层 Grid 对各面板的固有尺寸查询是后续优化对象。384 叶单叶编辑的申请次数为
 9873.65，整树失效为 14377.4；两者窗口内峰值同为 466764 字节，
-因为每次重新发布整棵树的结果。当前尚不能据此声称已经完成轨道
+因为每次重新发布整棵树的结果。这份基线不能证明已经完成轨道
 工作区与结果构造优化，也不能将这些数字推广到真实宿主文字。
+
+## 混合树约束复核后的基准
+
+四种根尺寸查询、四种嵌套 Flex 约束、Grid／Flex 两种外层算法组成的
+9,216 组差分揭示了 Grid 轨道贡献需要按已确定的另一轴重测。
+修正之后，首次布局比上表慢：384 叶合成回调从 3,033.70 µs 增至
+9,666.15 µs。布局会为相同的叶节点建立多种约束；现在按节点保留
+最多八种布局片段，并独立保留最多十六种测量请求结果。两类缓存
+均按节点失效，只在整次计算成功后发布；全树容量由 `TreeLimits` 限制。
+
+下表使用与初始基线相同的输入、计时边界和 20 帧 × 9 批方法。
+时间是局部失效配置的批次均值中位数，括号中为每帧宿主测量次数：
+
+| 后端／叶子 | 首次 | 尺寸变化 | 单叶编辑 | 面板编辑 |
+| --- | ---: | ---: | ---: | ---: |
+| 合成／96 | 2496.69（1017） | 49.29（0） | 205.59（22.8） | 237.72（84.25） |
+| 合成／384 | 9666.15（4070） | 175.97（0） | 344.58（23.45） | 383.94（84.25） |
+| DirectWrite／96 | 4978.93（1017） | 48.40（0） | 239.03（12.1） | 431.81（84.25） |
+
+384 叶单叶编辑的整树失效对照是 9678.99 µs、4096 次测量；
+局部编辑的 C++ 申请次数为 2446.9，整树失效为 47188.6。
+但 384 叶首次布局需要 10065 次节点布局和 47164 次 C++ 申请，
+相对初始基线仍有明显回退。DirectWrite 首次布局也从旧基线的
+2555.79 µs 增至 4978.93 µs；测量结果复用降低了宿主调用，
+尚未消除重复的布局片段构造。后续须在保持 9,216 组几何差分的条件下
+优化 Grid 贡献查询及输出构造。
+
+新原始记录：[时间汇总](benchmarks/css-retained-parity-2026-09-30/timing-summary.csv)、
+[逐批时间](benchmarks/css-retained-parity-2026-09-30/timing-raw.csv)、
+[分配汇总](benchmarks/css-retained-parity-2026-09-30/allocations-summary.csv)、
+[逐批分配](benchmarks/css-retained-parity-2026-09-30/allocations-raw.csv)、
+[DirectWrite 时间汇总](benchmarks/css-retained-parity-2026-09-30/directwrite-timing-summary.csv)、
+[DirectWrite 逐批时间](benchmarks/css-retained-parity-2026-09-30/directwrite-timing-raw.csv)、
+[DirectWrite 分配汇总](benchmarks/css-retained-parity-2026-09-30/directwrite-allocations-summary.csv)、
+[DirectWrite 逐批分配](benchmarks/css-retained-parity-2026-09-30/directwrite-allocations-raw.csv)、
+[环境与二进制哈希](benchmarks/css-retained-parity-2026-09-30/environment.json)。
+申请次数和字节数仍要求各批完全一致；峰值存活字节可能因不同节点标识
+导致容器释放顺序微变，汇总使用批次均值的中位数，逐批值保存在 CSV。
 
 ## 验证范围
 
-本次改动的 Release、Debug 参考构建各通过 333/333 项；ASan 通过
+初始基线的 Release、Debug 参考构建各通过 333/333 项；ASan 通过
 332/332 项；benchmark-release 通过 303/303 项。基准自身的几何与
 分配 smoke 纳入 CTest。
+混合树约束复核后的参考 Release／Debug 各通过 338/338，MSVC ASan
+通过 337/337；GeeyoouUI Release／Debug／MSVC ASan 各通过 294/294。
+基准的四项 smoke、独立安装消费程序的 1/1 项和真实 Showcase 窗口
+的 CSS 混合页重排均通过。Taffy 的 9,216 组混合树差分属于参考
+338 项中的四项 CTest；以上结果对应最后一次 Grid 贡献变化判断修改。
 已从 Release 安装前缀单独编译、链接并运行消费程序，验证混合
 Grid→Flex→Block 树、宿主测量、结果复用和局部失效。
 GeeyoouUI 的真实控件与窗口验收见

@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace axisly::css::detail {
 
@@ -18,6 +19,9 @@ struct LayoutNode {
 
 struct Constraints {
     std::optional<Unit> known_width, known_height; // border-box
+    // A known size can come from a parent's content calculation. Flex must
+    // retain that distinction when collecting its own lines.
+    bool known_width_is_definite{true}, known_height_is_definite{true};
     AvailableSize available;
     std::optional<Unit> containing_width, containing_height;
     bool ignore_preferred_width{}, ignore_preferred_height{};
@@ -53,7 +57,14 @@ struct CacheEntry {
     Constraints constraints;
     Fragment fragment;
 };
-using CacheMap = std::unordered_map<std::uint64_t, CacheEntry>;
+using CacheMap = std::unordered_map<std::uint64_t, std::vector<CacheEntry>>;
+
+struct MeasurementCacheEntry {
+    MeasureRequest request;
+    Measurement result;
+};
+using MeasurementCacheMap =
+    std::unordered_map<std::uint64_t, std::vector<MeasurementCacheEntry>>;
 
 struct BlockContext;
 
@@ -89,19 +100,26 @@ public:
 class Engine {
 public:
     Engine(const std::unordered_map<std::uint64_t, LayoutNode>& nodes,
-           const CacheMap& cache, TreeLimits limits);
+           const CacheMap& cache, const MeasurementCacheMap& measurement_cache,
+           TreeLimits limits);
     [[nodiscard]] LayoutResult compute(NodeId root, AvailableSize available);
     [[nodiscard]] CacheMap take_updates() && { return std::move(updates_); }
+    [[nodiscard]] MeasurementCacheMap take_measurement_updates() && {
+        return std::move(measurement_updates_);
+    }
 
 private:
     const std::unordered_map<std::uint64_t, LayoutNode>& nodes_;
     const CacheMap& cache_;
     CacheMap updates_;
+    const MeasurementCacheMap& measurement_cache_;
+    MeasurementCacheMap measurement_updates_;
     TreeLimits limits_;
     std::size_t measurements_{};
     std::size_t layouts_{};
     std::size_t hits_{};
     std::size_t pending_layouts_{};
+    std::size_t pending_measurements_{};
     bool root_hit_{};
     std::unordered_map<std::uint64_t, bool> float_subtree_;
     void stage(NodeId id, const Constraints& constraints, const Fragment& fragment);

@@ -141,20 +141,40 @@ std::optional<Unit> child_baseline(const Fragment& fragment, const Style& style)
 }
 
 Engine::Engine(const std::unordered_map<std::uint64_t, LayoutNode>& nodes,
-               const CacheMap& cache, TreeLimits limits)
-    : nodes_(nodes), cache_(cache), limits_(limits) {}
+               const CacheMap& cache,
+               const MeasurementCacheMap& measurement_cache, TreeLimits limits)
+    : nodes_(nodes), cache_(cache), measurement_cache_(measurement_cache),
+      limits_(limits) {}
 
 void Engine::stage(NodeId id, const Constraints& constraints, const Fragment& fragment) {
     // Fragment caching is bounded because storing every nested subtree in a
     // deep chain otherwise takes quadratic space.
     constexpr std::size_t maximum_fragment_nodes = 512;
+    constexpr std::size_t entries_per_node = 8;
     const auto count = fragment.nodes.size();
     const auto existing = updates_.find(id.value);
-    const auto old_count = existing == updates_.end()
-        ? 0 : existing->second.fragment.nodes.size();
+    std::optional<std::size_t> match_index;
+    if (existing != updates_.end()) {
+        for (std::size_t index = 0; index < existing->second.size(); ++index) {
+            if (existing->second[index].constraints == constraints) {
+                match_index = index;
+                break;
+            }
+        }
+    }
+    const auto old_count = match_index
+        ? existing->second[*match_index].fragment.nodes.size()
+        : existing != updates_.end() && existing->second.size() == entries_per_node
+            ? existing->second.front().fragment.nodes.size() : 0;
     if (count > maximum_fragment_nodes
         || count > limits_.maximum_cached_layouts - (pending_layouts_ - old_count)) return;
-    updates_.insert_or_assign(id.value, CacheEntry{constraints, fragment});
+    auto& entries = updates_[id.value];
+    if (match_index) {
+        entries[*match_index] = CacheEntry{constraints, fragment};
+    } else {
+        if (entries.size() == entries_per_node) entries.erase(entries.begin());
+        entries.push_back(CacheEntry{constraints, fragment});
+    }
     pending_layouts_ = pending_layouts_ - old_count + count;
 }
 
@@ -227,19 +247,24 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "CSS layout depth exceeded");
     }
     const auto& node = get(id);
-    const auto cached = updates_.find(id.value);
-    if (!block_context && cached != updates_.end()
-        && cached->second.constraints == constraints) {
-        ++hits_;
-        if (depth == 1) root_hit_ = true;
-        return cached->second.fragment;
-    }
-    const auto previous = cache_.find(id.value);
-    if (!block_context && previous != cache_.end()
-        && previous->second.constraints == constraints) {
-        ++hits_;
-        if (depth == 1) root_hit_ = true;
-        return previous->second.fragment;
+    if (!block_context) {
+        const auto lookup = [&](const CacheMap& source) -> const CacheEntry* {
+            const auto entries = source.find(id.value);
+            if (entries == source.end()) return nullptr;
+            if (const auto match = std::find_if(entries->second.begin(), entries->second.end(),
+                    [&](const CacheEntry& entry) { return entry.constraints == constraints; });
+                match != entries->second.end()) {
+                return &*match;
+            }
+            return nullptr;
+        };
+        const auto* hit = lookup(updates_);
+        if (!hit) hit = lookup(cache_);
+        if (hit) {
+            ++hits_;
+            if (depth == 1) root_hit_ = true;
+            return hit->fragment;
+        }
     }
     ++layouts_;
     Fragment fragment;
@@ -403,14 +428,35 @@ std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
 
 Measurement Engine::measure(const LayoutNode& node, const MeasureRequest& request) {
     if (!node.measure) return {};
+    validate_measure_request(request);
+    const auto lookup = [&](const MeasurementCacheMap& source) -> const Measurement* {
+        const auto entries = source.find(node.id.value);
+        if (entries == source.end()) return nullptr;
+        const auto match = std::find_if(entries->second.begin(), entries->second.end(),
+            [&](const MeasurementCacheEntry& entry) {
+                return entry.request == request;
+            });
+        return match == entries->second.end() ? nullptr : &match->result;
+    };
+    if (const auto* hit = lookup(measurement_updates_)) return *hit;
+    if (const auto* hit = lookup(measurement_cache_)) return *hit;
     if (++measurements_ > limits_.maximum_measurements) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, node.id, "CSS measurement limit exceeded");
     }
-    validate_measure_request(request);
     const auto result = node.measure(request);
     try { validate_measurement(result); }
     catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidMeasurement, node.id, error.what());
+    }
+    constexpr std::size_t entries_per_node = 16;
+    auto found = measurement_updates_.find(node.id.value);
+    if (found != measurement_updates_.end()
+        && found->second.size() == entries_per_node) {
+        found->second.erase(found->second.begin());
+        found->second.push_back({request, result});
+    } else if (pending_measurements_ < limits_.maximum_cached_measurements) {
+        measurement_updates_[node.id.value].push_back({request, result});
+        ++pending_measurements_;
     }
     return result;
 }

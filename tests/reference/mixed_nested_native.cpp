@@ -76,6 +76,7 @@ void run_case(std::size_t scenario, std::size_t root_kind,
     if (nested_kind == 0) {
         nested_style.flex_direction = nested_direction == 0
             ? FlexDirection::Row : FlexDirection::Column;
+        if (variant >= 2) nested_style.flex_wrap = FlexWrap::Wrap;
     } else {
         nested_style.grid.template_columns = nested_direction == 0
             ? std::vector<TemplateTrack>{TrackSizing::automatic(), TrackSizing::automatic()}
@@ -92,6 +93,15 @@ void run_case(std::size_t scenario, std::size_t root_kind,
     if (variant == 1) {
         nested_style.flex_grow = 1;
         nested_style.flex_basis = Length::length(20);
+    } else if (variant >= 2) {
+        auto& maximum = nested_direction == 0 ? nested_style.box.max_size.width
+            : nested_style.box.max_size.height;
+        maximum = Length::length(38);
+        if (variant == 3) {
+            auto& minimum = nested_direction == 0 ? nested_style.box.min_size.width
+                : nested_style.box.min_size.height;
+            minimum = Length::length(46);
+        }
     }
     const auto nested = tree.create_node(nested_style);
     tree.append_child(root, nested);
@@ -141,12 +151,12 @@ int main(int argc, char** argv) {
                        && mode.empty()) {
                 mode = argument;
             } else {
-                throw std::invalid_argument("Expected an intrinsic query and optional --details");
+                throw std::invalid_argument("Expected a query and optional --details");
             }
         }
         const std::size_t scenario = mode == "--max-content" ? 1
             : mode == "--min-content" ? 2 : mode == "--auto-definite" ? 3 : 0;
-        std::cout << "{\"protocol\":\"AXISLY_MIXED_NESTED_V1\",\"cases\":[";
+        std::cout << "{\"protocol\":\"AXISLY_MIXED_NESTED_V2\",\"cases\":[";
         bool first = true;
         for (std::size_t root_kind = 0; root_kind < 2; ++root_kind)
         for (std::size_t root_alignment = 0; root_alignment < item_positions.size(); ++root_alignment)
@@ -154,7 +164,7 @@ int main(int argc, char** argv) {
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
         for (std::size_t nested_kind = 0; nested_kind < 2; ++nested_kind)
         for (std::size_t nested_direction = 0; nested_direction < 2; ++nested_direction)
-        for (std::size_t variant = 0; variant < 2; ++variant)
+        for (std::size_t variant = 0; variant < 4; ++variant)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;

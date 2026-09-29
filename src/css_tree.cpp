@@ -43,14 +43,16 @@ struct LayoutTree::Impl {
     TreeLimits limits;
     std::unordered_map<std::uint64_t, detail::LayoutNode> nodes;
     detail::CacheMap cache;
+    detail::MeasurementCacheMap measurement_cache;
     std::size_t cached_layouts{};
+    std::size_t cached_measurements{};
     LayoutResult published;
     std::optional<std::pair<NodeId, AvailableSize>> published_key;
     bool computing{};
 
     explicit Impl(TreeLimits requested) : limits(requested) {
         if (!limits.maximum_depth || !limits.maximum_nodes || !limits.maximum_measurements
-            || !limits.maximum_cached_layouts) {
+            || !limits.maximum_cached_layouts || !limits.maximum_cached_measurements) {
             throw std::invalid_argument("CSS tree limits must be positive");
         }
     }
@@ -69,9 +71,17 @@ struct LayoutTree::Impl {
     }
     void erase_cache(NodeId id) {
         const auto entry = cache.find(id.value);
-        if (entry == cache.end()) return;
-        cached_layouts -= entry->second.fragment.nodes.size();
-        cache.erase(entry);
+        if (entry != cache.end()) {
+            for (const auto& cached : entry->second) {
+                cached_layouts -= cached.fragment.nodes.size();
+            }
+            cache.erase(entry);
+        }
+        const auto measured = measurement_cache.find(id.value);
+        if (measured != measurement_cache.end()) {
+            cached_measurements -= measured->second.size();
+            measurement_cache.erase(measured);
+        }
     }
     void invalidate_path(std::optional<NodeId> start) {
         published_key.reset();
@@ -171,6 +181,7 @@ void LayoutTree::remove(NodeId node) {
     impl_->get(node);
     impl_->published_key.reset();
     detach(node);
+    impl_->invalidate_subtree(node);
     std::vector<NodeId> pending{node};
     while (!pending.empty()) {
         const auto current = pending.back();
@@ -203,18 +214,53 @@ const LayoutResult& LayoutTree::compute(NodeId root, AvailableSize available) & 
         explicit Guard(bool& value) : computing(value) { computing = true; }
         ~Guard() { computing = false; }
     } guard(impl_->computing);
-    detail::Engine engine(impl_->nodes, impl_->cache, impl_->limits);
+    detail::Engine engine(impl_->nodes, impl_->cache,
+        impl_->measurement_cache, impl_->limits);
     auto candidate = engine.compute(root, available);
     if (candidate.succeeded()) {
-        for (auto& [id, entry] : std::move(engine).take_updates()) {
-            const auto existing = impl_->cache.find(id);
-            const auto old_count = existing == impl_->cache.end()
-                ? 0 : existing->second.fragment.nodes.size();
-            const auto new_count = entry.fragment.nodes.size();
-            if (new_count > impl_->limits.maximum_cached_layouts
-                - (impl_->cached_layouts - old_count)) continue;
-            impl_->cache.insert_or_assign(id, std::move(entry));
-            impl_->cached_layouts = impl_->cached_layouts - old_count + new_count;
+        constexpr std::size_t entries_per_node = 8;
+        for (auto& [id, staged] : std::move(engine).take_updates()) {
+            auto& resident = impl_->cache[id];
+            for (auto& entry : staged) {
+                const auto match = std::find_if(resident.begin(), resident.end(),
+                    [&](const detail::CacheEntry& cached) {
+                        return cached.constraints == entry.constraints;
+                    });
+                const auto old_count = match != resident.end()
+                    ? match->fragment.nodes.size()
+                    : resident.size() == entries_per_node
+                        ? resident.front().fragment.nodes.size() : 0;
+                const auto new_count = entry.fragment.nodes.size();
+                if (new_count > impl_->limits.maximum_cached_layouts
+                    - (impl_->cached_layouts - old_count)) continue;
+                if (match != resident.end()) {
+                    *match = std::move(entry);
+                } else {
+                    if (resident.size() == entries_per_node) resident.erase(resident.begin());
+                    resident.push_back(std::move(entry));
+                }
+                impl_->cached_layouts = impl_->cached_layouts - old_count + new_count;
+            }
+        }
+        constexpr std::size_t measurements_per_node = 16;
+        for (auto& [id, staged] : std::move(engine).take_measurement_updates()) {
+            auto& resident = impl_->measurement_cache[id];
+            for (auto& entry : staged) {
+                const auto match = std::find_if(resident.begin(), resident.end(),
+                    [&](const detail::MeasurementCacheEntry& cached) {
+                        return cached.request == entry.request;
+                    });
+                if (match != resident.end()) continue;
+                if (resident.size() == measurements_per_node) {
+                    resident.erase(resident.begin());
+                } else if (impl_->cached_measurements
+                    >= impl_->limits.maximum_cached_measurements) {
+                    continue;
+                } else {
+                    ++impl_->cached_measurements;
+                }
+                resident.push_back(std::move(entry));
+            }
         }
     }
     impl_->published = std::move(candidate);

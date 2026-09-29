@@ -1,6 +1,8 @@
 // Development-only benchmark for the CSS Block/Flex/Grid retained tree.
 #include <axisly/css_tree.hpp>
 
+#include "css_text_metrics.hpp"
+
 #ifdef AXISLY_COUNT_ALLOCATIONS
 #include "allocation_probe.hpp"
 #endif
@@ -29,14 +31,6 @@ using namespace axisly::css;
 
 constexpr std::size_t panel_size = 8;
 constexpr std::size_t panel_columns = 4;
-constexpr std::array<std::string_view, 5> texts{
-    "Status ready",
-    "Temperature setpoint 24.5 C",
-    "Channel 07 acquisition in progress 128 samples collected",
-    "Changing this label invalidates its ancestors while adjacent panels retain their measured content",
-    "Long diagnostic text wraps when the available inline size becomes smaller during a window resize",
-};
-
 void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -46,35 +40,10 @@ struct TextContext {
     std::uint64_t revision{};
 };
 
-Unit longest_word_width(std::string_view value) {
-    std::size_t longest = 0, current = 0;
-    for (const char letter : value) {
-        if (letter == ' ') {
-            longest = std::max(longest, current);
-            current = 0;
-        } else ++current;
-    }
-    return static_cast<Unit>(std::max(longest, current) * 7);
-}
-
-Measurement measure_text(const TextContext& context, const MeasureRequest& request) {
-    const auto value = texts[(context.index + context.revision) % texts.size()];
-    const Unit preferred = static_cast<Unit>(value.size() * 7);
-    const Unit minimum = longest_word_width(value);
-    const auto available = request.available_width.definite_value();
-    const Unit width = request.known_content_width.value_or(
-        request.available_width.kind == AvailableKind::MinContent ? minimum
-            : available ? std::min(preferred, *available) : preferred);
-    const Unit wrap_width = std::max(Unit{1}, request.known_content_width.value_or(
-        available.value_or(width)));
-    const Unit lines = std::max(Unit{1}, std::ceil(preferred / wrap_width));
-    const Unit height = request.known_content_height.value_or(lines * Unit{16});
-    return {{width, height}, Unit{12}, height - Unit{4}};
-}
-
 class Scene {
 public:
-    explicit Scene(std::size_t count) : contexts_(count) {
+    Scene(std::size_t count, axisly::bench::CssTextMetrics& metrics)
+        : contexts_(count), metrics_(metrics) {
         require(count >= panel_size * panel_columns
             && count % (panel_size * panel_columns) == 0,
             "Leaf count must be a multiple of 32");
@@ -128,7 +97,8 @@ public:
                 }
                 const auto leaf = tree_.create_node(leaf_style,
                     [this, index](const MeasureRequest& request) {
-                        return measure_text(contexts_[index], request);
+                        const auto& context = contexts_[index];
+                        return metrics_.measure(context.index, context.revision, request);
                     });
                 tree_.append_child(panel, leaf);
                 leaves_.push_back(leaf);
@@ -155,13 +125,18 @@ public:
         } else require(mode == "same" || mode == "first", "Unknown CSS benchmark mode");
         if (full_invalidation && mode != "first") tree_.mark_dirty(root_);
         const auto& result = tree_.compute(root_, available_);
-        require(result.succeeded() && result.nodes.size() == leaves_.size()
-            + panels_.size() + 1, "CSS benchmark layout failed");
+        if (!result.succeeded()) {
+            throw std::runtime_error("CSS benchmark layout failed: "
+                + result.error.message);
+        }
+        require(result.nodes.size() == leaves_.size() + panels_.size() + 1,
+            "CSS benchmark returned incomplete layout");
         return result;
     }
 
 private:
     std::vector<TextContext> contexts_;
+    axisly::bench::CssTextMetrics& metrics_;
     LayoutTree tree_;
     NodeId root_;
     std::vector<NodeId> panels_, leaves_;
@@ -241,8 +216,9 @@ void equal(const LayoutResult& first, const LayoutResult& second,
     }
 }
 
-void validate(std::size_t count, std::string_view mode) {
-    Scene targeted(count), full(count);
+void validate(std::size_t count, std::string_view mode,
+              axisly::bench::CssTextMetrics& metrics) {
+    Scene targeted(count, metrics), full(count, metrics);
     if (mode != "first") {
         targeted.step("first", 0, false);
         full.step("first", 0, false);
@@ -270,10 +246,11 @@ struct Sample {
 };
 
 Sample batch(std::size_t count, std::string_view mode,
-             bool full_invalidation, std::size_t iterations) {
+             bool full_invalidation, std::size_t iterations,
+             axisly::bench::CssTextMetrics& metrics) {
     std::unique_ptr<Scene> retained;
     if (mode != "first") {
-        retained = std::make_unique<Scene>(count);
+        retained = std::make_unique<Scene>(count, metrics);
         retained->step("first", 0, false);
     }
     Sample sample;
@@ -281,7 +258,7 @@ Sample batch(std::size_t count, std::string_view mode,
         std::unique_ptr<Scene> fresh;
         Scene* scene = retained.get();
         if (mode == "first") {
-            fresh = std::make_unique<Scene>(count);
+            fresh = std::make_unique<Scene>(count, metrics);
             scene = fresh.get();
         }
 #ifdef AXISLY_COUNT_ALLOCATIONS
@@ -319,6 +296,7 @@ Sample batch(std::size_t count, std::string_view mode,
 struct Options {
     std::size_t iterations{12}, samples{5};
     bool smoke{};
+    std::string backend{"synthetic"};
     std::string output, raw_output;
 };
 
@@ -339,11 +317,14 @@ Options options(int argc, char** argv) {
         require(index + 1 < argc, "Missing CSS benchmark argument");
         if (argument == "--iterations") config.iterations = positive(argv[++index]);
         else if (argument == "--samples") config.samples = positive(argv[++index]);
+        else if (argument == "--backend") config.backend = argv[++index];
         else if (argument == "--output") config.output = argv[++index];
         else if (argument == "--samples-output") config.raw_output = argv[++index];
         else throw std::runtime_error("Unknown CSS benchmark argument");
     }
     if (config.smoke) { config.iterations = 2; config.samples = 2; }
+    require(config.backend == "synthetic" || config.backend == "directwrite",
+        "Unknown CSS benchmark text backend");
     require(config.output.empty() || config.output != config.raw_output,
         "CSS benchmark output paths must differ");
     return config;
@@ -362,16 +343,18 @@ double percentile95(std::vector<double> values) {
 }
 
 void report(std::ostream& summary, std::ostream* raw, std::size_t count,
-            std::string_view mode, const Options& config) {
-    validate(count, mode);
+            std::string_view mode, const Options& config,
+            axisly::bench::CssTextMetrics& metrics) {
+    validate(count, mode, metrics);
     std::array<std::vector<Sample>, 2> samples;
     for (std::size_t trial = 0; trial < config.samples; ++trial) {
         for (std::size_t order = 0; order < 2; ++order) {
             const std::size_t profile = (trial + order) % 2;
-            const auto sample = batch(count, mode, profile == 1, config.iterations);
+            const auto sample = batch(count, mode, profile == 1,
+                config.iterations, metrics);
             samples[profile].push_back(sample);
             if (raw) {
-                *raw << mode << ',' << count << ','
+                *raw << metrics.name() << ',' << mode << ',' << count << ','
                     << (profile ? "full_invalidation" : "targeted") << ','
                     << trial << ',' << config.iterations << ','
                     << sample.us << ',' << sample.measurements << ','
@@ -397,7 +380,7 @@ void report(std::ostream& summary, std::ostream* raw, std::size_t count,
                 "CSS benchmark work is not repeatable");
             times.push_back(sample.us);
         }
-        summary << mode << ',' << count << ','
+        summary << metrics.name() << ',' << mode << ',' << count << ','
             << (profile ? "full_invalidation" : "targeted") << ','
             << AXISLY_BENCH_CONFIG << ',' << AXISLY_BENCH_VERSION << ','
             << config.iterations << ',' << config.samples << ','
@@ -422,21 +405,25 @@ int main(int argc, char** argv) {
             require(static_cast<bool>(raw_file), "Cannot open CSS benchmark samples");
         }
         auto& summary = config.output.empty() ? std::cout : summary_file;
+        axisly::bench::CssTextMetrics metrics(config.backend == "directwrite");
+        metrics.check_wrapping();
         summary.imbue(std::locale::classic());
         raw_file.imbue(std::locale::classic());
         summary << std::fixed << std::setprecision(6);
         raw_file << std::fixed << std::setprecision(6);
-        summary << "mode,leaves,profile,build,version,iterations,samples,median_us,p95_us,measurements_per_frame,layouts_per_frame,allocations_per_frame,allocated_bytes_per_frame,peak_live_bytes_per_frame,checksum\n";
+        summary << "backend,mode,leaves,profile,build,version,iterations,samples,median_us,p95_us,measurements_per_frame,layouts_per_frame,allocations_per_frame,allocated_bytes_per_frame,peak_live_bytes_per_frame,checksum\n";
         if (raw_file.is_open()) {
-            raw_file << "mode,leaves,profile,sample,iterations,us,measurements_per_frame,layouts_per_frame,allocations_per_frame,allocated_bytes_per_frame,peak_live_bytes_per_frame,checksum\n";
+            raw_file << "backend,mode,leaves,profile,sample,iterations,us,measurements_per_frame,layouts_per_frame,allocations_per_frame,allocated_bytes_per_frame,peak_live_bytes_per_frame,checksum\n";
         }
         for (const auto count : config.smoke
                 ? std::vector<std::size_t>{96}
-                : std::vector<std::size_t>{96, 384}) {
+                : config.backend == "directwrite"
+                    ? std::vector<std::size_t>{96}
+                    : std::vector<std::size_t>{96, 384}) {
             for (const std::string_view mode : {"first", "same", "resize",
                                                 "leaf_edit", "branch_edit", "mixed"}) {
                 report(summary, raw_file.is_open() ? &raw_file : nullptr,
-                    count, mode, config);
+                    count, mode, config, metrics);
             }
         }
         summary.flush();

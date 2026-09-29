@@ -183,7 +183,8 @@ layout／paint containment、方向和
 当前已建立 [CSS 混合树保留布局基准](31-css-retained-benchmarks.md)，
 保存首次计算、输入不变、尺寸变化和局部编辑的时间／分配原始数据；
 修复了输入不变时重复构造已发布结果的问题，并由已安装库的消费程序
-验证新 CSS 树入口。合成回调仍须扩展到真实字体和 GeeyoouUI 新树页面；
+验证新 CSS 树入口。基准现有合成与 DirectWrite 真实字体两种回调；
+GeeyoouUI 新树页面仍需验收；
 Grid/Flex 固有尺寸探测与每次变更时的输出构造仍是已测得的热点。
 
 ## 完成判据

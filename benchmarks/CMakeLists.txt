@@ -36,8 +36,11 @@ set_target_properties(axisly_retained_bench PROPERTIES CXX_EXTENSIONS OFF RUNTIM
 axisly_enable_warnings(axisly_retained_bench)
 
 foreach(target IN ITEMS axisly_css_retained_bench axisly_css_retained_allocations)
-    add_executable(${target} css_retained.cpp)
+    add_executable(${target} css_retained.cpp css_text_metrics.cpp)
     target_link_libraries(${target} PRIVATE axisly::axisly)
+    if(WIN32)
+        target_link_libraries(${target} PRIVATE dwrite)
+    endif()
     target_compile_definitions(${target} PRIVATE
         AXISLY_BENCH_VERSION="${PROJECT_VERSION}" AXISLY_BENCH_CONFIG="$<CONFIG>")
     set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF
@@ -52,6 +55,12 @@ if(AXISLY_BUILD_TESTS)
         COMMAND axisly_css_retained_bench --smoke)
     add_test(NAME axisly.css_retained_bench.allocations_smoke
         COMMAND axisly_css_retained_allocations --smoke)
+    if(WIN32)
+        add_test(NAME axisly.css_retained_bench.directwrite_smoke
+            COMMAND axisly_css_retained_bench --backend directwrite --smoke)
+        set_tests_properties(axisly.css_retained_bench.directwrite_smoke
+            PROPERTIES LABELS benchmark TIMEOUT 120)
+    endif()
     add_test(NAME axisly.css_retained_bench.reject_zero
         COMMAND axisly_css_retained_bench --iterations 0)
     set_tests_properties(axisly.css_retained_bench.reject_zero PROPERTIES WILL_FAIL TRUE)

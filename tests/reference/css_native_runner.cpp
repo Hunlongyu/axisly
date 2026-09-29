@@ -834,6 +834,96 @@ void calc_leaf_case(std::string_view name) {
         {{7000 + variant * 10, root}});
 }
 
+void calc_container_case(std::string_view name) {
+    const bool block = name == "calc-block-child";
+    const bool auto_gap = name.ends_with("-auto-gap");
+    const bool flex = name.starts_with("calc-flex-");
+    const int id = block ? 7100 : auto_gap ? (flex ? 7130 : 7140)
+        : flex ? 7110 : 7120;
+    const auto calc = [](Unit length, Unit percent) {
+        return Length::calc(Calculation::add(
+            Calculation::length(length), Calculation::percent(percent)));
+    };
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = block ? Display::Block : flex ? Display::Flex : Display::Grid;
+    root_style.box.size.width = auto_gap ? Length::automatic()
+        : block ? calc(120, 0.5f) : Length::calc(Calculation::length(200));
+    root_style.box.size.height = Length::calc(Calculation::length(
+        block ? 60.0f : (flex || auto_gap) ? 40.0f : 50.0f));
+    if (block) {
+        root_style.box.padding.left = calc(5, 0.05f);
+    } else {
+        root_style.gap.width = calc(auto_gap ? 5.0f : flex ? 5.0f : 10.0f,
+            auto_gap ? 0.1f : 0.05f);
+    }
+    if (!block && !flex) {
+        root_style.grid.template_columns = auto_gap
+            ? std::vector<TemplateTrack>{TrackSizing::fixed(20), TrackSizing::fixed(20)}
+            : std::vector<TemplateTrack>{TrackSizing::fixed(50), TrackSizing::fraction(1)};
+        root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    if (block) {
+        Style child_style;
+        child_style.display = Display::Block;
+        child_style.box.size = {calc(20, 0.5f),
+            Length::calc(Calculation::length(20))};
+        child_style.box.margin.left = calc(2, 0.1f);
+        const auto child = tree.create_node(child_style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + 1, child);
+        Style grandchild_style;
+        grandchild_style.display = Display::Block;
+        grandchild_style.box.size = {calc(10, 0.5f),
+            Length::calc(Calculation::length(10))};
+        const auto grandchild = tree.create_node(grandchild_style);
+        tree.append_child(child, grandchild);
+        nodes.emplace_back(id + 2, grandchild);
+    } else if (flex) {
+        Style first_style;
+        if (!auto_gap) {
+            first_style.box.size = {Length::calc(Calculation::length(40)),
+                Length::calc(Calculation::length(20))};
+        }
+        const auto first = auto_gap
+            ? tree.create_node(first_style, [](const MeasureRequest&) {
+                return Measurement{{40, 10}, {}, {}};
+            }) : tree.create_node(first_style);
+        tree.append_child(root, first);
+        nodes.emplace_back(id + 1, first);
+        Style second_style;
+        if (!auto_gap) {
+            second_style.flex_grow = 1;
+            second_style.flex_basis = calc(20, 0.1f);
+            second_style.box.size.height = Length::calc(Calculation::length(20));
+        }
+        const auto second = auto_gap
+            ? tree.create_node(second_style, [](const MeasureRequest&) {
+                return Measurement{{20, 10}, {}, {}};
+            }) : tree.create_node(second_style);
+        tree.append_child(root, second);
+        nodes.emplace_back(id + 2, second);
+    } else {
+        for (int index = 0; index < 2; ++index) {
+            Style item_style;
+            item_style.box.size = {auto_gap
+                ? Length::calc(Calculation::length(10))
+                : calc(index == 0 ? 10.0f : 20.0f, 0.5f),
+                Length::calc(Calculation::length(10))};
+            const auto child = tree.create_node(item_style);
+            tree.append_child(root, child);
+            nodes.emplace_back(id + index + 1, child);
+        }
+    }
+    const Unit width = block ? 240.0f : 200.0f;
+    const Unit height = block ? 100.0f : (flex || auto_gap) ? 40.0f : 50.0f;
+    print(name.data(), tree.compute(root,
+        {auto_gap ? AvailableSpace::max_content()
+            : AvailableSpace::definite(width), AvailableSpace::definite(height)}), nodes);
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2764,6 +2854,9 @@ int main(int argc, char** argv) {
             named_line_implicit_case(name);
         else if (name.starts_with("calc-leaf-"))
             calc_leaf_case(name);
+        else if (name == "calc-block-child" || name == "calc-flex-gap-basis"
+            || name == "calc-grid-gap-item" || name == "calc-flex-auto-gap"
+            || name == "calc-grid-auto-gap") calc_container_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name.starts_with("rtl-block-auto-")) rtl_block_auto_margin_case(name);

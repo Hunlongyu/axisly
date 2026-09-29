@@ -98,8 +98,10 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
 }
 
 Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId node) {
-    const auto numeric = value.resolve_numeric(basis);
-    if (!numeric) return 0; // Cyclic percentage gaps resolve to zero.
+    // Taffy resolves Flex gaps against zero while the container axis is
+    // indefinite. This preserves a calc expression's fixed-length term.
+    const auto numeric = value.resolve_numeric(basis.value_or(Unit{0}));
+    if (!numeric) return 0;
     if (*numeric < 0) throw LayoutFailure(LayoutErrorCode::InvalidStyle, node, "Flex gap must be nonnegative");
     return *numeric;
 }

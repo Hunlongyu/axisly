@@ -72,6 +72,68 @@
         "width": {"op": "clamp", "lower": {"op": "length", "value": 100}, "value": {"op": "length", "value": 80}, "upper": {"op": "length", "value": 50}},
         "height": {"op": "length", "value": 10}
       }
+    },
+    {
+      "name": "calc-block-child", "available": [240, 100], "nodes": [
+        {"id": 7100, "parent": null, "style": {"display": "Block",
+          "width": {"op": "add", "left": {"op": "length", "value": 120}, "right": {"op": "percent", "value": 0.5}},
+          "height": {"op": "length", "value": 60},
+          "padding_left": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.05}}}},
+        {"id": 7101, "parent": 0, "style": {"display": "Block",
+          "width": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.5}},
+          "height": {"op": "length", "value": 20},
+          "margin_left": {"op": "add", "left": {"op": "length", "value": 2}, "right": {"op": "percent", "value": 0.1}}}},
+        {"id": 7102, "parent": 1, "style": {"display": "Block",
+          "width": {"op": "add", "left": {"op": "length", "value": 10}, "right": {"op": "percent", "value": 0.5}},
+          "height": {"op": "length", "value": 10}}}
+      ]
+    },
+    {
+      "name": "calc-flex-gap-basis", "available": [200, 40], "nodes": [
+        {"id": 7110, "parent": null, "style": {"display": "Flex",
+          "width": {"op": "length", "value": 200}, "height": {"op": "length", "value": 40},
+          "gap_width": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.05}}}},
+        {"id": 7111, "parent": 0, "style": {
+          "width": {"op": "length", "value": 40}, "height": {"op": "length", "value": 20}}},
+        {"id": 7112, "parent": 0, "style": {"flex_grow": 1,
+          "flex_basis": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.1}},
+          "height": {"op": "length", "value": 20}}}
+      ]
+    },
+    {
+      "name": "calc-grid-gap-item", "available": [200, 50], "nodes": [
+        {"id": 7120, "parent": null, "style": {"display": "Grid",
+          "width": {"op": "length", "value": 200}, "height": {"op": "length", "value": 50},
+          "gap_width": {"op": "add", "left": {"op": "length", "value": 10}, "right": {"op": "percent", "value": 0.05}},
+          "grid_template_columns": "50px 1fr", "grid_template_rows": "20px"}},
+        {"id": 7121, "parent": 0, "style": {
+          "width": {"op": "add", "left": {"op": "length", "value": 10}, "right": {"op": "percent", "value": 0.5}},
+          "height": {"op": "length", "value": 10}}},
+        {"id": 7122, "parent": 0, "style": {
+          "width": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.5}},
+          "height": {"op": "length", "value": 10}}}
+      ]
+    },
+    {
+      "name": "calc-flex-auto-gap", "available": ["max-content", 40], "nodes": [
+        {"id": 7130, "parent": null, "style": {"display": "Flex",
+          "height": {"op": "length", "value": 40},
+          "gap_width": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.1}}}},
+        {"id": 7131, "parent": 0, "content": [40, 10], "style": {}},
+        {"id": 7132, "parent": 0, "content": [20, 10], "style": {}}
+      ]
+    },
+    {
+      "name": "calc-grid-auto-gap", "available": ["max-content", 40], "nodes": [
+        {"id": 7140, "parent": null, "style": {"display": "Grid",
+          "height": {"op": "length", "value": 40},
+          "gap_width": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.1}},
+          "grid_template_columns": "20px 20px", "grid_template_rows": "20px"}},
+        {"id": 7141, "parent": 0, "style": {
+          "width": {"op": "length", "value": 10}, "height": {"op": "length", "value": 10}}},
+        {"id": 7142, "parent": 0, "style": {
+          "width": {"op": "length", "value": 10}, "height": {"op": "length", "value": 10}}}
+      ]
     }
   ]
 }

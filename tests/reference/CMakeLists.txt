@@ -72,6 +72,11 @@ target_link_libraries(axisly_grid_line_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_grid_line_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_grid_line_matrix_native)
 
+add_executable(axisly_grid_repeat_matrix_native grid_repeat_matrix_native.cpp)
+target_link_libraries(axisly_grid_repeat_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_grid_repeat_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_grid_repeat_matrix_native)
+
 add_executable(axisly_grid_triple_span_native grid_triple_span_native.cpp)
 target_link_libraries(axisly_grid_triple_span_native PRIVATE axisly::axisly)
 set_target_properties(axisly_grid_triple_span_native PROPERTIES CXX_EXTENSIONS OFF)
@@ -161,6 +166,13 @@ add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}"
     --details)
 set_tests_properties(axisly.reference.grid_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.grid_repeat_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_repeat_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_grid_repeat_matrix_native>"
+    --taffy "${taffy_tree_output}"
+    --details)
+set_tests_properties(axisly.reference.grid_repeat_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 foreach(start_line RANGE 0 11)
     add_test(NAME axisly.reference.grid_line_matrix.${start_line} COMMAND "${Python3_EXECUTABLE}"

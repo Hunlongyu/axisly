@@ -102,6 +102,7 @@ double grow_nonflexible_tracks(TrackAxis& axis, std::optional<Unit> available,
         if (query == AvailableKind::MinContent) return free;
         for (auto& track : axis.tracks) {
             if (track.intrinsic_max) track.size = track.preferred;
+            else if (track.maximum && track.flex <= 0) track.size = *track.maximum;
         }
         return free;
     }
@@ -228,7 +229,8 @@ void apply_cross_axis_ratio_contributions(const TrackAxis& rows,
 
 void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
                bool columns, std::optional<Unit> available, AvailableKind query,
-               NodeId id) {
+               std::optional<Unit> flex_minimum,
+               std::optional<Unit> flex_maximum, NodeId id) {
     const auto range = [&](const ItemContribution& item) {
         return columns
             ? std::pair{item.placement.column_start, item.placement.column_end}
@@ -546,6 +548,22 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
                 fr_unit = std::max(fr_unit, size_of_fraction_unit(axis,
                     start, end, contribution(item, ContributionKind::MaxContent)));
             }
+        }
+        double hypothetical = 0;
+        for (const auto gap : axis.gutter_after) hypothetical += gap;
+        for (const auto& track : axis.tracks) {
+            hypothetical += track.style.maximum.kind() == TrackBreadthKind::Fraction
+                ? std::max<double>(track.size, fr_unit * track.flex)
+                : track.size;
+        }
+        if (flex_minimum && hypothetical < *flex_minimum) {
+            fr_unit = size_of_fraction_unit(axis, axis.origin,
+                axis.origin + static_cast<std::int32_t>(axis.tracks.size()),
+                *flex_minimum);
+        } else if (flex_maximum && hypothetical > *flex_maximum) {
+            fr_unit = size_of_fraction_unit(axis, axis.origin,
+                axis.origin + static_cast<std::int32_t>(axis.tracks.size()),
+                *flex_maximum);
         }
         for (auto& track : axis.tracks) {
             if (track.style.maximum.kind() == TrackBreadthKind::Fraction) {

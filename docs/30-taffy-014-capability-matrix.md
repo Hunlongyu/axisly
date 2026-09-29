@@ -20,7 +20,7 @@
 | `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 部分：标记使 Block 子项不拉伸自动宽度并阻断父子边距折叠；复杂内在尺寸未完整 | P4 | 已建：block-table-intrinsic、block-table-margin-boundary |
 | `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；叶子测量后的纵横比与约束、Flex 拉伸交叉轴传递到主轴基准、Grid 行区域对自动列的比例贡献已差分；更多跨算法组合未完整 | P1/P2/P3 | 已建：block-replaced-intrinsic、block-replaced-ratio、flex-replaced-ratio、grid-replaced-ratio |
 | `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸、Flex 及带 `calc` 宽度／盒边的 ContentBox 叶子已差分，嵌套复杂尺寸未完整 | P1 | 已建：content-box-and-negative-margin、calc-leaf-content-box |
-| `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入基本方向规则；Grid/Flex 的 self-start／self-end 按项目自身方向解析，混合树未验收 | P1/P4 | 已建：rtl-block-child、grid-self-ltr-rtl、flex-self-rtl-ltr；待建：rtl-mixed |
+| `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入方向规则；Grid/Flex 的 self-start／self-end 按项目自身方向解析；三种混合容器方向切换与 Block RTL 自动边距溢出已差分，更多定位和内在尺寸组合未完整 | P1/P4 | 已建：rtl-block-child、rtl-mixed-block-flex-grid／grid-flex-block／flex-reverse、rtl-block-auto-overflow-both／left／right、grid-self-ltr-rtl、flex-self-rtl-ltr |
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 与 Grid 单轨道自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding、grid-scroll-automatic-minimum |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出范围与子项组合仍需差分 | P4 | 已建：flex-scrollbar-reservation、overflow-scroll-padding |
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；Layout／Content 抑制基线，Paint 保留基线；溢出细节仍未完整 | P4 | 已建：block-contain-float、nested-block／flex／grid-layout／paint-contain-baseline |
@@ -32,17 +32,17 @@
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；叶子 calc 最小尺寸已对照；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height、calc-leaf-min-max |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限、Flex 拉伸交叉轴基准和 Grid 自动轨道比例贡献已差分；未定交叉轴及复杂 min/max 组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width；待建：ratio-indefinite-cross-axis |
-| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins |
+| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分；RTL Block 自动边距在正剩余空间与溢出时按物理右边定位，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、rtl-block-auto-overflow-both／left／right、rtl-block-auto-positive／left／right、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，Flex/Grid 根容器按固有阶段零值布局；其他百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis；待建：nested-percent-padding |
 | `border` | 四边 Length／Percent／Calc | 部分：固定数值、叶子 calc 及根容器未定宽度的百分比边框已差分；Block 用确定后的边框作为子项和溢出坐标原点；嵌套循环未完整 | P1 | 已建：content-box-and-negative-margin、root-block／flex／grid-border-percent、calc-leaf-content-box／partial-basis |
-| `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择与滚动项目基线钳制已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline |
+| `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择、滚动项目基线钳制及 Grid 安全对齐在溢出时回退起始边已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline、grid-align-safe／unsafe-overflow |
 | `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；固定交叉尺寸项目在反向换行时按 flex-start 对齐；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline；待建：align-self-full |
-| `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 常用位置与 stretch；安全值未完整 | P3 | 待建：justify-items |
+| `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 默认 End 与单项 Start 覆盖、SafeCenter／Center 在轨道小于项目时的位置已差分；其他安全值、RTL 与内在尺寸组合未完整 | P3 | 已建：grid-justify-items-end、grid-justify-safe／unsafe-overflow |
 | `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch，self-start／self-end 按项目自身方向解析；基线未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr；待建：justify-self-full |
 | `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；自动容器固有尺寸阶段以零参与百分比间隙计算，尺寸确定后重算 Flex 主轴分配与 Grid 双轴轨道偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、repeat-gap-fixed／max／min-fill |
-| `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐已接入；RTL 组合未验收 | P4 | 已建：block-legacy-text-align |
+| `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；复杂组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance |
@@ -175,6 +175,10 @@
 | `named-line-missing-positive`／`named-line-missing-negative`／`named-line-missing-end-negative` | 缺失名称按 Taffy 0.14 的正负隐式线回退规则解析；结束线的负序号同样参与 |
 | `named-line-existing-negative-third`／`named-line-existing-positive-third` | 名称存在但要求的出现次数超出显式网格范围时，按剩余次数推算隐式线 |
 | `named-line-missing-forward-span`／`named-line-missing-backward-span`／`named-line-existing-backward-span-first` | 具名 span 在锚点一侧筛选候选线，缺失名称回退到隐式线；反向范围按冲突规则交换 |
+| `rtl-mixed-block-flex-grid`／`rtl-mixed-grid-flex-block`／`rtl-mixed-flex-reverse` | 三种容器在嵌套方向切换、RTL Grid 列镜像和 Flex 反向主轴下的节点位置 |
+| `grid-justify-items-end`／`grid-justify-safe-overflow`／`grid-justify-unsafe-overflow`／`grid-align-safe-overflow`／`grid-align-unsafe-overflow` | Grid 默认和项目覆盖对齐；安全位置在项目大于固定轨道时回退起始边 |
+| `block-legacy-rtl-left`／`block-legacy-rtl-right`／`block-legacy-rtl-center` | RTL Block 的传统物理左、右和居中对齐 |
+| `rtl-block-auto-overflow-both`／`rtl-block-auto-overflow-left`／`rtl-block-auto-overflow-right`／`rtl-block-auto-positive`／`rtl-block-auto-positive-left`／`rtl-block-auto-positive-right` | RTL Block 中双／单自动外边距在正剩余空间和溢出时的物理右边定位及报告边距 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -197,7 +201,7 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二百三十三组可重放树形参考输入、八组独立 calc
+目前有 44 字段清单、二百五十组可重放树形参考输入、八组独立 calc
 参考输入、独立树形工具及旧 Grid 差分回归；树形参考输入的矩形、盒边、
 滚动条及节点局部可滚动溢出
 同时经过新原生树差分。

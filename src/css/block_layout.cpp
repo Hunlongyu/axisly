@@ -187,12 +187,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 nested.nodes.front().margin.left = used_left;
                 nested.nodes.front().margin.right = used_right;
             }
-            Unit x = auto_left || auto_right
-                ? used_left
-                : node.style.box.direction == Direction::Rtl
-                    ? checked(static_cast<double>(content_width)
-                        - nested.size.width - used_right, child_id)
-                    : used_left;
+            Unit x = node.style.box.direction == Direction::Rtl
+                ? checked(static_cast<double>(content_width)
+                    - nested.size.width - used_right, child_id)
+                : used_left;
             const Unit free_align = checked(static_cast<double>(content_width)
                 - nested.size.width - used_left - used_right, child_id);
             if (free_align > 0) {

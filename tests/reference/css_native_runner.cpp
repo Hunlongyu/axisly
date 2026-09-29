@@ -871,6 +871,178 @@ void rtl_block_child() {
         {{160, root}, {161, child}});
 }
 
+void rtl_block_auto_margin_case(std::string_view name) {
+    const bool positive = name.find("-positive") != std::string_view::npos;
+    const bool left = name.ends_with("left");
+    const bool right = name.ends_with("right");
+    const int id = positive ? (left ? 6850 : right ? 6860 : 6840)
+        : left ? 6820 : right ? 6830 : 6810;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.direction = Direction::Rtl;
+    root_style.box.size = {Length::length(100), Length::length(40)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size = {Length::length(positive ? 20.0f : 120.0f),
+                            Length::length(10)};
+    child_style.box.margin.left = left || (!left && !right)
+        ? Length::automatic() : Length::length(10);
+    child_style.box.margin.right = right || (!left && !right)
+        ? Length::automatic() : Length::length(10);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(40)}),
+        {{id, root}, {id + 1, child}});
+}
+
+void rtl_mixed_case(std::string_view name) {
+    LayoutTree tree;
+    const bool block_root = name == "rtl-mixed-block-flex-grid";
+    const bool grid_root = name == "rtl-mixed-grid-flex-block";
+    const int id = block_root ? 6700 : grid_root ? 6710 : 6720;
+    const auto available = AvailableSize{AvailableSpace::definite(
+        block_root ? 260.0f : grid_root ? 200.0f : 160.0f),
+        AvailableSpace::definite(grid_root || block_root ? 100.0f : 60.0f)};
+    std::vector<IdentifiedNode> nodes;
+    const auto add = [&](int node_id, NodeId parent, Style style) {
+        const auto child = tree.create_node(std::move(style));
+        tree.append_child(parent, child);
+        nodes.emplace_back(node_id, child);
+        return child;
+    };
+    Style root_style;
+    root_style.display = block_root ? Display::Block
+        : grid_root ? Display::Grid : Display::Flex;
+    root_style.box.direction = Direction::Rtl;
+    root_style.box.size = {Length::length(available.width.value),
+                           Length::length(available.height.value)};
+    if (block_root) {
+        root_style.box.padding.left = Length::length(10);
+        root_style.box.padding.right = Length::length(20);
+    } else if (grid_root) {
+        root_style.grid.template_columns = {
+            TrackSizing::fixed(60), TrackSizing::fixed(80)};
+        root_style.grid.template_rows = {TrackSizing::fixed(50)};
+    } else {
+        root_style.flex_direction = FlexDirection::RowReverse;
+        root_style.gap.width = Length::length(10);
+    }
+    const auto root = tree.create_node(root_style);
+    nodes.emplace_back(id, root);
+    if (block_root) {
+        Style flex_style;
+        flex_style.display = Display::Flex;
+        flex_style.box.direction = Direction::Ltr;
+        flex_style.box.size = {Length::length(120), Length::length(40)};
+        flex_style.box.margin.left = Length::length(7);
+        flex_style.box.margin.right = Length::length(5);
+        const auto flex = add(id + 1, root, flex_style);
+        Style grid_style;
+        grid_style.display = Display::Grid;
+        grid_style.box.direction = Direction::Rtl;
+        grid_style.box.size = {Length::length(50), Length::length(30)};
+        grid_style.grid.template_columns = {
+            TrackSizing::fixed(20), TrackSizing::fixed(30)};
+        grid_style.grid.template_rows = {TrackSizing::fixed(20)};
+        const auto grid = add(id + 2, flex, grid_style);
+        Style inner;
+        inner.display = Display::Block;
+        inner.box.direction = Direction::Ltr;
+        inner.box.size = {Length::length(10), Length::length(10)};
+        add(id + 3, grid, inner);
+        inner.display = Display::Flex;
+        inner.box.direction = Direction::Rtl;
+        inner.box.size = {Length::length(20), Length::length(20)};
+        add(id + 4, flex, inner);
+    } else if (grid_root) {
+        Style flex_style;
+        flex_style.display = Display::Flex;
+        flex_style.box.direction = Direction::Ltr;
+        flex_style.box.size = {Length::length(50), Length::length(40)};
+        flex_style.grid.column.start = GridLine::index(1);
+        const auto flex = add(id + 1, root, flex_style);
+        Style leaf;
+        leaf.display = Display::Block;
+        leaf.box.direction = Direction::Rtl;
+        leaf.box.size = {Length::length(20), Length::length(10)};
+        add(id + 2, flex, leaf);
+        Style grid_style;
+        grid_style.display = Display::Grid;
+        grid_style.box.direction = Direction::Ltr;
+        grid_style.box.size = {Length::length(70), Length::length(40)};
+        grid_style.grid.column.start = GridLine::index(2);
+        grid_style.grid.template_columns = {
+            TrackSizing::fixed(30), TrackSizing::fixed(40)};
+        grid_style.grid.template_rows = {TrackSizing::fixed(20)};
+        const auto grid = add(id + 3, root, grid_style);
+        leaf.box.size = {Length::length(10), Length::length(10)};
+        add(id + 4, grid, leaf);
+    } else {
+        Style leaf;
+        leaf.display = Display::Block;
+        leaf.box.direction = Direction::Ltr;
+        leaf.box.size = {Length::length(30), Length::length(20)};
+        add(id + 1, root, leaf);
+        Style grid_style;
+        grid_style.display = Display::Grid;
+        grid_style.box.direction = Direction::Rtl;
+        grid_style.box.size = {Length::length(50), Length::length(40)};
+        grid_style.grid.template_columns = {
+            TrackSizing::fixed(20), TrackSizing::fixed(30)};
+        grid_style.grid.template_rows = {TrackSizing::fixed(20)};
+        const auto grid = add(id + 2, root, grid_style);
+        leaf.box.size = {Length::length(10), Length::length(10)};
+        add(id + 3, grid, leaf);
+    }
+    print(name.data(), tree.compute(root, available), nodes);
+}
+
+void grid_alignment_safety_case(std::string_view name) {
+    const bool default_justify = name == "grid-justify-items-end";
+    const bool justify = name.starts_with("grid-justify-");
+    const bool safe = name.find("-safe-") != std::string_view::npos;
+    const int id = default_justify ? 6730 : justify
+        ? (safe ? 6740 : 6750) : (safe ? 6760 : 6770);
+    const Unit width = default_justify ? 100.0f : 40.0f;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(width), Length::length(40)};
+    root_style.grid.template_columns = default_justify
+        ? std::vector<TemplateTrack>{TrackSizing::fixed(50), TrackSizing::fixed(50)}
+        : std::vector<TemplateTrack>{TrackSizing::fixed(20)};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    if (default_justify) {
+        root_style.justify_items = ItemAlignment{ItemPosition::End};
+    } else if (justify) {
+        root_style.justify_items = ItemAlignment{
+            ItemPosition::Center, safe ? AlignmentSafety::Safe : AlignmentSafety::Unsafe};
+    } else {
+        root_style.align_items = ItemAlignment{
+            ItemPosition::End, safe ? AlignmentSafety::Safe : AlignmentSafety::Unsafe};
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    const int count = default_justify ? 2 : 1;
+    for (int index = 0; index < count; ++index) {
+        Style item_style;
+        item_style.box.size = {Length::length(justify
+            ? (default_justify ? 20.0f : 50.0f) : 10.0f),
+            Length::length(justify ? 10.0f : 50.0f)};
+        if (default_justify && index == 1) {
+            item_style.justify_self = ItemAlignment{ItemPosition::Start};
+        }
+        const auto child = tree.create_node(item_style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + index + 1, child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(width), AvailableSpace::definite(40)}), nodes);
+}
+
 void flex_scrollbar_reservation() {
     LayoutTree tree;
     Style root_style;
@@ -893,21 +1065,28 @@ void flex_scrollbar_reservation() {
         {{170, root}, {171, child}});
 }
 
-void block_legacy_text_align() {
+void block_legacy_text_align(std::string_view name) {
+    const bool rtl = name.starts_with("block-legacy-rtl-");
+    const int id = !rtl ? 180 : name.ends_with("left") ? 6780
+        : name.ends_with("right") ? 6790 : 6800;
     LayoutTree tree;
     Style root_style;
     root_style.display = Display::Block;
+    root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
     root_style.box.size = {Length::length(100), Length::length(40)};
-    root_style.text_align = TextAlign::LegacyCenter;
+    root_style.text_align = name.ends_with("left") ? TextAlign::LegacyLeft
+        : name.ends_with("right") ? TextAlign::LegacyRight
+        : TextAlign::LegacyCenter;
     const auto root = tree.create_node(root_style);
     Style child_style;
     child_style.display = Display::Block;
+    child_style.box.direction = Direction::Ltr;
     child_style.box.size = {Length::length(20), Length::length(10)};
     const auto child = tree.create_node(child_style);
     tree.append_child(root, child);
-    print("block-legacy-text-align", tree.compute(root,
+    print(name.data(), tree.compute(root,
         {AvailableSpace::definite(100), AvailableSpace::definite(40)}),
-        {{180, root}, {181, child}});
+        {{id, root}, {id + 1, child}});
 }
 
 void block_contain_float() {
@@ -2587,8 +2766,17 @@ int main(int argc, char** argv) {
             calc_leaf_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
+        else if (name.starts_with("rtl-block-auto-")) rtl_block_auto_margin_case(name);
+        else if (name.starts_with("rtl-mixed-")) rtl_mixed_case(name);
+        else if (name == "grid-justify-items-end"
+            || name.starts_with("grid-justify-safe-")
+            || name.starts_with("grid-justify-unsafe-")
+            || name.starts_with("grid-align-safe-")
+            || name.starts_with("grid-align-unsafe-"))
+            grid_alignment_safety_case(name);
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();
-        else if (name == "block-legacy-text-align") block_legacy_text_align();
+        else if (name == "block-legacy-text-align"
+            || name.starts_with("block-legacy-rtl-")) block_legacy_text_align(name);
         else if (name == "block-contain-float") block_contain_float();
         else if (name == "grid-absolute-area") grid_absolute_area();
         else if (name == "grid-implicit-negative-lines") grid_implicit_negative_lines();

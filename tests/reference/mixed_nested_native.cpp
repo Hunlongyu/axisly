@@ -41,7 +41,7 @@ void run_case(std::size_t scenario, std::size_t root_kind,
               std::size_t root_alignment,
               std::size_t direction, std::size_t wrap,
               std::size_t nested_kind, std::size_t nested_direction,
-              std::size_t variant, std::size_t rtl) {
+              std::size_t variant, std::size_t rtl, bool include_grid_details) {
     const bool row = direction < 2;
     LayoutTree tree;
     Style root_style;
@@ -123,16 +123,24 @@ void run_case(std::size_t scenario, std::size_t root_kind,
             : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()};
     reference::write_case(std::cout, name, tree.compute(root, available),
         {{1, root}, {2, nested}, {3, first}, {4, second},
-         {5, fixed}, {6, measured_child}});
+         {5, fixed}, {6, measured_child}}, include_grid_details);
 }
 } // namespace
 
 int main(int argc, char** argv) {
     try {
-        const std::string_view mode = argc == 2 ? argv[1] : "";
-        if (argc > 2 || (argc == 2 && mode != "--max-content"
-            && mode != "--min-content")) {
-            throw std::invalid_argument("Expected an intrinsic query or no argument");
+        std::string_view mode;
+        bool include_grid_details = false;
+        for (int index = 1; index < argc; ++index) {
+            const std::string_view argument = argv[index];
+            if (argument == "--details" && !include_grid_details) {
+                include_grid_details = true;
+            } else if ((argument == "--max-content" || argument == "--min-content")
+                       && mode.empty()) {
+                mode = argument;
+            } else {
+                throw std::invalid_argument("Expected an intrinsic query and optional --details");
+            }
         }
         const std::size_t scenario = mode == "--max-content" ? 1
             : mode == "--min-content" ? 2 : 0;
@@ -149,7 +157,7 @@ int main(int argc, char** argv) {
             if (!first) std::cout << ',';
             first = false;
             run_case(scenario, root_kind, root_alignment, direction, wrap, nested_kind,
-                nested_direction, variant, rtl);
+                nested_direction, variant, rtl, include_grid_details);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

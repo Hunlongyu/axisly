@@ -14,10 +14,11 @@ using namespace axisly;
 using namespace axisly::css;
 
 using reference::IdentifiedNode;
+bool include_grid_details = false;
 
 void print(const char* name, const LayoutResult& result,
            const std::vector<IdentifiedNode>& nodes) {
-    reference::write_case(std::cout, name, result, nodes);
+    reference::write_case(std::cout, name, result, nodes, include_grid_details);
     std::cout << '\n';
 }
 
@@ -2862,7 +2863,15 @@ void mixed_tree() {
 
 int main(int argc, char** argv) {
     try {
-        if (argc != 2) throw std::invalid_argument("Expected fixture name");
+        if (argc != 2 && argc != 3) {
+            throw std::invalid_argument("Expected fixture name and optional --details");
+        }
+        if (argc == 3) {
+            if (std::string_view{argv[2]} != "--details") {
+                throw std::invalid_argument("Expected optional --details");
+            }
+            include_grid_details = true;
+        }
         const std::string_view name = argv[1];
         if (name == "flex-row-grow") row_grow();
         else if (name == "content-box-and-negative-margin") negative_margin();

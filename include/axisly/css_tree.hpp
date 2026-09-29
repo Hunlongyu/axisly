@@ -57,10 +57,28 @@ struct NodeLayout {
     Rect scrollable_overflow_rect{};
 };
 
+struct GridTrackPosition {
+    Unit start{}, end{}; // Grid border-box-relative physical coordinates.
+    bool operator==(const GridTrackPosition&) const = default;
+};
+
+struct GridItemPlacement {
+    NodeId node;
+    // Origin-zero line numbers in the owning Grid's explicit coordinate system.
+    std::int32_t row_start{}, row_end{}, column_start{}, column_end{};
+    bool operator==(const GridItemPlacement&) const = default;
+};
+
 struct GridTracks {
     NodeId node;
+    // First track's line number relative to the explicit grid's first line.
     std::int32_t row_origin{}, column_origin{};
+    std::size_t explicit_rows{}, explicit_columns{};
+    // Used track sizes and positions in implicit-grid order, including collapsed tracks.
     std::vector<Unit> rows, columns;
+    std::vector<GridTrackPosition> row_positions, column_positions;
+    // In-flow children only; line zero is the explicit grid's first line.
+    std::vector<GridItemPlacement> items;
 };
 
 struct LayoutResult {

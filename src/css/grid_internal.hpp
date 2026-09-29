@@ -32,7 +32,7 @@ struct ItemContribution {
     Size minimum_contribution{}, min_content{}, max_content{};
     Insets margin{};
     bool scrolls_x{}, scrolls_y{};
-    std::optional<ResolvedBox> stretched_ratio_box;
+    std::optional<ResolvedBox> ratio_from_rows_box;
 };
 
 struct TrackState {

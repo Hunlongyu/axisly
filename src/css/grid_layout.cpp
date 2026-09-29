@@ -284,6 +284,11 @@ struct OccupiedArea {
     bool auto_placed{};
 };
 
+struct GridExtent {
+    std::int32_t row_start{}, row_end{};
+    std::int32_t column_start{}, column_end{};
+};
+
 class GridOccupancy {
 public:
     void add(std::int32_t primary, std::int32_t primary_span,
@@ -322,8 +327,8 @@ private:
     std::vector<OccupiedArea> areas_;
 };
 
-void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
-           std::int32_t explicit_columns, GridAutoFlow flow, NodeId id) {
+GridExtent place(std::vector<Placement>& placements, std::int32_t explicit_rows,
+                 std::int32_t explicit_columns, GridAutoFlow flow, NodeId id) {
     const bool by_row = flow == GridAutoFlow::Row || flow == GridAutoFlow::RowDense;
     const bool dense = flow == GridAutoFlow::RowDense || flow == GridAutoFlow::ColumnDense;
     const auto primary = [by_row](const Placement& item) -> const AxisPlacement& {
@@ -332,20 +337,26 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
     const auto secondary = [by_row](const Placement& item) -> const AxisPlacement& {
         return by_row ? item.row : item.column;
     };
-    std::int32_t primary_start = 0;
-    std::int32_t primary_end = by_row ? explicit_columns : explicit_rows;
-    std::int32_t secondary_start = 0;
-    std::int32_t largest_primary_span = 1;
+    GridExtent extent{0, explicit_rows, 0, explicit_columns};
+    std::int32_t largest_row_span = 0;
+    std::int32_t largest_column_span = 0;
     for (const auto& item : placements) {
         if (item.hidden) continue;
-        const auto& p = by_row ? item.column_estimate : item.row_estimate;
-        const auto& s = by_row ? item.row_estimate : item.column_estimate;
-        primary_start = std::min(primary_start, p.minimum_line);
-        primary_end = std::max(primary_end, p.maximum_line);
-        largest_primary_span = std::max(largest_primary_span, p.indefinite_span);
-        secondary_start = std::min(secondary_start, s.minimum_line);
+        extent.row_start = std::min(extent.row_start, item.row_estimate.minimum_line);
+        extent.row_end = std::max(extent.row_end, item.row_estimate.maximum_line);
+        extent.column_start = std::min(extent.column_start, item.column_estimate.minimum_line);
+        extent.column_end = std::max(extent.column_end, item.column_estimate.maximum_line);
+        largest_row_span = std::max(largest_row_span, item.row_estimate.indefinite_span);
+        largest_column_span = std::max(largest_column_span,
+            item.column_estimate.indefinite_span);
     }
-    primary_end = std::max(primary_end, primary_start + largest_primary_span);
+    extent.row_end = std::max(extent.row_end, extent.row_start + largest_row_span);
+    extent.column_end = std::max(extent.column_end,
+        extent.column_start + largest_column_span);
+    auto& primary_start = by_row ? extent.column_start : extent.row_start;
+    auto& primary_end = by_row ? extent.column_end : extent.row_end;
+    auto& secondary_start = by_row ? extent.row_start : extent.column_start;
+    auto& secondary_end = by_row ? extent.row_end : extent.column_end;
     GridOccupancy occupied;
     const auto record = [&](Placement& item, std::int32_t p, std::int32_t s,
                             bool auto_placed) {
@@ -366,6 +377,7 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
         primary_start = std::min(primary_start, p);
         primary_end = std::max(primary_end, p_end);
         secondary_start = std::min(secondary_start, s);
+        secondary_end = std::max(secondary_end, s_end);
     };
 
     // Definite positions reserve their cells before either auto-placement phase.
@@ -433,6 +445,7 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
         cursor_primary = dense ? grid_start_primary : p + primary(item).span;
         cursor_secondary = dense ? grid_start_secondary : s;
     }
+    return extent;
 }
 
 Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId id) {
@@ -539,17 +552,10 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         placements[i].column_estimate = estimate_axis(child.style.grid.column,
             static_cast<std::int32_t>(columns.tracks.size()));
     }
-    place(placements, static_cast<std::int32_t>(rows.tracks.size()),
+    const auto extent = place(placements, static_cast<std::int32_t>(rows.tracks.size()),
         static_cast<std::int32_t>(columns.tracks.size()), node.style.grid.auto_flow, node.id);
-    std::int32_t min_row = 0, max_row = static_cast<std::int32_t>(rows.tracks.size());
-    std::int32_t min_column = 0, max_column = static_cast<std::int32_t>(columns.tracks.size());
-    for (const auto& placement : placements) {
-        if (placement.hidden) continue;
-        min_row = std::min(min_row, placement.row_start);
-        max_row = std::max(max_row, placement.row_end);
-        min_column = std::min(min_column, placement.column_start);
-        max_column = std::max(max_column, placement.column_end);
-    }
+    const auto min_row = extent.row_start, max_row = extent.row_end;
+    const auto min_column = extent.column_start, max_column = extent.column_end;
     auto track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
         min_column, max_column, initial_track_width, column_gap, node.id);
     auto track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
@@ -582,20 +588,17 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto scrolls = [](Overflow overflow) {
             return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
         };
-        const auto horizontal = get(id).style.justify_self.value_or(
-            node.style.justify_items.value_or(ItemAlignment{}));
-        const bool stretched_ratio = inner_height && child_box.aspect_ratio
+        const bool ratio_from_rows = inner_height && child_box.aspect_ratio
             && get(id).style.box.size.width.kind() == LengthKind::Auto
-            && horizontal.position == ItemPosition::Stretch
             && !child_box.preferred.width;
         contribution_indices[i] = contributions.size();
         contributions.push_back({placements[i], minimum_contribution,
             min_fragment.size, max_fragment.size, edges(child_box.margin, id),
             scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y),
-            stretched_ratio ? std::optional<ResolvedBox>(child_box) : std::nullopt});
+            ratio_from_rows ? std::optional<ResolvedBox>(child_box) : std::nullopt});
     }
     if (inner_height && std::any_of(contributions.begin(), contributions.end(),
-        [](const ItemContribution& item) { return item.stretched_ratio_box.has_value(); })) {
+        [](const ItemContribution& item) { return item.ratio_from_rows_box.has_value(); })) {
         auto measured_rows = track_rows;
         size_axis(measured_rows, contributions, false, initial_track_height,
             row_query, node.id);
@@ -658,12 +661,46 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
+    const auto border = edges(box.border, node.id);
+    const auto padding = edges(box.padding, node.id);
+    const Unit content_x = checked(static_cast<double>(border.left) + padding.left, node.id);
+    const Unit content_y = checked(static_cast<double>(border.top) + padding.top, node.id);
     GridTracks report;
     report.node = node.id;
     report.column_origin = track_columns.origin;
     report.row_origin = track_rows.origin;
-    for (const auto& track : track_columns.tracks) report.columns.push_back(track.size);
-    for (const auto& track : track_rows.tracks) report.rows.push_back(track.size);
+    report.explicit_columns = columns.tracks.size();
+    report.explicit_rows = rows.tracks.size();
+    report.columns.reserve(track_columns.tracks.size());
+    report.rows.reserve(track_rows.tracks.size());
+    report.column_positions.reserve(track_columns.tracks.size());
+    report.row_positions.reserve(track_rows.tracks.size());
+    report.items.reserve(node.children.size());
+    for (std::size_t i = 0; i < track_columns.tracks.size(); ++i) {
+        const auto size = track_columns.tracks[i].size;
+        report.columns.push_back(size);
+        const auto inline_start = track_columns.offsets[i];
+        const auto physical_start = node.style.box.direction == Direction::Rtl
+            ? static_cast<double>(content_x) + *inner_width - inline_start - size
+            : static_cast<double>(content_x) + inline_start;
+        const auto start = checked(physical_start, node.id);
+        report.column_positions.push_back({start,
+            checked(static_cast<double>(start) + size, node.id)});
+    }
+    for (std::size_t i = 0; i < track_rows.tracks.size(); ++i) {
+        const auto size = track_rows.tracks[i].size;
+        report.rows.push_back(size);
+        const auto start = checked(static_cast<double>(content_y)
+            + track_rows.offsets[i], node.id);
+        report.row_positions.push_back({start,
+            checked(static_cast<double>(start) + size, node.id)});
+    }
+    for (std::size_t i = 0; i < placements.size(); ++i) {
+        const auto& placed = placements[i];
+        if (placed.hidden) continue;
+        report.items.push_back({node.children[i], placed.row_start, placed.row_end,
+            placed.column_start, placed.column_end});
+    }
     result.grid_tracks.push_back(std::move(report));
     std::vector<Fragment> fragments(node.children.size());
     struct BaselinePlacement {
@@ -674,10 +711,6 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     };
     std::vector<BaselinePlacement> baseline_items;
     std::unordered_map<std::int32_t, Unit> row_baselines;
-    const auto border = edges(box.border, node.id);
-    const auto padding = edges(box.padding, node.id);
-    const Unit content_x = checked(static_cast<double>(border.left) + padding.left, node.id);
-    const Unit content_y = checked(static_cast<double>(border.top) + padding.top, node.id);
     for (std::size_t i = 0; i < node.children.size(); ++i) {
         const auto id = node.children[i];
         const auto& child = get(id);

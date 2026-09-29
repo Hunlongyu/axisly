@@ -5,6 +5,7 @@ import itertools
 import json
 import subprocess
 
+from grid_detail_compare import compare_grid_details
 from test_flex_matrix import compare
 
 
@@ -59,22 +60,26 @@ def main():
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
     parser.add_argument("--start-line", type=int)
+    parser.add_argument("--details", action="store_true")
     args = parser.parse_args()
     if args.start_line is not None and not 0 <= args.start_line < len(LINES):
         parser.error("--start-line must name an available line endpoint")
     cases = list(make_cases(args.start_line))
     expected_cases = []
+    protocol = "AXISLY_TREE_GRID_DETAILS_V1" if args.details else "AXISLY_TREE_V1"
     for offset in range(0, len(cases), 1024):
         oracle = json.loads(subprocess.run(
             [args.taffy], input=json.dumps({
-                "protocol": "AXISLY_TREE_V1", "cases": cases[offset:offset + 1024]}),
+                "protocol": protocol, "cases": cases[offset:offset + 1024]}),
             text=True, capture_output=True, check=True,
         ).stdout)
         assert oracle["taffy"] == "0.14.0"
+        assert oracle["protocol"] == protocol
         expected_cases.extend(oracle["cases"])
     native = json.loads(subprocess.run(
         [args.axisly] + ([] if args.start_line is None
-                         else ["--start-line", str(args.start_line)]),
+                         else ["--start-line", str(args.start_line)])
+        + (["--details"] if args.details else []),
         text=True, capture_output=True, check=True,
     ).stdout)
     assert native["protocol"] == "AXISLY_GRID_LINE_MATRIX_V1"
@@ -84,6 +89,8 @@ def main():
     for actual, expected in zip(native["cases"], expected_cases, strict=True):
         try:
             compare(actual, expected)
+            if args.details:
+                compare_grid_details(actual, expected)
         except AssertionError as error:
             failures.append(error.args[0])
     assert not failures, (len(failures), failures[:8])

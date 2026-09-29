@@ -33,7 +33,7 @@ GridPlacement placement(int start, int end) {
 }
 
 void run_case(std::size_t scenario, std::size_t track,
-              std::size_t axis, std::size_t rtl) {
+              std::size_t axis, std::size_t rtl, bool details) {
     const bool columns = axis == 0;
     LayoutTree tree;
     Style root_style;
@@ -88,12 +88,14 @@ void run_case(std::size_t scenario, std::size_t track,
     const auto name = "grid-triple-span-" + std::to_string(scenario) + '-'
         + std::to_string(track) + '-' + std::to_string(axis) + '-'
         + std::to_string(rtl);
-    reference::write_case(std::cout, name, tree.compute(root, available), nodes);
+    reference::write_case(std::cout, name, tree.compute(root, available), nodes, details);
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     try {
+        const bool details = argc == 2 && std::string(argv[1]) == "--details";
+        if (argc != 1 && !details) throw std::invalid_argument("Expected --details or no argument");
         std::cout << "{\"protocol\":\"AXISLY_GRID_TRIPLE_SPAN_V1\",\"cases\":[";
         bool first = true;
         for (std::size_t scenario = 0; scenario < 3; ++scenario)
@@ -102,7 +104,7 @@ int main() {
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, track, axis, rtl);
+            run_case(scenario, track, axis, rtl, details);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

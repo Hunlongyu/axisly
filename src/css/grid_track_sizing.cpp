@@ -206,8 +206,8 @@ Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
 void apply_cross_axis_ratio_contributions(const TrackAxis& rows,
     std::vector<ItemContribution>& items, NodeId id) {
     for (auto& item : items) {
-        if (!item.stretched_ratio_box) continue;
-        const auto& box = *item.stretched_ratio_box;
+        if (!item.ratio_from_rows_box) continue;
+        const auto& box = *item.ratio_from_rows_box;
         const Unit row_span = rows.span(item.placement.row_start,
             item.placement.row_end);
         const Unit available_height = std::max(Unit{0}, checked(

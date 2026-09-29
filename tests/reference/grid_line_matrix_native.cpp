@@ -29,7 +29,7 @@ GridLine line(std::size_t index) {
 
 void run_case(std::size_t start, std::size_t end, std::size_t axis,
               std::size_t rtl, std::size_t flow, std::size_t second_placement,
-              std::size_t sizing, std::size_t auto_tracks) {
+              std::size_t sizing, std::size_t auto_tracks, bool details) {
     LayoutTree tree;
     Style root_style;
     root_style.display = Display::Grid;
@@ -90,7 +90,7 @@ void run_case(std::size_t start, std::size_t end, std::size_t axis,
         + '-' + std::to_string(sizing) + '-' + std::to_string(auto_tracks);
     reference::write_case(std::cout, name, tree.compute(root,
         {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
-        {{1, root}, {2, first}, {3, second}, {4, third}});
+        {{1, root}, {2, first}, {3, second}, {4, third}}, details);
 }
 } // namespace
 
@@ -98,12 +98,18 @@ int main(int argc, char** argv) {
     try {
         std::size_t start_begin = 0;
         std::size_t start_end = 12;
-        if (argc == 3 && std::string(argv[1]) == "--start-line") {
-            start_begin = std::stoul(argv[2]);
-            if (start_begin >= 12) throw std::invalid_argument("Unknown start line");
-            start_end = start_begin + 1;
-        } else if (argc != 1) {
-            throw std::invalid_argument("Expected --start-line INDEX or no argument");
+        bool details = false;
+        for (int argument = 1; argument < argc; ++argument) {
+            if (std::string(argv[argument]) == "--details") {
+                details = true;
+            } else if (std::string(argv[argument]) == "--start-line"
+                && argument + 1 < argc) {
+                start_begin = std::stoul(argv[++argument]);
+                if (start_begin >= 12) throw std::invalid_argument("Unknown start line");
+                start_end = start_begin + 1;
+            } else {
+                throw std::invalid_argument("Expected --start-line INDEX or --details");
+            }
         }
         std::cout << "{\"protocol\":\"AXISLY_GRID_LINE_MATRIX_V1\",\"cases\":[";
         bool first = true;
@@ -117,7 +123,8 @@ int main(int argc, char** argv) {
         for (std::size_t auto_tracks = 0; auto_tracks < 2; ++auto_tracks) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(start, end, axis, rtl, flow, second_placement, sizing, auto_tracks);
+            run_case(start, end, axis, rtl, flow, second_placement, sizing,
+                auto_tracks, details);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

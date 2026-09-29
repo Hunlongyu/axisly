@@ -67,7 +67,8 @@ AvailableSize available_size(std::size_t scenario) {
 }
 
 void run_case(std::size_t scenario, std::size_t columns, std::size_t rows,
-              std::size_t justify, std::size_t align, std::size_t rtl) {
+              std::size_t justify, std::size_t align, std::size_t rtl,
+              bool details) {
     LayoutTree tree;
     Style root_style = container_style(scenario, columns, rows, rtl);
     root_style.justify_items = {positions[justify]};
@@ -84,11 +85,12 @@ void run_case(std::size_t scenario, std::size_t columns, std::size_t rows,
     }
     reference::write_case(std::cout,
         case_name(scenario, columns, rows, justify, align, rtl),
-        tree.compute(root, available_size(scenario)), nodes);
+        tree.compute(root, available_size(scenario)), nodes, details);
 }
 
 void run_span_case(std::size_t scenario, std::size_t columns,
-                   std::size_t rows, std::size_t mode, std::size_t rtl) {
+                   std::size_t rows, std::size_t mode, std::size_t rtl,
+                   bool details) {
     LayoutTree tree;
     Style root_style = container_style(scenario, columns, rows, rtl);
     root_style.justify_items = {ItemPosition::Start};
@@ -127,14 +129,20 @@ void run_span_case(std::size_t scenario, std::size_t columns,
         + std::to_string(columns) + '-' + std::to_string(rows) + '-'
         + std::to_string(mode) + '-' + std::to_string(rtl);
     reference::write_case(std::cout, name,
-        tree.compute(root, available_size(scenario)), nodes);
+        tree.compute(root, available_size(scenario)), nodes, details);
 }
 } // namespace
 
 int main(int argc, char** argv) {
     try {
-        const bool spanning = argc == 2 && std::string_view(argv[1]) == "--span";
-        if (argc != 1 && !spanning) throw std::invalid_argument("Expected --span or no argument");
+        bool spanning = false;
+        bool details = false;
+        for (int argument = 1; argument < argc; ++argument) {
+            const std::string_view option{argv[argument]};
+            if (option == "--span") spanning = true;
+            else if (option == "--details") details = true;
+            else throw std::invalid_argument("Expected --span or --details");
+        }
         std::cout << "{\"protocol\":\""
             << (spanning ? "AXISLY_GRID_SPAN_MATRIX_V1" : "AXISLY_GRID_MATRIX_V1")
             << "\",\"cases\":[";
@@ -147,8 +155,8 @@ int main(int argc, char** argv) {
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            if (spanning) run_span_case(scenario, columns, rows, first_axis, rtl);
-            else run_case(scenario, columns, rows, first_axis, second_axis, rtl);
+            if (spanning) run_span_case(scenario, columns, rows, first_axis, rtl, details);
+            else run_case(scenario, columns, rows, first_axis, second_axis, rtl, details);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

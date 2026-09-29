@@ -6,6 +6,7 @@ import json
 import subprocess
 
 from test_flex_matrix import compare
+from grid_detail_compare import compare_grid_details
 
 
 TRACKS = (
@@ -56,14 +57,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
+    parser.add_argument("--details", action="store_true")
     args = parser.parse_args()
     cases = list(make_cases())
+    protocol = "AXISLY_TREE_GRID_DETAILS_V1" if args.details else "AXISLY_TREE_V1"
     oracle = json.loads(subprocess.run(
-        [args.taffy], input=json.dumps({"protocol": "AXISLY_TREE_V1", "cases": cases}),
+        [args.taffy], input=json.dumps({"protocol": protocol, "cases": cases}),
         text=True, capture_output=True, check=True
     ).stdout)
     native = json.loads(subprocess.run(
-        [args.axisly], text=True, capture_output=True, check=True
+        [args.axisly] + (["--details"] if args.details else []),
+        text=True, capture_output=True, check=True
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_GRID_TRIPLE_SPAN_V1"
@@ -72,6 +76,8 @@ def main():
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:
             compare(actual, expected)
+            if args.details:
+                compare_grid_details(actual, expected)
         except AssertionError as error:
             failures.append(error.args[0])
     assert not failures, (len(failures), failures[:8])

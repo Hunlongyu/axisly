@@ -26,6 +26,7 @@ fn measure(known: Option<f32>, available: AvailableSpace, minimum: f32, preferre
 }
 
 const TREE_PROTOCOL: &str = "AXISLY_TREE_V1";
+const GRID_DETAILS_PROTOCOL: &str = "AXISLY_TREE_GRID_DETAILS_V1";
 const FIELDS_PROTOCOL: &str = "AXISLY_TREE_STYLE_FIELDS_V1";
 
 struct StrictValue(Value);
@@ -177,7 +178,7 @@ fn metrics(input: MeasureInput) -> Result<Metrics> {
     })
 }
 
-fn run_case(case: Case, allowed_fields: &[String]) -> Result<Value> {
+fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -> Result<Value> {
     if case.name.is_empty() || case.name.len() > 100 {
         return Err("Invalid case name".into());
     }
@@ -300,7 +301,7 @@ fn run_case(case: Case, allowed_fields: &[String]) -> Result<Value> {
         if values.iter().any(|value| !value.is_finite()) {
             return Err(format!("Non-finite Taffy layout for node {}", input.id));
         }
-        result.push(json!({
+        let mut node_result = json!({
             "id": input.id,
             "parent": input.parent,
             "rect": [layout.location.x, layout.location.y, layout.size.width, layout.size.height],
@@ -311,7 +312,42 @@ fn run_case(case: Case, allowed_fields: &[String]) -> Result<Value> {
             "overflow": [layout.scrollable_overflow_rect.left, layout.scrollable_overflow_rect.top,
                 layout.scrollable_overflow_rect.right, layout.scrollable_overflow_rect.bottom],
             "order": layout.order,
-        }));
+        });
+        if include_grid_details {
+            node_result["grid"] = match tree.detailed_layout_info(node.unwrap()) {
+                taffy::tree::DetailedLayoutInfo::Grid(info) => {
+                    let rows = &info.rows;
+                    let columns = &info.columns;
+                    if rows.positions.iter().chain(columns.positions.iter())
+                        .any(|track| !track.start.is_finite() || !track.end.is_finite())
+                    {
+                        return Err(format!("Non-finite Taffy Grid track for node {}", input.id));
+                    }
+                    json!({
+                        "rows": {
+                            "negative": rows.negative_implicit_tracks,
+                            "explicit": rows.explicit_tracks,
+                            "positive": rows.positive_implicit_tracks,
+                            "positions": rows.positions.iter()
+                                .map(|track| [track.start, track.end]).collect::<Vec<_>>(),
+                        },
+                        "columns": {
+                            "negative": columns.negative_implicit_tracks,
+                            "explicit": columns.explicit_tracks,
+                            "positive": columns.positive_implicit_tracks,
+                            "positions": columns.positions.iter()
+                                .map(|track| [track.start, track.end]).collect::<Vec<_>>(),
+                        },
+                        "items": info.items.iter().map(|item| [
+                            item.row_start, item.row_end,
+                            item.column_start, item.column_end,
+                        ]).collect::<Vec<_>>(),
+                    })
+                }
+                taffy::tree::DetailedLayoutInfo::None => Value::Null,
+            };
+        }
+        result.push(node_result);
     }
     Ok(json!({"name": case.name, "nodes": result}))
 }
@@ -332,10 +368,12 @@ pub(super) fn run(input: &str) -> Result<()> {
         return Ok(());
     }
     let document: Document = serde_json::from_value(value).map_err(|e| e.to_string())?;
-    if document.protocol != TREE_PROTOCOL || document.cases.is_empty() || document.cases.len() > 1024
+    if !matches!(document.protocol.as_str(), TREE_PROTOCOL | GRID_DETAILS_PROTOCOL)
+        || document.cases.is_empty() || document.cases.len() > 1024
     {
         return Err("Invalid tree protocol or case count".into());
     }
+    let include_grid_details = document.protocol == GRID_DETAILS_PROTOCOL;
     let fields = style_fields()?;
     let mut results = Vec::with_capacity(document.cases.len());
     let mut names = HashSet::new();
@@ -343,11 +381,11 @@ pub(super) fn run(input: &str) -> Result<()> {
         if !names.insert(case.name.clone()) {
             return Err("Duplicate case name".into());
         }
-        results.push(run_case(case, &fields)?);
+        results.push(run_case(case, &fields, include_grid_details)?);
     }
     println!(
         "{}",
-        json!({"protocol": TREE_PROTOCOL, "taffy": "0.14.0", "cases": results})
+        json!({"protocol": document.protocol, "taffy": "0.14.0", "cases": results})
     );
     Ok(())
 }

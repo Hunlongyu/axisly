@@ -97,6 +97,7 @@ set_tests_properties(axisly.reference.tree PROPERTIES LABELS reference TIMEOUT 1
 
 add_test(NAME axisly.reference.css_tree COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_css_tree.py"
+    --details
     --axisly "$<TARGET_FILE:axisly_css_reference_native>"
     --taffy "${taffy_tree_output}"
     --fixture "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/tree.json")
@@ -142,6 +143,7 @@ foreach(space IN ITEMS definite max-content min-content)
     add_test(NAME axisly.reference.mixed_nested_${space} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_nested.py"
         --scenario "${space}"
+        --details
         --axisly "$<TARGET_FILE:axisly_mixed_nested_native>"
         --taffy "${taffy_tree_output}")
     set_tests_properties(axisly.reference.mixed_nested_${space} PROPERTIES LABELS reference TIMEOUT 120)
@@ -156,7 +158,8 @@ set_tests_properties(axisly.reference.block_float_matrix PROPERTIES LABELS refer
 add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_matrix.py"
     --axisly "$<TARGET_FILE:axisly_grid_matrix_native>"
-    --taffy "${taffy_tree_output}")
+    --taffy "${taffy_tree_output}"
+    --details)
 set_tests_properties(axisly.reference.grid_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 foreach(start_line RANGE 0 11)
@@ -164,7 +167,8 @@ foreach(start_line RANGE 0 11)
         "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_line_matrix.py"
         --axisly "$<TARGET_FILE:axisly_grid_line_matrix_native>"
         --taffy "${taffy_tree_output}"
-        --start-line "${start_line}")
+        --start-line "${start_line}"
+        --details)
     set_tests_properties(axisly.reference.grid_line_matrix.${start_line}
         PROPERTIES LABELS reference TIMEOUT 120)
 endforeach()
@@ -172,13 +176,15 @@ endforeach()
 add_test(NAME axisly.reference.grid_span_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_span_matrix.py"
     --axisly "$<TARGET_FILE:axisly_grid_matrix_native>"
-    --taffy "${taffy_tree_output}")
+    --taffy "${taffy_tree_output}"
+    --details)
 set_tests_properties(axisly.reference.grid_span_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.grid_triple_span COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_triple_span.py"
     --axisly "$<TARGET_FILE:axisly_grid_triple_span_native>"
-    --taffy "${taffy_tree_output}")
+    --taffy "${taffy_tree_output}"
+    --details)
 set_tests_properties(axisly.reference.grid_triple_span PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"

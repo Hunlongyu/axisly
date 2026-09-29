@@ -6,6 +6,8 @@ import math
 import subprocess
 from pathlib import Path
 
+from grid_detail_compare import compare_grid_details
+
 
 CASES = (
     "flex-row-grow",
@@ -279,18 +281,23 @@ def main() -> None:
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
     parser.add_argument("--fixture", required=True)
+    parser.add_argument("--details", action="store_true")
     args = parser.parse_args()
-    fixture = Path(args.fixture).read_text(encoding="utf-8")
+    fixture = json.loads(Path(args.fixture).read_text(encoding="utf-8"))
+    if args.details:
+        fixture["protocol"] = "AXISLY_TREE_GRID_DETAILS_V1"
     result = subprocess.run(
-        [args.taffy], input=fixture, text=True, capture_output=True, check=True
+        [args.taffy], input=json.dumps(fixture), text=True, capture_output=True, check=True
     )
     oracle = json.loads(result.stdout)
-    assert oracle["protocol"] == "AXISLY_TREE_V1" and oracle["taffy"] == "0.14.0"
+    assert oracle["protocol"] == fixture["protocol"] and oracle["taffy"] == "0.14.0"
     by_name = {case["name"]: case for case in oracle["cases"]}
+    detail_failures = []
     for name in CASES:
         native = json.loads(
             subprocess.run(
-                [args.axisly, name], text=True, capture_output=True, check=True
+                [args.axisly, name] + (["--details"] if args.details else []),
+                text=True, capture_output=True, check=True
             ).stdout
         )
         reference = by_name[name]
@@ -317,6 +324,12 @@ def main() -> None:
                 assert all(math.isclose(a, b, rel_tol=0, abs_tol=0.01)
                            for a, b in zip(node[field], target[field], strict=True)), (
                     name, node["id"], field, node[field], target[field])
+        if args.details:
+            try:
+                compare_grid_details(native, reference)
+            except AssertionError as error:
+                detail_failures.append(error.args[0])
+    assert not detail_failures, (len(detail_failures), detail_failures[:20])
 
 
 if __name__ == "__main__":

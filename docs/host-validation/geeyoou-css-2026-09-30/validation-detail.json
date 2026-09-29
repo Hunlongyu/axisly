@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-30",
+  "compiler": "MSVC 19.51.36257.0",
+  "geeyoou_commit": "4cadaf6479b663ce6633e59bfbac28332de495fc",
+  "source_base_before_detail_changes": "044015ecaa2dd204181ff1b7350ebf6744ac7762",
+  "release_tests": "296/296",
+  "debug_tests": "296/296",
+  "msvc_asan_tests": "296/296",
+  "installed_consumer_tests": "1/1",
+  "showcase_pages": 19,
+  "showcase_visits": 57,
+  "native_dpi_scale": 1,
+  "css_mixed_native": "passed",
+  "release_showcase_sha256": "DBAF5C7359183E2FEC79738249EE21BF562CE0960AA284825D5D919C78B1CB7D",
+  "release_host_tests_sha256": "3B832B7F614E37C7254C660C97A7634B7C24799AC1641B1DB17AA5CFF33B12DE",
+  "css_screenshot_sha256": "BCE7237E37C86B98D4D86EB27D6F3186CD524317A9C18D58DF3CA3E79477E90B",
+  "note": "The source snapshot is the commit containing this record. The live Showcase exercised its 19 existing pages and the CSS mixed page. The CSS screenshot hash matches previous validations; cross-monitor DPI remains untested."
+}

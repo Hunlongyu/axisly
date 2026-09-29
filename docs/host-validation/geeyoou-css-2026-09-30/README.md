@@ -34,3 +34,10 @@ MSVC ASan 宿主，各通过 294/294 项。Release Showcase 再次运行
 CSS 混合页截图的 SHA-256 与上图相同，说明此验收输入的像素输出未变。
 [本轮验证记录](validation-parity.json)和
 [Showcase 摘要](showcase-parity-summary.json)保存了可核对结果。
+
+固有尺寸查询分层后，Release／Debug／MSVC ASan 宿主各通过 296/296 项；
+Release 的真实 Showcase 仍遍历 19 页 × 3 配置，并通过原生 CSS 混合页。
+安装前缀的独立消费者重新配置、链接并通过 1/1 项。CSS 混合页截图哈希
+与前两轮相同。[本轮验证记录](validation-detail.json)和
+[Showcase 摘要](showcase-detail-summary.json)保存了结果；实际跨显示器 DPI
+切换仍需单独验收。

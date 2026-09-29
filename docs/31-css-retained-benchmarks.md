@@ -117,6 +117,39 @@ ctest --test-dir build/benchmark-release -R axisly.css_retained_bench --output-o
 申请次数和字节数仍要求各批完全一致；峰值存活字节可能因不同节点标识
 导致容器释放顺序微变，汇总使用批次均值的中位数，逐批值保存在 CSV。
 
+## 固有尺寸查询的输出分层
+
+Grid 轨道贡献与 Flex 基础尺寸只消费子项尺寸。此前这些查询仍构造整棵
+子树的位置、Grid 轨道报告和发布用的节点数组。现将内部查询分为尺寸、
+基线和完整输出三种片段详细度：尺寸查询在结果确定后返回，Flex 行基线
+仍用带基线的子片段，只有最终布局汇集所有后代和轨道。详细度参与缓存键；
+完整片段可回答较小的查询，反向复用不允许。与前一份“混合树约束复核后”
+基准相比，输入、后端、计时边界、20 帧 × 9 批和机器相同。
+
+| 后端／叶子 | 场景 | 前一版 µs | 本版 µs | 前一版 C++ 申请 | 本版 C++ 申请 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 合成／384 | 首次 | 9666.15 | 8154.49 | 47164 | 40316 |
+| 合成／384 | 单叶编辑 | 344.58 | 281.82 | 2446.9 | 1731.9 |
+| DirectWrite／96 | 首次 | 4978.93 | 3680.68 | 12444 | 10604 |
+
+DirectWrite 行的申请次数是该后端对应的记录；它不包含 DirectWrite／COM
+内部未经过 C++ `new/delete` 的申请。合成／384 首次仍比更早的 3033.70 µs
+基线慢；新算法执行更多交叉轴贡献查询，不能把本轮改进视为性能收尾。
+缓存命中的尺寸变化与输入不变路径分别约 154.77 µs 和 0.035 µs；
+其中尺寸变化仍需构造根输出。Release／Debug 参考测试各通过 344/344，
+MSVC ASan 在 `vcvars64` 环境下通过 343/343；GeeyoouUI
+Release／Debug／MSVC ASan 各通过 296/296，包含 9,216 组混合树差分。
+
+新原始记录：[时间汇总](benchmarks/css-retained-detail-2026-09-30/timing-summary.csv)、
+[逐批时间](benchmarks/css-retained-detail-2026-09-30/timing-raw.csv)、
+[分配汇总](benchmarks/css-retained-detail-2026-09-30/allocations-summary.csv)、
+[逐批分配](benchmarks/css-retained-detail-2026-09-30/allocations-raw.csv)、
+[DirectWrite 时间汇总](benchmarks/css-retained-detail-2026-09-30/directwrite-timing-summary.csv)、
+[DirectWrite 逐批时间](benchmarks/css-retained-detail-2026-09-30/directwrite-timing-raw.csv)、
+[DirectWrite 分配汇总](benchmarks/css-retained-detail-2026-09-30/directwrite-allocations-summary.csv)、
+[DirectWrite 逐批分配](benchmarks/css-retained-detail-2026-09-30/directwrite-allocations-raw.csv)、
+[环境与可执行文件哈希](benchmarks/css-retained-detail-2026-09-30/environment.json)。
+
 ## 验证范围
 
 初始基线的 Release、Debug 参考构建各通过 333/333 项；ASan 通过

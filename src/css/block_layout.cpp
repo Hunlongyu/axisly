@@ -395,6 +395,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
     result.nodes.front().overflow_origin_border = border;
+    result.nodes.front().margin.top = margins.top.resolve(node.id);
+    result.nodes.front().margin.bottom = margins.bottom.resolve(node.id);
+    result.block_margins = margins;
+    if (detail_ == FragmentDetail::Size) return result;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto& child = get(node.children[source]);
         if (child.style.display == Display::None
@@ -407,9 +411,6 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 + *baseline, node.id);
         break;
     }
-    result.nodes.front().margin.top = margins.top.resolve(node.id);
-    result.nodes.front().margin.bottom = margins.bottom.resolve(node.id);
-    result.block_margins = margins;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto id = node.children[source];
         if (get(id).style.position == Position::Absolute
@@ -422,12 +423,14 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 std::nullopt, static_block_y[source]);
         }
         auto& nested = fragments[source];
-        result.nodes.insert(result.nodes.end(),
-            std::make_move_iterator(nested.nodes.begin()),
-            std::make_move_iterator(nested.nodes.end()));
-        result.grid_tracks.insert(result.grid_tracks.end(),
-            std::make_move_iterator(nested.grid_tracks.begin()),
-            std::make_move_iterator(nested.grid_tracks.end()));
+        if (detail_ == FragmentDetail::Full) {
+            result.nodes.insert(result.nodes.end(),
+                std::make_move_iterator(nested.nodes.begin()),
+                std::make_move_iterator(nested.nodes.end()));
+            result.grid_tracks.insert(result.grid_tracks.end(),
+                std::make_move_iterator(nested.grid_tracks.begin()),
+                std::make_move_iterator(nested.grid_tracks.end()));
+        }
     }
     return result;
 }

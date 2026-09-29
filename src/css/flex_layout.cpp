@@ -497,7 +497,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             if (row) child_constraints.ignore_min_max_width = true;
             else child_constraints.ignore_min_max_height = true;
         }
-        const auto base_layout = layout(id, child_constraints, depth + 1);
+        const auto base_layout = layout_size(id, child_constraints, depth + 1);
         Unit basis = axis(base_layout.size, row, true);
         const auto flex_basis = child.style.flex_basis.kind();
         bool basis_is_definite = flex_basis == LengthKind::Auto
@@ -521,7 +521,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     query.ignore_preferred_height = true;
                     query.available.height = main_space;
                 }
-                return axis(layout(id, query, depth + 1).size, row, true);
+                return axis(layout_size(id, query, depth + 1).size, row, true);
             };
             if (flex_basis == LengthKind::Stretch && main_available) {
                 basis_is_definite = true;
@@ -576,7 +576,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     min_constraints.available.height = AvailableSpace::min_content();
                     min_constraints.ignore_preferred_height = true;
                 }
-                const auto intrinsic = layout(id, min_constraints, depth + 1);
+                const auto intrinsic = layout_size(id, min_constraints, depth + 1);
                 minimum = axis(intrinsic.size, row, true);
                 if (const auto suggested = axis(child_box.preferred, row, true)) {
                     minimum = std::min(*minimum, *suggested);
@@ -736,11 +736,13 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             // size, then perform the item layout with both axes fixed. A
             // nested container may lay out its own children differently in
             // that final pass even when its border-box size stays the same.
-            const auto cross_probe = layout(item.id, final_constraints, depth + 1);
+            const auto cross_probe = layout_size(item.id, final_constraints, depth + 1);
             if (row) final_constraints.known_height = cross_probe.size.height;
             else final_constraints.known_width = cross_probe.size.width;
             item.final_constraints = final_constraints;
-            fragments[item.source_index] = layout(item.id, final_constraints, depth + 1);
+            fragments[item.source_index] = detail_ == FragmentDetail::Size
+                ? layout_sizing(item.id, final_constraints, depth + 1)
+                : layout(item.id, final_constraints, depth + 1);
             item.target = axis(fragments[item.source_index].size, row, true);
             item.cross = axis(fragments[item.source_index].size, row, false);
             const Unit outer_cross = checked(static_cast<double>(item.cross)
@@ -782,6 +784,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         border_width = constrain_axis(checked(used_cross + *deco_width,
             node.id), box.minimum.width, box.maximum.width);
         inner_width = std::max(Unit{0}, *border_width - *deco_width);
+    }
+    if (detail_ == FragmentDetail::Size) {
+        Fragment result;
+        result.size = constrain_size(Size{*border_width, *border_height}, box);
+        result.nodes.push_back(make_layout(node, result.size, box));
+        return result;
     }
     if (!cross_available) {
         // The cross probe precedes the container's own content-based cross
@@ -997,12 +1005,14 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             fragments[source] = absolute(node, id, candidate, box, depth);
         }
         auto& fragment = fragments[source];
-        result.nodes.insert(result.nodes.end(),
-            std::make_move_iterator(fragment.nodes.begin()),
-            std::make_move_iterator(fragment.nodes.end()));
-        result.grid_tracks.insert(result.grid_tracks.end(),
-            std::make_move_iterator(fragment.grid_tracks.begin()),
-            std::make_move_iterator(fragment.grid_tracks.end()));
+        if (detail_ == FragmentDetail::Full) {
+            result.nodes.insert(result.nodes.end(),
+                std::make_move_iterator(fragment.nodes.begin()),
+                std::make_move_iterator(fragment.nodes.end()));
+            result.grid_tracks.insert(result.grid_tracks.end(),
+                std::make_move_iterator(fragment.grid_tracks.begin()),
+                std::make_move_iterator(fragment.grid_tracks.end()));
+        }
     }
     return result;
 }

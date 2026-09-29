@@ -307,6 +307,8 @@ void multi_query_leaf_cache() {
     struct Snapshot {
         Size size;
         std::array<Rect, 4> rectangles;
+        std::array<std::optional<Unit>, 2> baselines;
+        std::size_t grid_reports;
         std::size_t calls;
         std::size_t layouts;
     };
@@ -351,14 +353,21 @@ void multi_query_leaf_cache() {
             "Grid intrinsic measurements must count only host calls");
         return Snapshot{result.size, {result.find(grid)->border_box,
             result.find(flex)->border_box, result.find(first)->border_box,
-            result.find(second)->border_box}, calls, result.layout_count};
+            result.find(second)->border_box},
+            {result.find(grid)->first_baseline,
+                result.find(flex)->first_baseline},
+            result.grid_tracks.size(), calls, result.layout_count};
     };
     const auto uncached = run(1, 1);
     const auto measured = run(1, 100'000);
     const auto cached = run(100'000, 100'000);
     require(cached.size == uncached.size && cached.rectangles == uncached.rectangles
+        && cached.baselines == uncached.baselines
+        && cached.grid_reports == uncached.grid_reports
         && measured.size == uncached.size
-        && measured.rectangles == uncached.rectangles,
+        && measured.rectangles == uncached.rectangles
+        && measured.baselines == uncached.baselines
+        && measured.grid_reports == uncached.grid_reports,
         "Intrinsic query reuse must preserve final geometry");
     require(measured.calls < uncached.calls,
         "Identical leaf requests should reuse measurements across layout constraints");

@@ -620,9 +620,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         intrinsic.containing_width = inner_width;
         intrinsic.containing_height = inner_height;
         intrinsic.available = {AvailableSpace::min_content(), AvailableSpace::min_content()};
-        const auto min_fragment = layout(id, intrinsic, depth + 1);
+        const auto min_fragment = layout_size(id, intrinsic, depth + 1);
         intrinsic.available = {AvailableSpace::max_content(), AvailableSpace::max_content()};
-        const auto max_fragment = layout(id, intrinsic, depth + 1);
+        const auto max_fragment = layout_size(id, intrinsic, depth + 1);
         const Size minimum_contribution{
             grid_item_minimum(get(id), child_box, placements[i], track_columns,
                 min_fragment.size.width, true),
@@ -704,9 +704,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 else intrinsic.known_height = known;
             }
             own_available = AvailableSpace::min_content();
-            const auto minimum = layout(id, intrinsic, depth + 1);
+            const auto minimum = layout_size(id, intrinsic, depth + 1);
             own_available = AvailableSpace::max_content();
-            const auto maximum = layout(id, intrinsic, depth + 1);
+            const auto maximum = layout_size(id, intrinsic, depth + 1);
             auto& contribution = contributions[*contribution_indices[i]];
             auto& min_content = rows_axis
                 ? contribution.min_content.height : contribution.min_content.width;
@@ -852,6 +852,12 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         inner_width = std::max(Unit{0}, candidate.width - *decoration_width);
         inner_height = std::max(Unit{0}, candidate.height - *decoration_height);
     }
+    if (detail_ == FragmentDetail::Size) {
+        Fragment result;
+        result.size = candidate;
+        result.nodes.push_back(make_layout(node, candidate, box));
+        return result;
+    }
     align_tracks(track_columns, *inner_width,
         node.style.justify_content.value_or(ContentAlignment{}), node.id);
     align_tracks(track_rows, *inner_height,
@@ -866,53 +872,55 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     const auto padding = edges(box.padding, node.id);
     const Unit content_x = content_origin_x(box, border, padding, node.id);
     const Unit content_y = checked(static_cast<double>(border.top) + padding.top, node.id);
-    GridTracks report;
-    report.node = node.id;
-    report.column_origin = track_columns.origin;
-    report.row_origin = track_rows.origin;
-    report.explicit_columns = columns.tracks.size();
-    report.explicit_rows = rows.tracks.size();
-    report.columns.reserve(track_columns.tracks.size());
-    report.rows.reserve(track_rows.tracks.size());
-    report.column_positions.reserve(track_columns.tracks.size());
-    report.row_positions.reserve(track_rows.tracks.size());
-    report.items.reserve(node.children.size());
-    for (std::size_t i = 0; i < track_columns.tracks.size(); ++i) {
-        const auto size = track_columns.tracks[i].size;
-        report.columns.push_back(size);
-        const auto inline_start = track_columns.offsets[i];
-        const auto start = physical_track_start(content_x, *inner_width,
-            inline_start, size, node.style.box.direction, node.id);
-        report.column_positions.push_back({start,
-            checked(static_cast<double>(start) + size, node.id)});
-    }
-    if (node.style.box.direction == Direction::Rtl
-        && std::any_of(track_columns.tracks.begin(), track_columns.tracks.end(),
-            [](const TrackState& track) { return !track.collapsed; })) {
-        Unit physical_cursor = content_x;
-        for (std::size_t i = track_columns.tracks.size(); i-- > 0;) {
-            if (track_columns.tracks[i].collapsed) {
-                report.column_positions[i] = {physical_cursor, physical_cursor};
-            } else {
-                physical_cursor = report.column_positions[i].end;
+    if (detail_ == FragmentDetail::Full) {
+        GridTracks report;
+        report.node = node.id;
+        report.column_origin = track_columns.origin;
+        report.row_origin = track_rows.origin;
+        report.explicit_columns = columns.tracks.size();
+        report.explicit_rows = rows.tracks.size();
+        report.columns.reserve(track_columns.tracks.size());
+        report.rows.reserve(track_rows.tracks.size());
+        report.column_positions.reserve(track_columns.tracks.size());
+        report.row_positions.reserve(track_rows.tracks.size());
+        report.items.reserve(node.children.size());
+        for (std::size_t i = 0; i < track_columns.tracks.size(); ++i) {
+            const auto size = track_columns.tracks[i].size;
+            report.columns.push_back(size);
+            const auto inline_start = track_columns.offsets[i];
+            const auto start = physical_track_start(content_x, *inner_width,
+                inline_start, size, node.style.box.direction, node.id);
+            report.column_positions.push_back({start,
+                checked(static_cast<double>(start) + size, node.id)});
+        }
+        if (node.style.box.direction == Direction::Rtl
+            && std::any_of(track_columns.tracks.begin(), track_columns.tracks.end(),
+                [](const TrackState& track) { return !track.collapsed; })) {
+            Unit physical_cursor = content_x;
+            for (std::size_t i = track_columns.tracks.size(); i-- > 0;) {
+                if (track_columns.tracks[i].collapsed) {
+                    report.column_positions[i] = {physical_cursor, physical_cursor};
+                } else {
+                    physical_cursor = report.column_positions[i].end;
+                }
             }
         }
+        for (std::size_t i = 0; i < track_rows.tracks.size(); ++i) {
+            const auto size = track_rows.tracks[i].size;
+            report.rows.push_back(size);
+            const auto start = checked(static_cast<double>(content_y)
+                + track_rows.offsets[i], node.id);
+            report.row_positions.push_back({start,
+                checked(static_cast<double>(start) + size, node.id)});
+        }
+        for (std::size_t i = 0; i < placements.size(); ++i) {
+            const auto& placed = placements[i];
+            if (placed.hidden) continue;
+            report.items.push_back({node.children[i], placed.row_start, placed.row_end,
+                placed.column_start, placed.column_end});
+        }
+        result.grid_tracks.push_back(std::move(report));
     }
-    for (std::size_t i = 0; i < track_rows.tracks.size(); ++i) {
-        const auto size = track_rows.tracks[i].size;
-        report.rows.push_back(size);
-        const auto start = checked(static_cast<double>(content_y)
-            + track_rows.offsets[i], node.id);
-        report.row_positions.push_back({start,
-            checked(static_cast<double>(start) + size, node.id)});
-    }
-    for (std::size_t i = 0; i < placements.size(); ++i) {
-        const auto& placed = placements[i];
-        if (placed.hidden) continue;
-        report.items.push_back({node.children[i], placed.row_start, placed.row_end,
-            placed.column_start, placed.column_end});
-    }
-    result.grid_tracks.push_back(std::move(report));
     std::vector<Fragment> fragments(node.children.size());
     struct BaselinePlacement {
         std::size_t source;
@@ -1127,12 +1135,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 + baseline, node.id);
     }
     for (auto& fragment : fragments) {
-        result.nodes.insert(result.nodes.end(),
-            std::make_move_iterator(fragment.nodes.begin()),
-            std::make_move_iterator(fragment.nodes.end()));
-        result.grid_tracks.insert(result.grid_tracks.end(),
-            std::make_move_iterator(fragment.grid_tracks.begin()),
-            std::make_move_iterator(fragment.grid_tracks.end()));
+        if (detail_ == FragmentDetail::Full) {
+            result.nodes.insert(result.nodes.end(),
+                std::make_move_iterator(fragment.nodes.begin()),
+                std::make_move_iterator(fragment.nodes.end()));
+            result.grid_tracks.insert(result.grid_tracks.end(),
+                std::make_move_iterator(fragment.grid_tracks.begin()),
+                std::make_move_iterator(fragment.grid_tracks.end()));
+        }
     }
     return result;
 }

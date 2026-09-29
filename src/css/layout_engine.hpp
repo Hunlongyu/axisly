@@ -17,6 +17,8 @@ struct LayoutNode {
     std::vector<NodeId> children;
 };
 
+enum class FragmentDetail { Size, Baseline, Full };
+
 struct Constraints {
     std::optional<Unit> known_width, known_height; // border-box
     // A known size can come from a parent's content calculation. Flex must
@@ -28,6 +30,8 @@ struct Constraints {
     bool ignore_min_max_width{}, ignore_min_max_height{};
     bool content_based_width{};
     bool preserve_known_grid_size{};
+    // Cache entries for intrinsic probes cannot stand in for published geometry.
+    FragmentDetail detail{FragmentDetail::Full};
     bool operator==(const Constraints&) const = default;
 };
 
@@ -123,12 +127,17 @@ private:
     std::size_t pending_layouts_{};
     std::size_t pending_measurements_{};
     bool root_hit_{};
+    FragmentDetail detail_{FragmentDetail::Full};
     std::unordered_map<std::uint64_t, bool> float_subtree_;
     void stage(NodeId id, const Constraints& constraints, const Fragment& fragment);
     [[nodiscard]] const LayoutNode& get(NodeId id) const;
     [[nodiscard]] bool has_float_subtree(NodeId id, std::size_t depth);
     [[nodiscard]] Fragment layout(NodeId id, Constraints constraints, std::size_t depth,
                                   BlockContext* block_context = nullptr);
+    [[nodiscard]] Fragment layout_sizing(NodeId id, Constraints constraints,
+                                         std::size_t depth);
+    [[nodiscard]] Fragment layout_size(NodeId id, Constraints constraints,
+                                       std::size_t depth);
     [[nodiscard]] Fragment leaf(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box);
     [[nodiscard]] std::optional<Unit> intrinsic_container_size(const LayoutNode& node,

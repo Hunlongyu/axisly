@@ -11,6 +11,18 @@ namespace {
 bool suppresses_baseline(Contain contain) noexcept {
     return contain == Contain::Layout || contain == Contain::Content;
 }
+
+class ScopedDetail final {
+public:
+    ScopedDetail(FragmentDetail& detail, FragmentDetail requested)
+        : detail_(detail), previous_(std::exchange(detail, requested)) {}
+    ~ScopedDetail() { detail_ = previous_; }
+    ScopedDetail(const ScopedDetail&) = delete;
+    ScopedDetail& operator=(const ScopedDetail&) = delete;
+private:
+    FragmentDetail& detail_;
+    FragmentDetail previous_;
+};
 } // namespace
 
 Unit checked(double value, NodeId id) {
@@ -239,6 +251,7 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "CSS layout depth exceeded");
     }
     const auto& node = get(id);
+    constraints.detail = detail_;
     if (!block_context) {
         const auto lookup = [&](const CacheMap& source) -> const CacheEntry* {
             const auto entries = source.find(id.value);
@@ -252,9 +265,25 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         };
         const auto* hit = lookup(updates_);
         if (!hit) hit = lookup(cache_);
+        // A richer cached fragment can answer a smaller query. The reverse
+        // would publish incomplete descendants or omit a needed baseline.
+        for (int detail = static_cast<int>(detail_) + 1;
+             !hit && detail <= static_cast<int>(FragmentDetail::Full); ++detail) {
+            constraints.detail = static_cast<FragmentDetail>(detail);
+            hit = lookup(updates_);
+            if (!hit) hit = lookup(cache_);
+        }
+        constraints.detail = detail_;
         if (hit) {
             ++hits_;
             if (depth == 1) root_hit_ = true;
+            if (hit->constraints.detail != detail_) {
+                Fragment compact;
+                compact.size = hit->fragment.size;
+                compact.nodes.push_back(hit->fragment.nodes.front());
+                compact.block_margins = hit->fragment.block_margins;
+                return compact;
+            }
             return hit->fragment;
         }
     }
@@ -338,6 +367,18 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
     return fragment;
 }
 
+Fragment Engine::layout_sizing(NodeId id, Constraints constraints,
+                               std::size_t depth) {
+    ScopedDetail scope(detail_, FragmentDetail::Baseline);
+    return layout(id, constraints, depth);
+}
+
+Fragment Engine::layout_size(NodeId id, Constraints constraints,
+                             std::size_t depth) {
+    ScopedDetail scope(detail_, FragmentDetail::Size);
+    return layout(id, constraints, depth);
+}
+
 std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
     const Constraints& constraints, const ResolvedBox& box,
     std::size_t depth, bool horizontal) {
@@ -383,7 +424,7 @@ std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
                 measured.ignore_preferred_width = true;
             }
         }
-        const auto fragment = layout(node.id, measured, depth);
+        const auto fragment = layout_size(node.id, measured, depth);
         return horizontal ? fragment.size.width : fragment.size.height;
     };
     if (kind == LengthKind::MinContent) return probe(AvailableSpace::min_content());
@@ -576,7 +617,10 @@ Fragment Engine::hidden(const LayoutNode& node, std::size_t depth) {
     fragment.nodes.push_back({node.id, node.parent});
     for (const auto child : node.children) {
         auto nested = hidden(get(child), depth + 1);
-        fragment.nodes.insert(fragment.nodes.end(), nested.nodes.begin(), nested.nodes.end());
+        if (detail_ == FragmentDetail::Full) {
+            fragment.nodes.insert(fragment.nodes.end(),
+                nested.nodes.begin(), nested.nodes.end());
+        }
     }
     return fragment;
 }

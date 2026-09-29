@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-30",
+  "compiler": "MSVC 19.51.36257.0",
+  "geeyoou_commit": "4cadaf6479b663ce6633e59bfbac28332de495fc",
+  "axisly_base_before_host_changes": "0759044",
+  "release_tests": "293/293",
+  "debug_tests": "293/293",
+  "msvc_asan_tests": "293/293",
+  "native_dpi_scale": 1,
+  "simulated_pixel_scales": [1, 1.25, 1.5, 2],
+  "showcase_visits": 57,
+  "installed_axisly_public_headers": 17,
+  "installed_total_files": 22,
+  "installed_consumer_tests": "1/1",
+  "release_showcase_sha256": "79DD359112B835B817596E8A28D2C51969669114BA8248C0A585817C4862ED6F",
+  "release_host_tests_sha256": "BC0D5E4CC26F04DFCD70ACA055AF7C38E20AFE95D497C2CA5C7F4A9E981044E2",
+  "debug_showcase_sha256": "B60FE0F4CAAFCCAD8FEB9615777292C591D6E74A0D933D5462A85566F0B3DD5F",
+  "debug_host_tests_sha256": "6248CD3C779C5FEAB22D14774B6D5F6B61F27817FAD90D7506BE583F4D1BB44F",
+  "asan_showcase_sha256": "51312A2B291B1EC05593CB1EFFDFB41406B11074BCC15B6EF9D07E53B8FB0035",
+  "asan_host_tests_sha256": "6DC5D985AF06F88F667354B243861C17D3A1A68362B8ED17F872DDE6B5A3755C",
+  "css_screenshot_sha256": "BCE7237E37C86B98D4D86EB27D6F3186CD524317A9C18D58DF3CA3E79477E90B"
+}

@@ -184,7 +184,9 @@ layout／paint containment、方向和
 保存首次计算、输入不变、尺寸变化和局部编辑的时间／分配原始数据；
 修复了输入不变时重复构造已发布结果的问题，并由已安装库的消费程序
 验证新 CSS 树入口。基准现有合成与 DirectWrite 真实字体两种回调；
-GeeyoouUI 新树页面仍需验收；
+[GeeyoouUI 的新 CSS 混合树示例](host-validation/geeyoou-css-2026-09-30/README.md)
+已在真实窗口与文字路径下验收代表性 Grid／Flex／Block 控件，
+更多页面和实际跨显示器 DPI 仍需验收；
 Grid/Flex 固有尺寸探测与每次变更时的输出构造仍是已测得的热点。
 
 ## 完成判据

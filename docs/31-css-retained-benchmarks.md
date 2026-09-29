@@ -85,5 +85,7 @@ ctest --test-dir build/benchmark-release -R axisly.css_retained_bench --output-o
 332/332 项；benchmark-release 通过 303/303 项。基准自身的几何与
 分配 smoke 纳入 CTest。
 已从 Release 安装前缀单独编译、链接并运行消费程序，验证混合
-Grid→Flex→Block 树、宿主测量、结果复用和局部失效。P5 仍需
-GeeyoouUI 的新 CSS 树页面和再次比较。
+Grid→Flex→Block 树、宿主测量、结果复用和局部失效。
+GeeyoouUI 的真实控件与窗口验收见
+[CSS 宿主记录](host-validation/geeyoou-css-2026-09-30/README.md)；
+更多页面、真实多显示器 DPI 和已识别热点的后续优化仍未完成。

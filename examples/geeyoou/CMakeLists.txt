@@ -30,7 +30,8 @@ endif()
 set(page_names Shell ShowcaseWindow PlantIcons PageWindow PageTheme PageDialogs
     PageIcons PageHmi PageWidgets PageInputs PageSelects PageOps
     PageTables PageTablesTree PageScene3D)
-set(page_sources AxislyLayout.cpp PageOverview.cpp PageLayout.cpp)
+set(page_sources AxislyLayout.cpp CssAxislyLayout.cpp CssHostPage.cpp
+    PageOverview.cpp PageLayout.cpp)
 foreach(page IN LISTS page_names)
     list(APPEND page_sources "${generated}/showcase/${page}.cpp")
 endforeach()

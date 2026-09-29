@@ -1,4 +1,6 @@
 #include "AxislyLayout.hpp"
+#include "CssAxislyLayout.hpp"
+#include "CssHostPage.hpp"
 #include "geeyoou/widget/Label.hpp"
 #include "geeyoou/widget/GroupBox.hpp"
 #include "geeyoou/render/Skin.hpp"
@@ -193,13 +195,81 @@ void responsiveViewport() {
     text->setVisible(false); host.animationTickTree();
     near(tail->geometry().y(), 0, "hidden viewport content still reserves space");
 }
+
+void cssMixedHost() {
+    Widget host;
+    const auto page = axisly_demo::buildCssHostPage(host);
+    auto* layout = page.layout;
+    auto* wrapped = page.wrapped;
+    auto* tail = page.tail;
+    auto* side = page.side;
+
+    host.setGeometry({0, 0, 400, 220});
+    require(side->geometry().x() >= 200, "CSS Grid must place the Block panel in the second column");
+    require(tail->geometry().y() >= wrapped->geometry().bottom(),
+        "CSS Flex must place its next label after wrapped text");
+    const auto before = wrapped->geometry().height();
+    wrapped->setText("Long text 中文换行 testing repeated words in a real host label. "
+        "This text must wrap after the content changes and the CSS tree is rebuilt.");
+    host.setGeometry({0, 0, 240, 220});
+    require(wrapped->geometry().height() > before,
+        "CSS host must remeasure a wrapped GeeyoouUI label after text and width changes");
+    require(tail->geometry().y() >= wrapped->geometry().bottom(),
+        "CSS host must move the following Flex label after wrapping");
+    for (float scale : {1.0f, 1.25f, 1.5f, 2.0f}) {
+        layout->setPixelScale(scale);
+        host.setGeometry({0, 0, 403, 220});
+        near(side->geometry().x() * scale,
+            std::round(side->geometry().x() * scale), "CSS host DPI edge");
+    }
+    host.removeChild(side);
+    host.performLayout();
+    require(tail->geometry().height() > 0,
+        "CSS host child removal must retain the other layout branch");
+}
+void cssHostLifetime(bool during_measure) {
+    geeyoou::Widget owner;
+    auto* host = owner.add<geeyoou::Widget>();
+    axisly::css::Style style;
+    style.display = axisly::css::Display::Flex;
+    auto* layout = host->setLayout<axisly_demo::CssAxislyLayout>(style);
+    auto* child = host->add<Action>();
+    layout->addWidget(layout->root(), child);
+    host->setGeometry({0, 0, 200, 100});
+    if (during_measure) {
+        child->measured = [&] { owner.removeChild(host); };
+        child->invalidateSizeHint();
+    } else {
+        child->arranged = [&] { owner.removeChild(host); };
+        layout->setPixelScale(1.25f);
+    }
+    require(geeyoou::detail::parkedLayoutCount() == 0,
+        "CSS host layout remained parked after reentrant destruction");
+}
+void cssHostInvalidMeasurement() {
+    geeyoou::Widget host;
+    axisly::css::Style style;
+    style.display = axisly::css::Display::Flex;
+    auto* layout = host.setLayout<axisly_demo::CssAxislyLayout>(style);
+    auto* child = host.add<Hint>();
+    layout->addWidget(layout->root(), child);
+    host.setGeometry({0, 0, 200, 100});
+    const auto prior = child->geometry();
+    child->hint.preferred.width = std::numeric_limits<float>::quiet_NaN();
+    child->invalidateSizeHint();
+    require(child->geometry() == prior,
+        "CSS host invalid measurement published partial geometry");
+}
 }
 int main() {
     try {
         cacheAndRemoval(); maxAndOverflow(); boxSpacingAndVisibility(); nestedInvalidation();
         textAndStyle(); percentageSpanBaselineAndPixels(); failureAtomicity(); responsiveViewport();
+        cssMixedHost();
+        cssHostLifetime(false); cssHostLifetime(true);
+        cssHostInvalidMeasurement();
         for (bool measure : {false, true}) for (int action = 0; action < 4; ++action) lifetime(measure, action);
-        std::puts("axisly GeeyoouUI adapter: 16 scenario groups passed");
+        std::puts("axisly GeeyoouUI adapter: 19 scenario groups passed");
         return 0;
     } catch (const std::exception& error) { std::fprintf(stderr, "%s\n", error.what()); return 1; }
 }

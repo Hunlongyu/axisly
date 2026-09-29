@@ -40,6 +40,18 @@ CASES = (
     "flex-small-shrink-factor",
     "flex-grow-max-freeze",
     "flex-shrink-min-freeze",
+    "absolute-auto-margins",
+    "absolute-one-auto-margin",
+    "absolute-negative-auto-margins",
+    "absolute-rtl-overconstraint",
+    "absolute-flex-static-center",
+    "absolute-flex-static-end",
+    "absolute-grid-static-center",
+    "absolute-grid-static-end",
+    "absolute-block-static-padding",
+    "absolute-flex-static-padding-rtl",
+    "absolute-grid-static-padding",
+    "absolute-block-static-flow",
     "mixed-block-flex-grid",
 )
 

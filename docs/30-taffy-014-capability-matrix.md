@@ -26,8 +26,8 @@
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；溢出与基线规则未完整 | P4 | 已建：block-contain-float |
 | `float` | None／Left／Right，Block 子项 | 部分：Block 浮动排布与 FlowRoot 包含；复杂环绕未验收 | P4 | 已建：block-float-clear |
 | `clear` | None／Left／Right／Both | 部分：按左右浮动底部清除，复杂折叠未验收 | P4 | 已建：block-float-clear |
-| `position` | Relative／Absolute | 部分：共享相对偏移与绝对定位，Grid 指定区域可作包含块；静态位置及祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area |
-| `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移和双边拉伸；自动 margin 未完整 | P4 | 已建：hidden-and-positioned；待建：percent-inset |
+| `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-flex-static-center、absolute-grid-static-center |
+| `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；复杂百分比未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint；待建：percent-inset |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束已接入，容器固有尺寸未完整 | P1 | 已建：flex-row-grow；待建：intrinsic-size |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束与 Flex 自动最小尺寸；跨算法边界未验收 | P1 | 待建：min-max-node |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束可解析，重新排版规则未完整 | P1 | 待建：min-max-node |
@@ -93,6 +93,12 @@
 | `block-padding-stops-collapse`／`block-fixed-height-collapse` | 垂直 padding 阻断折叠、固定高度仅允许顶部折叠 |
 | `flex-small-grow-factors`／`flex-small-shrink-factor` | 弹性系数总和小于 1 时保留未分配空间 |
 | `flex-grow-max-freeze`／`flex-shrink-min-freeze` | 多轮冻结后按剩余项目重新分配主轴空间 |
+| `absolute-auto-margins`／`absolute-one-auto-margin`／`absolute-negative-auto-margins` | 绝对定位双侧 inset 与自动外边距的正负剩余空间 |
+| `absolute-rtl-overconstraint` | RTL 包含块中左右 inset 冲突时使用右侧定位 |
+| `absolute-flex-static-center`／`absolute-flex-static-end` | Flex 绝对定位子项无 inset 时依据容器对齐计算静态位置 |
+| `absolute-grid-static-center`／`absolute-grid-static-end` | Grid 绝对定位子项无 inset 时依据项目对齐计算静态位置 |
+| `absolute-block-static-padding`／`absolute-flex-static-padding-rtl`／`absolute-grid-static-padding` | 含 padding 的 Block/Flex 静态位置与 Grid 定位区域边界 |
+| `absolute-block-static-flow` | Block 绝对定位子项在正常流中的静态纵坐标，不占用后续子项空间 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -115,8 +121,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、三十三组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这三十三组的矩形、盒边和滚动条同时经过新原生树差分。
+目前有 44 字段清单、四十五组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这四十五组的矩形、盒边和滚动条同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

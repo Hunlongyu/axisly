@@ -10,6 +10,105 @@ std::optional<Unit> inset_value(const Length& value, Unit basis, NodeId node) {
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, node, error.what());
     }
 }
+
+struct AbsoluteAxis {
+    Unit offset{}, start_margin{}, end_margin{};
+};
+
+enum class StaticPlacement { Start, Center, End };
+
+StaticPlacement writing_start(bool horizontal, Direction direction) {
+    return horizontal && direction == Direction::Rtl
+        ? StaticPlacement::End : StaticPlacement::Start;
+}
+
+StaticPlacement opposite(StaticPlacement placement) {
+    return placement == StaticPlacement::Start
+        ? StaticPlacement::End : StaticPlacement::Start;
+}
+
+StaticPlacement content_placement(ContentAlignment alignment,
+    bool horizontal, Direction direction, bool flex_reverse) {
+    const auto flex_start = flex_reverse
+        ? StaticPlacement::End : StaticPlacement::Start;
+    switch (alignment.position) {
+    case ContentPosition::Start: return writing_start(horizontal, direction);
+    case ContentPosition::End: return opposite(writing_start(horizontal, direction));
+    case ContentPosition::FlexEnd: return opposite(flex_start);
+    case ContentPosition::Center:
+    case ContentPosition::SpaceAround:
+    case ContentPosition::SpaceEvenly: return StaticPlacement::Center;
+    case ContentPosition::FlexStart:
+    case ContentPosition::Stretch:
+    case ContentPosition::SpaceBetween: return flex_start;
+    }
+    return flex_start;
+}
+
+StaticPlacement item_placement(ItemAlignment alignment, bool horizontal,
+    Direction container_direction, Direction item_direction, bool flex_reverse,
+    bool overflow) {
+    if (alignment.safety == AlignmentSafety::Safe && overflow) {
+        return writing_start(horizontal, container_direction);
+    }
+    const auto flex_start = flex_reverse
+        ? StaticPlacement::End : StaticPlacement::Start;
+    switch (alignment.position) {
+    case ItemPosition::Start:
+    case ItemPosition::Baseline:
+        return writing_start(horizontal, container_direction);
+    case ItemPosition::End:
+        return opposite(writing_start(horizontal, container_direction));
+    case ItemPosition::SelfStart:
+        return writing_start(horizontal, item_direction);
+    case ItemPosition::SelfEnd:
+        return opposite(writing_start(horizontal, item_direction));
+    case ItemPosition::FlexEnd: return opposite(flex_start);
+    case ItemPosition::Center: return StaticPlacement::Center;
+    case ItemPosition::FlexStart:
+    case ItemPosition::Stretch: return flex_start;
+    }
+    return flex_start;
+}
+
+Unit static_offset(StaticPlacement placement, Unit containing_size, Unit item_size,
+                   Unit start_margin, Unit end_margin, NodeId node) {
+    const Unit free = checked(static_cast<double>(containing_size)
+        - item_size - start_margin - end_margin, node);
+    switch (placement) {
+    case StaticPlacement::Start: return start_margin;
+    case StaticPlacement::Center:
+        return checked(static_cast<double>(start_margin) + free / 2, node);
+    case StaticPlacement::End:
+        return checked(static_cast<double>(start_margin) + free, node);
+    }
+    return start_margin;
+}
+
+AbsoluteAxis solve_absolute_axis(std::optional<Unit> start,
+    std::optional<Unit> end, Unit containing_size, Unit item_size,
+    Unit start_margin, Unit end_margin, bool auto_start, bool auto_end,
+    bool prefer_end, NodeId node) {
+    if (start && end) {
+        const Unit free = checked(static_cast<double>(containing_size)
+            - *start - *end - item_size - start_margin - end_margin, node);
+        if (free > 0 && (auto_start || auto_end)) {
+            const Unit share = checked(static_cast<double>(free)
+                / (static_cast<int>(auto_start) + static_cast<int>(auto_end)), node);
+            if (auto_start) start_margin = share;
+            if (auto_end) end_margin = share;
+        }
+    }
+    const Unit offset = prefer_end && end
+        ? checked(static_cast<double>(containing_size) - *end
+            - item_size - end_margin, node)
+        : start ? checked(static_cast<double>(*start) + start_margin, node)
+        : end ? checked(static_cast<double>(containing_size) - *end
+            - item_size - end_margin, node)
+        : prefer_end ? checked(static_cast<double>(containing_size)
+            - item_size - end_margin, node) : start_margin;
+    return {offset, start_margin, end_margin};
+}
 } // namespace
 
 std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
@@ -30,7 +129,8 @@ std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
 Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                           Size parent_size, const ResolvedBox& parent_box,
                           std::size_t depth,
-                          std::optional<Rect> containing_override) {
+                          std::optional<Rect> containing_override,
+                          std::optional<Unit> static_block_y) {
     const auto& child = get(child_id);
     const auto border = edges(parent_box.border, parent.id);
     const Rect containing = containing_override.value_or(Rect{
@@ -69,15 +169,99 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
             - margin.top - margin.bottom, child.id));
     }
     auto fragment = layout(child_id, constraints, depth + 1);
-    const Unit x = left ? checked(static_cast<double>(*left) + margin.left, child.id)
-        : right ? checked(static_cast<double>(containing_width) - *right
-            - fragment.size.width - margin.right, child.id) : margin.left;
-    const Unit y = top ? checked(static_cast<double>(*top) + margin.top, child.id)
-        : bottom ? checked(static_cast<double>(containing_height) - *bottom
-            - fragment.size.height - margin.bottom, child.id) : margin.top;
+    const auto horizontal = solve_absolute_axis(left, right, containing_width,
+        fragment.size.width, margin.left, margin.right,
+        child_box.margin.left.kind == EdgeKind::Auto,
+        child_box.margin.right.kind == EdgeKind::Auto,
+        parent.style.box.direction == Direction::Rtl, child.id);
+    const auto vertical = solve_absolute_axis(top, bottom, containing_height,
+        fragment.size.height, margin.top, margin.bottom,
+        child_box.margin.top.kind == EdgeKind::Auto,
+        child_box.margin.bottom.kind == EdgeKind::Auto, false, child.id);
+    auto placed_horizontal = horizontal;
+    auto placed_vertical = vertical;
+    const bool static_x = !left && !right;
+    const bool static_y = !top && !bottom;
+    const auto padding = edges(parent_box.padding, parent.id);
+    const Unit content_width = std::max(Unit{0}, checked(
+        static_cast<double>(containing_width) - padding.left - padding.right
+            - parent_box.scrollbar.width, parent.id));
+    const Unit content_height = std::max(Unit{0}, checked(
+        static_cast<double>(containing_height) - padding.top - padding.bottom
+            - parent_box.scrollbar.height, parent.id));
+    if (parent.style.display == Display::Flex && (static_x || static_y)) {
+        const bool row = parent.style.flex_direction == FlexDirection::Row
+            || parent.style.flex_direction == FlexDirection::RowReverse;
+        const bool rtl = parent.style.box.direction == Direction::Rtl;
+        const bool main_reverse = row
+            ? (parent.style.flex_direction == FlexDirection::RowReverse) != rtl
+            : parent.style.flex_direction == FlexDirection::ColumnReverse;
+        const bool cross_reverse = (parent.style.flex_wrap == FlexWrap::WrapReverse
+            || parent.style.flex_wrap == FlexWrap::BalanceReverse) != (!row && rtl);
+        const auto main_alignment = parent.style.justify_content.value_or(
+            ContentAlignment{ContentPosition::FlexStart});
+        const auto cross_alignment = child.style.align_self.value_or(
+            parent.style.align_items.value_or(ItemAlignment{}));
+        if (static_x) {
+            const auto placement = row
+                ? content_placement(main_alignment, true,
+                    parent.style.box.direction, main_reverse)
+                : item_placement(cross_alignment, true, parent.style.box.direction,
+                    child.style.box.direction, cross_reverse,
+                    fragment.size.width + margin.left + margin.right > content_width);
+            placed_horizontal.offset = checked(static_cast<double>(padding.left)
+                + static_offset(placement, content_width, fragment.size.width,
+                    margin.left, margin.right, child.id), child.id);
+        }
+        if (static_y) {
+            const auto placement = row
+                ? item_placement(cross_alignment, false, parent.style.box.direction,
+                    child.style.box.direction, cross_reverse,
+                    fragment.size.height + margin.top + margin.bottom > content_height)
+                : content_placement(main_alignment, false,
+                    parent.style.box.direction, main_reverse);
+            placed_vertical.offset = checked(static_cast<double>(padding.top)
+                + static_offset(placement, content_height, fragment.size.height,
+                    margin.top, margin.bottom, child.id), child.id);
+        }
+    } else if (parent.style.display == Display::Grid && (static_x || static_y)) {
+        const auto justify = child.style.justify_self.value_or(
+            parent.style.justify_items.value_or(ItemAlignment{}));
+        const auto align = child.style.align_self.value_or(
+            parent.style.align_items.value_or(ItemAlignment{}));
+        if (static_x) {
+            const auto placement = item_placement(justify, true,
+                parent.style.box.direction, child.style.box.direction, false,
+                fragment.size.width + margin.left + margin.right > containing_width);
+            placed_horizontal.offset = static_offset(placement, containing_width,
+                fragment.size.width, margin.left, margin.right, child.id);
+        }
+        if (static_y) {
+            const auto placement = item_placement(align, false,
+                parent.style.box.direction, child.style.box.direction, false,
+                fragment.size.height + margin.top + margin.bottom > containing_height);
+            placed_vertical.offset = static_offset(placement, containing_height,
+                fragment.size.height, margin.top, margin.bottom, child.id);
+        }
+    } else if ((parent.style.display == Display::Block
+        || parent.style.display == Display::FlowRoot) && (static_x || static_y)) {
+        if (static_x) {
+            placed_horizontal.offset = checked(static_cast<double>(padding.left)
+                + static_offset(writing_start(true, parent.style.box.direction),
+                    content_width, fragment.size.width, margin.left, margin.right,
+                    child.id), child.id);
+        }
+        if (static_y) {
+            placed_vertical.offset = checked(static_cast<double>(padding.top)
+                + static_block_y.value_or(Unit{0}) + margin.top, child.id);
+        }
+    }
+    fragment.nodes.front().margin = {horizontal.start_margin, vertical.start_margin,
+        horizontal.end_margin, vertical.end_margin};
     translate(fragment,
-        checked(static_cast<double>(containing.x) + x, child.id),
-        checked(static_cast<double>(containing.y) + y, child.id), child.id);
+        checked(static_cast<double>(containing.x) + placed_horizontal.offset, child.id),
+        checked(static_cast<double>(containing.y) + placed_vertical.offset, child.id),
+        child.id);
     return fragment;
 }
 } // namespace axisly::css::detail

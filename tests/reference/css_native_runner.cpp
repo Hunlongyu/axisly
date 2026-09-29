@@ -688,6 +688,123 @@ void flex_factor_case(std::string_view name) {
         {AvailableSpace::definite(width), AvailableSpace::definite(40)}), nodes);
 }
 
+void absolute_margin_case(std::string_view name) {
+    const bool both_auto = name == "absolute-auto-margins";
+    const bool one_auto = name == "absolute-one-auto-margin";
+    const bool negative = name == "absolute-negative-auto-margins";
+    const int first_id = both_auto ? 400 : one_auto ? 410 : negative ? 420 : 430;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    if (first_id == 430) root_style.box.direction = Direction::Rtl;
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.position = Position::Absolute;
+    child_style.box.size = negative
+        ? Dimensions{Length::length(100), Length::length(100)}
+        : Dimensions{Length::length(20), Length::length(20)};
+    child_style.inset.left = Length::length(10);
+    child_style.inset.right = Length::length(10);
+    child_style.inset.top = Length::length(5);
+    child_style.inset.bottom = Length::length(5);
+    if (first_id != 430) {
+        child_style.box.margin.left = Length::automatic();
+        child_style.box.margin.top = Length::automatic();
+        if (!one_auto) {
+            child_style.box.margin.right = Length::automatic();
+            child_style.box.margin.bottom = Length::automatic();
+        }
+    }
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
+        {{first_id, root}, {first_id + 1, child}});
+}
+
+void absolute_static_alignment(std::string_view name) {
+    const bool grid = name == "absolute-grid-static-center"
+        || name == "absolute-grid-static-end";
+    const bool end = name == "absolute-flex-static-end"
+        || name == "absolute-grid-static-end";
+    const int first_id = grid ? (end ? 470 : 460) : (end ? 450 : 440);
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = grid ? Display::Grid : Display::Flex;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    root_style.align_items = ItemAlignment{end ? ItemPosition::End : ItemPosition::Center};
+    if (grid) {
+        root_style.justify_items = ItemAlignment{end ? ItemPosition::End : ItemPosition::Center};
+    } else {
+        root_style.justify_content = ContentAlignment{
+            end ? ContentPosition::FlexEnd : ContentPosition::Center};
+    }
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.position = Position::Absolute;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
+        {{first_id, root}, {first_id + 1, child}});
+}
+
+void absolute_static_padding(std::string_view name) {
+    const bool block = name == "absolute-block-static-padding";
+    const bool flex = name == "absolute-flex-static-padding-rtl";
+    const int first_id = block ? 480 : flex ? 490 : 500;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = block ? Display::Block : flex ? Display::Flex : Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    root_style.box.padding.left = Length::length(10);
+    root_style.box.padding.right = Length::length(20);
+    root_style.box.padding.top = Length::length(5);
+    root_style.box.padding.bottom = Length::length(15);
+    if (flex) root_style.box.direction = Direction::Rtl;
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.position = Position::Absolute;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
+        {{first_id, root}, {first_id + 1, child}});
+}
+
+void absolute_block_static_flow() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    const auto root = tree.create_node(root_style);
+    Style first_style;
+    first_style.display = Display::Block;
+    first_style.box.size.height = Length::length(20);
+    first_style.box.margin.bottom = Length::length(10);
+    const auto first = tree.create_node(first_style);
+    Style absolute_style;
+    absolute_style.display = Display::Block;
+    absolute_style.position = Position::Absolute;
+    absolute_style.box.size = {Length::length(20), Length::length(10)};
+    absolute_style.box.margin.top = Length::length(5);
+    const auto absolute = tree.create_node(absolute_style);
+    Style last_style = first_style;
+    last_style.box.margin.bottom = Length::length(0);
+    last_style.box.margin.top = Length::length(15);
+    const auto last = tree.create_node(last_style);
+    tree.append_child(root, first);
+    tree.append_child(root, absolute);
+    tree.append_child(root, last);
+    print("absolute-block-static-flow", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
+        {{510, root}, {511, first}, {512, absolute}, {513, last}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -756,6 +873,18 @@ int main(int argc, char** argv) {
             || name == "flex-small-shrink-factor"
             || name == "flex-grow-max-freeze"
             || name == "flex-shrink-min-freeze") flex_factor_case(name);
+        else if (name == "absolute-auto-margins"
+            || name == "absolute-one-auto-margin"
+            || name == "absolute-negative-auto-margins"
+            || name == "absolute-rtl-overconstraint") absolute_margin_case(name);
+        else if (name == "absolute-flex-static-center"
+            || name == "absolute-flex-static-end"
+            || name == "absolute-grid-static-center"
+            || name == "absolute-grid-static-end") absolute_static_alignment(name);
+        else if (name == "absolute-block-static-padding"
+            || name == "absolute-flex-static-padding-rtl"
+            || name == "absolute-grid-static-padding") absolute_static_padding(name);
+        else if (name == "absolute-block-static-flow") absolute_block_static_flow();
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

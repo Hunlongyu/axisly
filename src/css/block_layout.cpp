@@ -70,6 +70,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const Unit x_origin = checked(static_cast<double>(border.left) + padding.left, node.id);
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
     std::vector<Fragment> fragments(node.children.size());
+    std::vector<std::optional<Unit>> static_block_y(node.children.size());
     std::vector<FloatRegion> floats;
     Unit cursor = 0;
     MarginStrut pending_margin, leading_margin;
@@ -82,7 +83,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             fragments[source] = hidden(child, depth + 1);
             continue;
         }
-        if (child.style.position == Position::Absolute) continue;
+        if (child.style.position == Position::Absolute) {
+            static_block_y[source] = checked(static_cast<double>(cursor)
+                + (has_flow ? pending_margin.resolve(child_id) : 0), child_id);
+            continue;
+        }
         Constraints child_constraints;
         child_constraints.available.width = AvailableSpace::definite(content_width);
         child_constraints.available.height = AvailableSpace::indefinite();
@@ -265,7 +270,12 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         const auto id = node.children[source];
         if (get(id).style.position == Position::Absolute
             && get(id).style.display != Display::None) {
-            fragments[source] = absolute(node, id, candidate, box, depth);
+            if (static_block_y[source]) {
+                static_block_y[source] = checked(
+                    static_cast<double>(*static_block_y[source]) - top_shift, id);
+            }
+            fragments[source] = absolute(node, id, candidate, box, depth,
+                std::nullopt, static_block_y[source]);
         }
         auto& nested = fragments[source];
         result.nodes.insert(result.nodes.end(),

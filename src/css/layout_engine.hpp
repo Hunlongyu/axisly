@@ -103,7 +103,8 @@ private:
     [[nodiscard]] Fragment hidden(const LayoutNode& node, std::size_t depth);
     [[nodiscard]] Fragment absolute(const LayoutNode& parent, NodeId child,
         Size parent_size, const ResolvedBox& parent_box, std::size_t depth,
-        std::optional<Rect> containing_override = std::nullopt);
+        std::optional<Rect> containing_override = std::nullopt,
+        std::optional<Unit> static_block_y = std::nullopt);
     [[nodiscard]] Measurement measure(const LayoutNode& node, const MeasureRequest& request);
 };
 

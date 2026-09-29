@@ -14,8 +14,15 @@ struct AxisPlacement {
     std::int32_t span{1};
 };
 
+struct AxisEstimate {
+    std::int32_t minimum_line{};
+    std::int32_t maximum_line{};
+    std::int32_t indefinite_span{1};
+};
+
 struct Placement {
     AxisPlacement row, column;
+    AxisEstimate row_estimate, column_estimate;
     std::int32_t row_start{}, row_end{}, column_start{}, column_end{};
     bool hidden{};
 };

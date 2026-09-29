@@ -53,12 +53,12 @@
 | `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入，百分比间隙及轨道在自动重复计数中按尺寸约束解析；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，跨弹性轨道的单格和跨格项目合批规划基础尺寸，仅向弹性轨道分配该批的固有贡献；固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分，`min-content` 查询不放大弹性轨道；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair、repeat-gap-fixed-percent-track、test_grid_matrix.py、test_grid_span_matrix.py |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持显式网格后的正向循环及前方的逆向序列，含双侧隐式行；复杂放置组合未验收 | P3 | 已建：grid-implicit-positive-rows、grid-implicit-negative-rows、grid-implicit-mixed-rows |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
-| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；按“确定双轴、确定次轴、自动游标”阶段排布，负隐式轨道为游标起点；稀疏／Dense 的行列方向已差分，复杂跨格组合未完整 | P3 | 已建：grid-row-dense-holes、placement-row／column-secondary-first、placement-row／column-dense-secondary、placement-negative-column／row-start、placement-row／column-primary-backtrack |
+| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；按“确定双轴、确定次轴、自动游标”阶段排布，原始网格线先估算初始范围，确定位置的项目再扩张占用范围；稀疏／Dense 的行列方向与具名线、负隐式线、第二项目的确定主轴／次轴位置已组合差分，复杂跨格组合未完整 | P3 | 已建：grid-row-dense-holes、placement-row／column-secondary-first、placement-row／column-dense-secondary、placement-negative-column／row-start、placement-row／column-primary-backtrack、test_grid_line_matrix.py |
 | `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
-| `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；缺失名称、超出显式范围的正负序号及带锚点的具名 span 已差分，其他区域生成线名组合未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences、named-line-missing-positive／negative／forward-span／backward-span、named-line-existing-negative-third／positive-third／backward-span-first |
-| `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；多次出现未完整 | P3 | 已建：named-area-placement |
-| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；起止反向时交换、相同线时形成一条轨道，区域与绝对定位通过固定差分；更多命名线组合未完整 | P3 | 已建：named-area-placement、grid-absolute-area、grid-line-reverse-row |
-| `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域；双 span 采用起始 span，孤立具名 span 化为一条轨道，起止反向／相同线规则已差分；更多命名线组合未完整 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences、grid-line-reverse-column／negative／named、grid-line-equal-column、grid-line-both-spans、grid-line-named-span-start-auto／auto-end |
+| `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；缺失名称、超出显式范围的正负序号及带锚点的具名 span 已差分；端点组合矩阵覆盖列轴、LTR／RTL、四种自动流和拉伸项目，其他区域生成线名组合未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences、named-line-missing-positive／negative／forward-span／backward-span、named-line-existing-negative-third／positive-third／backward-span-first、test_grid_line_matrix.py |
+| `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；端点组合矩阵覆盖行轴的重复线名及缺失名称，区域生成线名与重复模板的组合未完整 | P3 | 已建：named-area-placement、test_grid_line_matrix.py |
+| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；起止反向时交换、相同线时形成一条轨道，区域与绝对定位通过固定差分；行轴端点矩阵覆盖自动／数字／负线／具名线／具名 span 及第二项目的确定位置，更多区域和固有尺寸组合未完整 | P3 | 已建：named-area-placement、grid-absolute-area、grid-line-reverse-row、test_grid_line_matrix.py |
+| `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域；双 span 采用起始 span，孤立具名 span 化为一条轨道，起止反向／相同线规则已差分；列轴端点矩阵覆盖四种自动流与固定／拉伸项目，更多固有尺寸组合未完整 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences、grid-line-reverse-column／negative／named、grid-line-equal-column、grid-line-both-spans、grid-line-named-span-start-auto／auto-end、test_grid_line_matrix.py |
 | `dummy` | Rust 泛型编译占位字段 | 内部字段 | — | 无需用例 |
 
 ## 跨字段验收轴
@@ -249,6 +249,13 @@ FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚
 `test_grid_triple_span.py` 再组合五类三轨道模板、相互重叠的两轨道跨度、
 单格项目、行列双轴、LTR／RTL 与三种尺寸查询，共 60 组；全部作为
 CTest 差分回归。
+`test_grid_line_matrix.py` 组合 12 种起始线和 12 种终止线、行／列轴、
+LTR／RTL、四种自动流、第二项目的自动／确定次轴／确定主轴／确定双轴位置，
+以及固定尺寸／自动拉伸尺寸，共 18,432 组。参考工具单次最多接受 1,024 组，
+脚本分批执行并比较全部节点的矩形、盒边和可滚动溢出。初始隐式网格范围
+按原始数字端点估算，之后再解析具名线并扩张占用范围；Taffy 0.14 对
+负数字锚点筛选具名 span 时使用其原始一基坐标，此版本行为已单独复现，
+尚未以 CSS 规范／WPT 判定。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

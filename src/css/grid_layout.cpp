@@ -183,15 +183,20 @@ std::int32_t named_index(const ExpandedTemplate& axis, const GridLine& line, boo
 }
 
 std::int32_t named_span(const ExpandedTemplate& axis, std::int32_t anchor,
-                        const GridLine& span, bool forward) {
+                        const GridLine& anchor_style, const GridLine& span, bool forward) {
     auto name = span.name();
     const bool exact_exists = std::any_of(axis.line_names.begin(), axis.line_names.end(),
         [&](const auto& names) { return has_name(names, name); });
     if (!exact_exists) name += forward ? "-end" : "-start";
+    // Taffy 0.14 filters candidates using the original one-based negative
+    // endpoint. Its normalized filter boundary is one line before the resolved
+    // origin-zero endpoint for negative numeric anchors.
+    const auto filter_boundary = anchor_style.kind() == GridLineKind::Index
+        && anchor_style.index_value() < 0 ? anchor - 1 : anchor;
     std::int32_t found = 0;
     for (std::size_t i = 0; i < axis.line_names.size(); ++i) {
         const auto index = static_cast<std::int32_t>(i);
-        if ((forward ? index > anchor : index < anchor)
+        if ((forward ? index > filter_boundary : index < filter_boundary)
             && has_name(axis.line_names[i], name)
             && ++found == span.span_count()) return index;
     }
@@ -226,18 +231,51 @@ AxisPlacement axis_placement(const GridPlacement& value, const ExpandedTemplate&
     if (start && end) return {std::min(*start, *end),
         std::max<std::int32_t>(1, std::abs(*end - *start))};
     if (start && value.end.kind() == GridLineKind::NamedSpan) {
-        const auto target = named_span(axis, *start, value.end, true);
+        const auto target = named_span(axis, *start, value.start, value.end, true);
         return {std::min(*start, target),
             std::max<std::int32_t>(1, std::abs(target - *start))};
     }
     if (end && value.start.kind() == GridLineKind::NamedSpan) {
-        const auto target = named_span(axis, *end, value.start, false);
+        const auto target = named_span(axis, *end, value.end, value.start, false);
         return {std::min(target, *end),
             std::max<std::int32_t>(1, std::abs(*end - target))};
     }
     if (start) return {*start, span};
     if (end) return {*end - span, span};
     return {std::nullopt, span};
+}
+
+AxisEstimate estimate_axis(const GridPlacement& value, std::int32_t explicit_count) {
+    // Taffy's initial grid extent is computed before named lines are resolved.
+    // A named endpoint therefore contributes no definite bound at this stage.
+    const auto line_index = [explicit_count](const GridLine& line)
+        -> std::optional<std::int32_t> {
+        if (line.kind() != GridLineKind::Index || line.index_value() == 0) {
+            return std::nullopt;
+        }
+        const auto index = line.index_value();
+        return index > 0 ? static_cast<std::int32_t>(index - 1)
+            : explicit_count + 1 + index;
+    };
+    const auto start = line_index(value.start);
+    const auto end = line_index(value.end);
+    const auto span_count = [](const GridLine& line) {
+        return line.kind() == GridLineKind::Span
+            ? static_cast<std::int32_t>(line.span_count()) : std::int32_t{1};
+    };
+    if (start && end) {
+        return {*start == *end ? *start : std::min(*start, *end),
+            *start == *end ? *start + 1 : std::max(*start, *end), 1};
+    }
+    if (start) return {*start, *start + span_count(value.end), 1};
+    if (end) {
+        const auto minimum = value.start.kind() == GridLineKind::Span
+            ? *end - span_count(value.start) : *end;
+        return {minimum, *end, 1};
+    }
+    const auto indefinite_span = value.start.kind() == GridLineKind::Span
+        ? span_count(value.start) : span_count(value.end);
+    return {0, 0, indefinite_span};
 }
 
 struct OccupiedArea {
@@ -300,13 +338,12 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
     std::int32_t largest_primary_span = 1;
     for (const auto& item : placements) {
         if (item.hidden) continue;
-        const auto& p = primary(item);
-        const auto& s = secondary(item);
-        if (p.start) {
-            primary_start = std::min(primary_start, *p.start);
-            primary_end = std::max(primary_end, *p.start + p.span);
-        } else largest_primary_span = std::max(largest_primary_span, p.span);
-        if (s.start) secondary_start = std::min(secondary_start, *s.start);
+        const auto& p = by_row ? item.column_estimate : item.row_estimate;
+        const auto& s = by_row ? item.row_estimate : item.column_estimate;
+        primary_start = std::min(primary_start, p.minimum_line);
+        primary_end = std::max(primary_end, p.maximum_line);
+        largest_primary_span = std::max(largest_primary_span, p.indefinite_span);
+        secondary_start = std::min(secondary_start, s.minimum_line);
     }
     primary_end = std::max(primary_end, primary_start + largest_primary_span);
     GridOccupancy occupied;
@@ -326,7 +363,9 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
             item.column_end = s_end;
         }
         occupied.add(p, primary(item).span, s, secondary(item).span, auto_placed);
+        primary_start = std::min(primary_start, p);
         primary_end = std::max(primary_end, p_end);
+        secondary_start = std::min(secondary_start, s);
     };
 
     // Definite positions reserve their cells before either auto-placement phase.
@@ -355,8 +394,10 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
     }
 
     // Remaining items share one cursor; dense flow restarts at the implicit grid start.
-    std::int32_t cursor_primary = primary_start;
-    std::int32_t cursor_secondary = secondary_start;
+    const auto grid_start_primary = primary_start;
+    const auto grid_start_secondary = secondary_start;
+    std::int32_t cursor_primary = grid_start_primary;
+    std::int32_t cursor_secondary = grid_start_secondary;
     for (auto& item : placements) {
         if (item.hidden || secondary(item).start) continue;
         std::int32_t p = cursor_primary;
@@ -389,8 +430,8 @@ void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
         if (!found) throw LayoutFailure(LayoutErrorCode::LimitExceeded, id,
             "Grid automatic placement search limit exceeded");
         record(item, p, s, true);
-        cursor_primary = dense ? primary_start : p + primary(item).span;
-        cursor_secondary = dense ? secondary_start : s;
+        cursor_primary = dense ? grid_start_primary : p + primary(item).span;
+        cursor_secondary = dense ? grid_start_secondary : s;
     }
 }
 
@@ -493,6 +534,10 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         }
         placements[i].row = axis_placement(child.style.grid.row, rows);
         placements[i].column = axis_placement(child.style.grid.column, columns);
+        placements[i].row_estimate = estimate_axis(child.style.grid.row,
+            static_cast<std::int32_t>(rows.tracks.size()));
+        placements[i].column_estimate = estimate_axis(child.style.grid.column,
+            static_cast<std::int32_t>(columns.tracks.size()));
     }
     place(placements, static_cast<std::int32_t>(rows.tracks.size()),
         static_cast<std::int32_t>(columns.tracks.size()), node.style.grid.auto_flow, node.id);

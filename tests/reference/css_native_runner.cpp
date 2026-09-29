@@ -848,6 +848,74 @@ void auto_min_height(std::string_view name) {
         {{first_id, root}, {first_id + 1, child}});
 }
 
+void grid_negative_implicit_sequence() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(30)};
+    root_style.grid.template_columns = {
+        TrackSizing::fixed(30), TrackSizing::fixed(30)};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    root_style.grid.auto_columns = {
+        TrackSizing::fixed(15), TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size.height = Length::length(10);
+    child_style.grid.row = {GridLine::index(1), GridLine::span(1)};
+    child_style.grid.column = {GridLine::index(-5), GridLine::span(1)};
+    const auto first = tree.create_node(child_style);
+    child_style.grid.column = {GridLine::index(-4), GridLine::span(1)};
+    const auto second = tree.create_node(child_style);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    print("grid-negative-implicit-sequence", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(30)}),
+        {{800, root}, {801, first}, {802, second}});
+}
+
+void block_intrinsic_flag(bool table) {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.item_is_table = table;
+    child_style.box.replaced = !table;
+    const auto child = tree.create_node(child_style,
+        [](const MeasureRequest&) { return Measurement{{30, 10}, {}, {}}; });
+    tree.append_child(root, child);
+    print(table ? "block-table-intrinsic" : "block-replaced-intrinsic",
+        tree.compute(root, {AvailableSpace::definite(100),
+            AvailableSpace::max_content()}),
+        table ? std::vector<IdentifiedNode>{{900, root}, {901, child}}
+            : std::vector<IdentifiedNode>{{910, root}, {911, child}});
+}
+
+void block_table_margin_boundary() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style table_style;
+    table_style.display = Display::Block;
+    table_style.item_is_table = true;
+    const auto table = tree.create_node(table_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size.height = Length::length(10);
+    child_style.box.margin.top = Length::length(20);
+    child_style.box.margin.bottom = Length::length(15);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, table);
+    tree.append_child(table, child);
+    print("block-table-margin-boundary", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{920, root}, {921, table}, {922, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -933,6 +1001,10 @@ int main(int argc, char** argv) {
             || name == "grid-min-width-before-tracks") constrained_container(name);
         else if (name == "flex-auto-min-height"
             || name == "grid-auto-min-height") auto_min_height(name);
+        else if (name == "grid-negative-implicit-sequence") grid_negative_implicit_sequence();
+        else if (name == "block-table-intrinsic") block_intrinsic_flag(true);
+        else if (name == "block-replaced-intrinsic") block_intrinsic_flag(false);
+        else if (name == "block-table-margin-boundary") block_table_margin_boundary();
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

@@ -17,8 +17,8 @@
 | Style 字段 | Taffy 0.14 输入与关键取值 | Axisly 现状 | 阶段 | 参考用例 |
 | --- | --- | --- | --- | --- |
 | `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：新树均可调度；各算法尚未完整 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned |
-| `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 未支持 | P4 | 待建：block-table-item |
-| `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：输入可表达，尺寸传递未验收 | P1 | 待建：replaced-intrinsic |
+| `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 部分：标记使 Block 子项不拉伸自动宽度并阻断父子边距折叠；复杂内在尺寸未完整 | P4 | 已建：block-table-intrinsic、block-table-margin-boundary |
+| `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；纵横比与跨算法组合未完整 | P1 | 已建：block-replaced-intrinsic |
 | `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸与 Flex 差分已覆盖 | P1 | 已建：content-box-and-negative-margin |
 | `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入基本方向规则，混合树未验收 | P1/P4 | 已建：rtl-block-child；待建：rtl-mixed |
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 自动最小尺寸依赖 overflow；裁剪与溢出结果未实现 | P4 | 待建：overflow-min-size |
@@ -52,7 +52,7 @@
 | `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit |
 | `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；复杂尺寸阶段未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
-| `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
+| `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
 | `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；RowDense 补洞通过差分 | P3 | 已建：grid-row-dense-holes |
 | `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
 | `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences |
@@ -101,6 +101,9 @@
 | `absolute-block-static-flow` | Block 绝对定位子项在正常流中的静态纵坐标，不占用后续子项空间 |
 | `block-min-width-before-children`／`flex-min-width-before-children`／`grid-min-width-before-tracks` | 三算法在排子项与轨道前应用容器最小宽度 |
 | `flex-auto-min-height`／`grid-auto-min-height` | 自动高度受最小高度约束后重新分配 Flex 交叉轴与 Grid `fr` 轨道 |
+| `grid-negative-implicit-sequence` | 显式网格前的隐式列按 `grid-auto-columns` 序列逆向取值 |
+| `block-table-intrinsic`／`block-replaced-intrinsic` | Table 标记及替换元素的 Block 测量叶子采用固有宽度 |
+| `block-table-margin-boundary` | Table 标记建立独立格式化边界，不与内部子块折叠外边距 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -123,8 +126,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、五十组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这五十组的矩形、盒边和滚动条同时经过新原生树差分。
+目前有 44 字段清单、五十四组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这五十四组的矩形、盒边和滚动条同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

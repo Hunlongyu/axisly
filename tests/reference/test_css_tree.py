@@ -57,6 +57,10 @@ CASES = (
     "grid-min-width-before-tracks",
     "flex-auto-min-height",
     "grid-auto-min-height",
+    "grid-negative-implicit-sequence",
+    "block-table-intrinsic",
+    "block-replaced-intrinsic",
+    "block-table-margin-boundary",
     "mixed-block-flex-grid",
 )
 

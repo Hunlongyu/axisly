@@ -431,6 +431,40 @@
         {"id": 710, "parent": null, "style": {"display": "Grid", "size": {"width": 100}, "min_size": {"height": 100}, "grid_template_rows": "1fr"}},
         {"id": 711, "parent": 0, "style": {"display": "Block", "size": {"width": 20}}, "measure": {"minimum": [20, 10], "preferred": [20, 10]}}
       ]
+    },
+    {
+      "name": "grid-negative-implicit-sequence",
+      "available": [100, 30],
+      "nodes": [
+        {"id": 800, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 30}, "grid_template_columns": "30px 30px", "grid_template_rows": "20px", "grid_auto_columns": "15px 20px"}},
+        {"id": 801, "parent": 0, "style": {"size": {"height": 10}, "grid_column": {"start": "-5", "end": "span 1"}, "grid_row": {"start": "1", "end": "span 1"}}},
+        {"id": 802, "parent": 0, "style": {"size": {"height": 10}, "grid_column": {"start": "-4", "end": "span 1"}, "grid_row": {"start": "1", "end": "span 1"}}}
+      ]
+    },
+    {
+      "name": "block-table-intrinsic",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 900, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 901, "parent": 0, "style": {"display": "Block", "item_is_table": true}, "measure": {"minimum": [30, 10], "preferred": [30, 10]}}
+      ]
+    },
+    {
+      "name": "block-replaced-intrinsic",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 910, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 911, "parent": 0, "style": {"display": "Block", "item_is_replaced": true}, "measure": {"minimum": [30, 10], "preferred": [30, 10]}}
+      ]
+    },
+    {
+      "name": "block-table-margin-boundary",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 920, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 921, "parent": 0, "style": {"display": "Block", "item_is_table": true}},
+        {"id": 922, "parent": 1, "style": {"display": "Block", "size": {"height": 10}, "margin": {"top": 20, "bottom": 15}}}
+      ]
     }
   ]
 }

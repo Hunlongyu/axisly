@@ -144,6 +144,14 @@ class TreeReferenceTests(unittest.TestCase):
                                      701: [0, 0, 20, 100]},
             "grid-auto-min-height": {710: [0, 0, 100, 100],
                                      711: [0, 0, 20, 100]},
+            "grid-negative-implicit-sequence": {800: [0, 0, 100, 30],
+                                                801: [0, 0, 15, 10],
+                                                802: [15, 0, 20, 10]},
+            "block-table-intrinsic": {900: [0, 0, 100, 10], 901: [0, 0, 30, 10]},
+            "block-replaced-intrinsic": {910: [0, 0, 100, 10],
+                                         911: [0, 0, 30, 10]},
+            "block-table-margin-boundary": {920: [0, 0, 100, 45],
+                                            921: [0, 0, 0, 45], 922: [0, 20, 0, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

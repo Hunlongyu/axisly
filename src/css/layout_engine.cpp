@@ -197,6 +197,7 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
                     || get(*node.parent).style.display == Display::FlowRoot);
             const bool through = in_block_flow && !node.measure
                 && node.style.float_side == FloatSide::None
+                && !node.style.item_is_table && !node.style.box.replaced
                 && node.style.contain == Contain::None
                 && node.style.overflow_x != Overflow::Hidden
                 && node.style.overflow_x != Overflow::Scroll

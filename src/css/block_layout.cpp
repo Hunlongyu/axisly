@@ -96,7 +96,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             continue;
         }
         Constraints child_constraints;
-        child_constraints.available.width = AvailableSpace::definite(content_width);
+        const bool intrinsic_width = child.style.item_is_table
+            || child.style.box.replaced;
+        child_constraints.available.width = intrinsic_width
+            ? AvailableSpace::max_content()
+            : AvailableSpace::definite(content_width);
         child_constraints.available.height = AvailableSpace::indefinite();
         child_constraints.containing_width = content_width;
         if (preferred_height) child_constraints.containing_height = content_height_basis;
@@ -108,6 +112,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         const auto margin = edges(child_box.margin, child_id);
         if (child.style.float_side == FloatSide::None
+            && !intrinsic_width
             && child.style.box.size.width.kind() == LengthKind::Auto) {
             child_constraints.known_width = std::max(Unit{0}, checked(
                 static_cast<double>(content_width) - margin.left - margin.right,
@@ -215,6 +220,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         && (get(*node.parent).style.display == Display::Block
             || get(*node.parent).style.display == Display::FlowRoot);
     const bool independent = node.style.display != Display::Block
+        || node.style.item_is_table || node.style.box.replaced
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y)

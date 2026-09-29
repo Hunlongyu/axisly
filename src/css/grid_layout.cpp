@@ -383,9 +383,12 @@ TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
         if (index >= 0 && index < static_cast<std::int32_t>(explicit_tracks.size())) {
             style = explicit_tracks[static_cast<std::size_t>(index)];
         } else if (!auto_tracks.empty()) {
-            const auto sequence = index < 0 ? static_cast<std::size_t>(-index - 1)
-                : static_cast<std::size_t>(index - explicit_tracks.size());
-            style = auto_tracks[sequence % auto_tracks.size()];
+            const auto sequence = index < 0
+                ? auto_tracks.size() - 1
+                    - (static_cast<std::size_t>(-index - 1) % auto_tracks.size())
+                : static_cast<std::size_t>(index - explicit_tracks.size())
+                    % auto_tracks.size();
+            style = auto_tracks[sequence];
         }
         TrackState state;
         state.style = style;

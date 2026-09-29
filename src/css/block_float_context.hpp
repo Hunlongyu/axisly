@@ -30,8 +30,19 @@ public:
 private:
     struct Region {
         FloatSide side{};
-        Unit left{}, right{}, top{}, bottom{};
+        Unit left{}, right{}, top{}, bottom{}, occupied_bottom{};
+        [[nodiscard]] bool occupies(Unit query_top, Unit query_bottom) const noexcept {
+            return query_top == query_bottom
+                ? top <= query_top && occupied_bottom > query_top
+                : top < query_bottom && occupied_bottom > query_top;
+        }
     };
+    struct Interval {
+        Unit left{}, right{};
+    };
+
+    [[nodiscard]] std::vector<Interval> free_intervals(Unit top, Unit bottom) const;
+    [[nodiscard]] std::optional<Unit> next_occupied_bottom(Unit top, Unit bottom) const;
 
     Unit content_width_{};
     std::vector<Region> regions_;

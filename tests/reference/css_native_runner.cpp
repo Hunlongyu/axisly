@@ -1288,6 +1288,68 @@ void block_float_self_clear() {
         {{1310, root}, {1311, left}, {1312, right}});
 }
 
+void block_float_vertical_case(std::string_view name) {
+    struct FloatSpec {
+        FloatSide side;
+        Unit width, height;
+        ClearSide clear = ClearSide::None;
+    };
+    const bool vertical = name == "block-float-vertical-hole";
+    const bool left = name == "block-float-staggered-left";
+    const bool right = name == "block-float-staggered-right";
+    const bool opposite = name == "block-float-opposite-hole";
+    const bool clear = name == "block-float-clear-ceiling";
+    const bool flow = name == "block-float-hole-flow-root";
+    const bool wide_flow = name == "block-float-hole-wide-flow-root";
+    const int id = vertical ? 1810 : left ? 1820 : right ? 1830
+        : opposite ? 1840 : clear ? 1850 : flow ? 1860
+        : wide_flow ? 1870 : 1880;
+    std::vector<FloatSpec> specs;
+    if (vertical || flow || wide_flow) {
+        specs = {{FloatSide::Left, 50, 10}, {FloatSide::Left, 50, 30}};
+        if (vertical) specs.push_back({FloatSide::Left, 50, 10});
+    } else if (left || right) {
+        const auto side = left ? FloatSide::Left : FloatSide::Right;
+        specs = {{side, 30, 30}, {side, 30, 10}, {side, 70, 10}};
+    } else if (opposite) {
+        specs = {{FloatSide::Left, 50, 10}, {FloatSide::Right, 50, 30},
+                 {FloatSide::Left, 50, 10}};
+    } else if (clear) {
+        specs = {{FloatSide::Left, 30, 20},
+                 {FloatSide::Right, 30, 10, ClearSide::Both},
+                 {FloatSide::Left, 30, 10}};
+    } else {
+        specs = {{FloatSide::Left, 50, 0}, {FloatSide::Left, 60, 10}};
+    }
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (const auto& spec : specs) {
+        Style style;
+        style.display = Display::Block;
+        style.float_side = spec.side;
+        style.clear = spec.clear;
+        style.box.size = {Length::length(spec.width), Length::length(spec.height)};
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + static_cast<int>(nodes.size()), child);
+    }
+    if (flow || wide_flow) {
+        Style style;
+        style.display = Display::FlowRoot;
+        style.box.size = {Length::length(flow ? 50.0f : 80.0f),
+                          Length::length(10)};
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + static_cast<int>(nodes.size()), child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}), nodes);
+}
+
 void block_intrinsic_width_case(std::string_view name) {
     const bool floating = name.starts_with("block-float-intrinsic-");
     const bool overflow = name == "block-float-intrinsic-overflow";
@@ -1867,6 +1929,14 @@ int main(int argc, char** argv) {
             || name == "block-float-overflow-context"
             || name == "block-float-flex-context"
             || name == "block-float-grid-context") block_float_context_case(name);
+        else if (name == "block-float-vertical-hole"
+            || name == "block-float-staggered-left"
+            || name == "block-float-staggered-right"
+            || name == "block-float-opposite-hole"
+            || name == "block-float-clear-ceiling"
+            || name == "block-float-hole-flow-root"
+            || name == "block-float-hole-wide-flow-root"
+            || name == "block-float-zero-height") block_float_vertical_case(name);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

@@ -52,6 +52,11 @@ target_link_libraries(axisly_flex_factors_native PRIVATE axisly::axisly)
 set_target_properties(axisly_flex_factors_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_flex_factors_native)
 
+add_executable(axisly_flex_nested_native flex_nested_native.cpp)
+target_link_libraries(axisly_flex_nested_native PRIVATE axisly::axisly)
+set_target_properties(axisly_flex_nested_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_flex_nested_native)
+
 add_executable(axisly_grid_matrix_native grid_matrix_native.cpp)
 target_link_libraries(axisly_grid_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_grid_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
@@ -121,6 +126,15 @@ foreach(space IN ITEMS max-content min-content)
         --axisly "$<TARGET_FILE:axisly_flex_factors_native>"
         --taffy "${taffy_tree_output}")
     set_tests_properties(axisly.reference.flex_factors_${space} PROPERTIES LABELS reference TIMEOUT 120)
+endforeach()
+
+foreach(space IN ITEMS definite max-content min-content)
+    add_test(NAME axisly.reference.flex_nested_${space} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_nested.py"
+        --scenario "${space}"
+        --axisly "$<TARGET_FILE:axisly_flex_nested_native>"
+        --taffy "${taffy_tree_output}")
+    set_tests_properties(axisly.reference.flex_nested_${space} PROPERTIES LABELS reference TIMEOUT 120)
 endforeach()
 
 add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"

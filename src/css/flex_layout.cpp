@@ -61,6 +61,7 @@ struct FlexLine {
     bool has_baseline{};
 };
 
+double bounded_main_size(const FlexItem& item, double value);
 Unit clamped_main_size(const FlexItem& item, double value);
 
 std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
@@ -169,9 +170,13 @@ ContentAlignment alignment_fallback(ContentAlignment alignment,
     return alignment;
 }
 
-Unit clamped_main_size(const FlexItem& item, double value) {
+double bounded_main_size(const FlexItem& item, double value) {
     if (item.maximum) value = std::min(value, static_cast<double>(*item.maximum));
-    return checked(std::max(value, static_cast<double>(item.minimum)), item.id);
+    return std::max(value, static_cast<double>(item.minimum));
+}
+
+Unit clamped_main_size(const FlexItem& item, double value) {
+    return checked(bounded_main_size(item, value), item.id);
 }
 
 Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
@@ -255,8 +260,12 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
                 : static_cast<double>(item.shrink) * item.base;
             const double ideal = static_cast<double>(item.base)
                 + (scaled_factor_sum > 0 ? free * factor / scaled_factor_sum : 0);
-            item.target = clamped_main_size(item, ideal);
-            violations[slot] = static_cast<double>(item.target) - ideal;
+            const double bounded = bounded_main_size(item, ideal);
+            item.target = checked(bounded, item.id);
+            // Compare in the same precision as the unconstrained target.
+            // Casting to Unit first can turn an unbounded item into a false
+            // min/max violation and freeze it in the next pass.
+            violations[slot] = bounded - ideal;
             total_violation += violations[slot];
         }
         if (std::abs(total_violation) < 0.0001) break;
@@ -309,6 +318,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     const auto child_percentage_height = inner_height;
     const auto main_available = row ? inner_width : inner_height;
     const auto cross_available = row ? inner_height : inner_width;
+    const auto main_query = row ? constraints.available.width.kind
+        : constraints.available.height.kind;
     Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
         main_available, node.id);
     const Unit cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
@@ -336,11 +347,13 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         child_constraints.containing_width = inner_width;
         child_constraints.containing_height = inner_height;
         child_constraints.available.width = inner_width
-            ? AvailableSpace::definite(*inner_width) : AvailableSpace::indefinite();
+            ? AvailableSpace::definite(*inner_width) : constraints.available.width;
         child_constraints.available.height = inner_height
-            ? AvailableSpace::definite(*inner_height) : AvailableSpace::indefinite();
-        if (row) child_constraints.available.width = AvailableSpace::max_content();
-        else child_constraints.available.height = AvailableSpace::max_content();
+            ? AvailableSpace::definite(*inner_height) : constraints.available.height;
+        const auto base_space = main_query == AvailableKind::MinContent
+            ? AvailableSpace::min_content() : AvailableSpace::max_content();
+        if (row) child_constraints.available.width = base_space;
+        else child_constraints.available.height = base_space;
         // The flex base size is measured before applying min/max main sizes.
         // Those bounds produce the hypothetical size used for line breaking.
         if (row) child_constraints.ignore_min_max_width = true;
@@ -465,8 +478,6 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     }
 
     auto line_break_limit = main_available;
-    const auto main_query = row ? constraints.available.width.kind
-        : constraints.available.height.kind;
     if (!line_break_limit && main_query == AvailableKind::MinContent
         && node.style.flex_wrap != FlexWrap::NoWrap) {
         double largest_item = 0;
@@ -534,11 +545,18 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             final_constraints.containing_width = child_percentage_width;
             final_constraints.containing_height = child_percentage_height;
             final_constraints.available.width = inner_width
-                ? AvailableSpace::definite(*inner_width) : AvailableSpace::indefinite();
+                ? AvailableSpace::definite(*inner_width) : constraints.available.width;
             final_constraints.available.height = inner_height
-                ? AvailableSpace::definite(*inner_height) : AvailableSpace::indefinite();
+                ? AvailableSpace::definite(*inner_height) : constraints.available.height;
             if (row) final_constraints.known_width = item.target;
             else final_constraints.known_height = item.target;
+            // Resolve the hypothetical cross size using the post-flex main
+            // size, then perform the item layout with both axes fixed. A
+            // nested container may lay out its own children differently in
+            // that final pass even when its border-box size stays the same.
+            const auto cross_probe = layout(item.id, final_constraints, depth + 1);
+            if (row) final_constraints.known_height = cross_probe.size.height;
+            else final_constraints.known_width = cross_probe.size.width;
             fragments[item.source_index] = layout(item.id, final_constraints, depth + 1);
             item.target = axis(fragments[item.source_index].size, row, true);
             item.cross = axis(fragments[item.source_index].size, row, false);

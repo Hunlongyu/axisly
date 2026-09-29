@@ -74,6 +74,9 @@ CASES = (
     "grid-visible-automatic-minimum",
     "grid-scroll-automatic-minimum",
     "grid-scroll-explicit-minimum",
+    "grid-spanning-flex-minimum",
+    "grid-spanning-auto-minimum",
+    "grid-spanning-scroll-minimum",
     "mixed-block-flex-grid",
 )
 

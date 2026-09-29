@@ -184,6 +184,12 @@ class TreeReferenceTests(unittest.TestCase):
                                               1111: [0, 0, 40, 20]},
             "grid-scroll-explicit-minimum": {1120: [0, 0, 10, 20],
                                              1121: [0, 0, 20, 20]},
+            "grid-spanning-flex-minimum": {1130: [0, 0, 40, 20],
+                                           1131: [0, 0, 40, 20]},
+            "grid-spanning-auto-minimum": {1140: [0, 0, 40, 20],
+                                           1141: [0, 0, 80, 20]},
+            "grid-spanning-scroll-minimum": {1150: [0, 0, 40, 20],
+                                             1151: [0, 0, 40, 20]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

@@ -1103,6 +1103,40 @@ void grid_automatic_minimum(GridMinimumCase scenario) {
         {{id, root}, {id + 1, child}});
 }
 
+enum class GridSpanningCase { Flexible, Automatic, Scrolling };
+
+void grid_spanning_minimum(GridSpanningCase scenario) {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(40), Length::length(20)};
+    const auto track = scenario == GridSpanningCase::Flexible
+        ? TrackSizing::fraction(1) : TrackSizing::automatic();
+    root_style.grid.template_columns = {track, track};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.grid.column = {GridLine::index(1), GridLine::span(2)};
+    if (scenario == GridSpanningCase::Scrolling) {
+        child_style.overflow_x = Overflow::Hidden;
+        child_style.overflow_y = Overflow::Hidden;
+    }
+    const auto child = tree.create_node(child_style, [](const MeasureRequest& request) {
+        return Measurement{{request.known_content_width.value_or(80.0f),
+            request.known_content_height.value_or(10.0f)}, {}, {}, Size{80, 10}};
+    });
+    tree.append_child(root, child);
+    const int id = scenario == GridSpanningCase::Flexible ? 1130
+        : scenario == GridSpanningCase::Automatic ? 1140 : 1150;
+    const char* name = scenario == GridSpanningCase::Flexible
+        ? "grid-spanning-flex-minimum"
+        : scenario == GridSpanningCase::Automatic
+            ? "grid-spanning-auto-minimum" : "grid-spanning-scroll-minimum";
+    print(name, tree.compute(root,
+        {AvailableSpace::definite(40), AvailableSpace::definite(20)}),
+        {{id, root}, {id + 1, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1208,6 +1242,12 @@ int main(int argc, char** argv) {
             grid_automatic_minimum(GridMinimumCase::Scrolling);
         else if (name == "grid-scroll-explicit-minimum")
             grid_automatic_minimum(GridMinimumCase::ExplicitMinimum);
+        else if (name == "grid-spanning-flex-minimum")
+            grid_spanning_minimum(GridSpanningCase::Flexible);
+        else if (name == "grid-spanning-auto-minimum")
+            grid_spanning_minimum(GridSpanningCase::Automatic);
+        else if (name == "grid-spanning-scroll-minimum")
+            grid_spanning_minimum(GridSpanningCase::Scrolling);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

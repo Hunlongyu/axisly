@@ -50,7 +50,7 @@
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze |
 | `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit |
-| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；跨格项目先按跨度分批，固有最大尺寸轨道共同分配可用空间并冻结增长上限；Grid 项目的最小贡献与 min-content 分开；复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum |
+| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，固有最大尺寸轨道共同分配可用空间并冻结增长上限；复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
 | `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；RowDense 补洞通过差分 | P3 | 已建：grid-row-dense-holes |
@@ -111,6 +111,7 @@
 | `grid-span-order-short-first`／`grid-span-order-long-first` | 2 跨格与 3 跨格项目交换源码顺序；断言固有轨道分配和项目矩形不变 |
 | `grid-equal-intrinsic-growth`／`grid-capped-intrinsic-growth` | 两条 auto 轨道在有限宽度内共同增长；相同上限均分，较小上限先冻结 |
 | `grid-visible-automatic-minimum`／`grid-scroll-automatic-minimum`／`grid-scroll-explicit-minimum` | Grid 单轨道项目的自动最小尺寸随溢出模式归零，显式最小尺寸仍生效 |
+| `grid-spanning-flex-minimum`／`grid-spanning-auto-minimum`／`grid-spanning-scroll-minimum` | 跨弹性、普通 auto 轨道与滚动项目的最小贡献；按最小贡献和 min-content 阶段分别分配 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -133,8 +134,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、六十七组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这六十七组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、七十组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这七十组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

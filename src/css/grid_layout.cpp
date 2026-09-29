@@ -579,27 +579,63 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         }
         if (track.flex > 0) track.preferred = std::max(track.preferred, preferred);
     }
+    const auto grow_spanning_bases = [&](ContributionKind kind, auto eligible) {
+        std::vector<Unit> planned(axis.tracks.size());
+        std::vector<std::size_t> touched;
+        for (std::size_t first = 0; first < spanning_items.size();) {
+            std::size_t last = first + 1;
+            while (last < spanning_items.size()
+                && spanning_items[last].crosses_flexible_track
+                    == spanning_items[first].crosses_flexible_track
+                && spanning_items[last].span == spanning_items[first].span) {
+                ++last;
+            }
+            for (auto item_index = first; item_index < last; ++item_index) {
+                const auto& item = *spanning_items[item_index].item;
+                const auto [start, end] = range(item);
+                double occupied = 0;
+                std::size_t growable = 0;
+                for (auto index = start; index < end; ++index) {
+                    const auto slot = static_cast<std::size_t>(index - axis.origin);
+                    const auto& track = axis.tracks[slot];
+                    occupied += track.size;
+                    if (index + 1 < end) occupied += axis.gutter_after[slot];
+                    if (eligible(track)) ++growable;
+                }
+                const double deficit = contribution(item, kind) - occupied;
+                if (deficit <= 0 || !growable) continue;
+                const Unit share = checked(deficit / growable, id);
+                for (auto index = start; index < end; ++index) {
+                    const auto slot = static_cast<std::size_t>(index - axis.origin);
+                    if (!eligible(axis.tracks[slot])) continue;
+                    if (planned[slot] == 0) touched.push_back(slot);
+                    planned[slot] = std::max(planned[slot], share);
+                }
+            }
+            for (const auto slot : touched) {
+                axis.tracks[slot].size = checked(static_cast<double>(axis.tracks[slot].size)
+                    + planned[slot], id);
+                planned[slot] = 0;
+            }
+            touched.clear();
+            first = last;
+        }
+    };
+    grow_spanning_bases(ContributionKind::Minimum,
+        [](const TrackState& track) { return track.intrinsic_min; });
+    grow_spanning_bases(ContributionKind::MinContent,
+        [](const TrackState& track) {
+            const auto kind = track.style.minimum.kind();
+            return kind == TrackBreadthKind::MinContent
+                || kind == TrackBreadthKind::MaxContent;
+        });
+    grow_spanning_bases(ContributionKind::MaxContent,
+        [](const TrackState& track) {
+            return track.style.minimum.kind() == TrackBreadthKind::MaxContent;
+        });
     for (const auto& spanning_item : spanning_items) {
         const auto& item = *spanning_item.item;
         const auto [start, end] = range(item);
-        double occupied = 0;
-        for (auto index = start; index + 1 < end; ++index) {
-            occupied += axis.gutter_after[static_cast<std::size_t>(index - axis.origin)];
-        }
-        std::size_t growable = 0;
-        for (auto index = start; index < end; ++index) {
-            const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-            occupied += track.size;
-            if (track.intrinsic_min) ++growable;
-        }
-        const double deficit = contribution(item, ContributionKind::MinContent) - occupied;
-        if (deficit > 0 && growable) {
-            const Unit share = checked(deficit / growable, id);
-            for (auto index = start; index < end; ++index) {
-                auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-                if (track.intrinsic_min) track.size = checked(static_cast<double>(track.size) + share, id);
-            }
-        }
         double preferred_occupied = 0;
         for (auto index = start; index + 1 < end; ++index) {
             preferred_occupied += axis.gutter_after[static_cast<std::size_t>(index - axis.origin)];

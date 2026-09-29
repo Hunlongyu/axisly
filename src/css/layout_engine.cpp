@@ -156,6 +156,28 @@ const LayoutNode& Engine::get(NodeId id) const {
     return iterator->second;
 }
 
+bool Engine::has_float_subtree(NodeId id, std::size_t depth) {
+    if (depth > limits_.maximum_depth) {
+        throw LayoutFailure(LayoutErrorCode::LimitExceeded, id,
+            "CSS layout depth exceeded");
+    }
+    if (const auto cached = float_subtree_.find(id.value);
+        cached != float_subtree_.end()) return cached->second;
+    const auto& node = get(id);
+    bool has_float = node.style.display != Display::None
+        && node.style.float_side != FloatSide::None;
+    if (node.style.display != Display::None) {
+        for (const auto child : node.children) {
+            if (has_float_subtree(child, depth + 1)) {
+                has_float = true;
+                break;
+            }
+        }
+    }
+    float_subtree_.emplace(id.value, has_float);
+    return has_float;
+}
+
 LayoutResult Engine::compute(NodeId root, AvailableSize available) {
     LayoutResult result;
     try {

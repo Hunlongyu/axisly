@@ -212,11 +212,13 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             && child.style.position != Position::Absolute
             && !intrinsic_width && !avoids_floats_as_block_item(child)
             && !child.style.align_content.has_value();
+        const bool share_float_context = same_bfc && !child.children.empty()
+            && (!floats.empty() || has_float_subtree(child_id, depth + 1));
         FloatContext probe_floats;
         BlockContext probe_context{probe_floats, 0, 0};
         auto nested = layout(child_id, child_constraints, depth + 1,
-            same_bfc && !child.children.empty() ? &probe_context : nullptr);
-        if (same_bfc && !child.children.empty()) {
+            share_float_context ? &probe_context : nullptr);
+        if (share_float_context) {
             const MarginStrut child_top = nested.block_margins
                 ? nested.block_margins->top : MarginStrut::from(margin.top);
             Unit y = checked(static_cast<double>(cursor)

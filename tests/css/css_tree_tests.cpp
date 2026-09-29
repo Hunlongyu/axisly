@@ -223,6 +223,29 @@ void inherited_float_invalidation() {
         && refreshed.find(content)->border_box.x == 47,
         "Changing a float must invalidate inherited placement");
 }
+
+void plain_block_single_measure() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style block_style;
+    block_style.display = Display::Block;
+    const auto block = tree.create_node(block_style);
+    tree.append_child(root, block);
+    std::size_t calls = 0;
+    const auto leaf = tree.create_node({}, [&](const MeasureRequest&) {
+        ++calls;
+        return Measurement{{100, 10}, {}, {}};
+    });
+    tree.append_child(block, leaf);
+    const auto result = tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()});
+    require(result.succeeded() && result.size == Size{100, 10}
+        && result.measurement_count == 1 && calls == 1,
+        "A Block subtree without floats must use one layout pass");
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -235,6 +258,7 @@ int main(int argc, char** argv) {
         else if (name == "errors_and_exception_atomicity") errors_and_exception_atomicity();
         else if (name == "cache_and_dirty") cache_and_dirty();
         else if (name == "inherited_float_invalidation") inherited_float_invalidation();
+        else if (name == "plain_block_single_measure") plain_block_single_measure();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

@@ -234,6 +234,8 @@ padding、外边距、方向与独立格式化上下文交互，以及 64 组三
 空间不足时的安全回退与浮动，包括子树上下文边界。普通 Block 后代使用共享浮动上下文，
 FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚动溢出。
 `inherited_float_invalidation` 验证祖先浮动尺寸修改后，后代布局与缓存失效。
+`plain_block_single_measure` 验证不含浮动的普通 Block 子树只调用一次宿主测量，
+避免共享浮动上下文探测让一般布局重复计算。
 复杂外边距折叠和更多深层嵌套仍待验收。
 
 `test_grid_matrix.py` 生成 2,646 组 Grid 组合：七类双轨道模板分别用于行列，

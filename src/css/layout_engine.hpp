@@ -102,8 +102,10 @@ private:
     std::size_t hits_{};
     std::size_t pending_layouts_{};
     bool root_hit_{};
+    std::unordered_map<std::uint64_t, bool> float_subtree_;
     void stage(NodeId id, const Constraints& constraints, const Fragment& fragment);
     [[nodiscard]] const LayoutNode& get(NodeId id) const;
+    [[nodiscard]] bool has_float_subtree(NodeId id, std::size_t depth);
     [[nodiscard]] Fragment layout(NodeId id, Constraints constraints, std::size_t depth,
                                   BlockContext* block_context = nullptr);
     [[nodiscard]] Fragment leaf(const LayoutNode& node, const Constraints& constraints,

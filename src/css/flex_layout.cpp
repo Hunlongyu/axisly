@@ -400,7 +400,21 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto});
     }
 
-    auto lines = collect_flex_lines(items, row, main_available, main_gap,
+    auto line_break_limit = main_available;
+    const auto main_query = row ? constraints.available.width.kind
+        : constraints.available.height.kind;
+    if (!line_break_limit && main_query == AvailableKind::MinContent
+        && node.style.flex_wrap != FlexWrap::NoWrap) {
+        double largest_item = 0;
+        for (const auto& item : items) {
+            largest_item = std::max(largest_item,
+                static_cast<double>(clamped_main_size(item, item.base))
+                    + axis(item.margin, row, true, true)
+                    + axis(item.margin, row, true, false));
+        }
+        line_break_limit = checked(std::max(0.0, largest_item), node.id);
+    }
+    auto lines = collect_flex_lines(items, row, line_break_limit, main_gap,
         node.style.flex_wrap, node.style.flex_line_count);
     if (!main_available) {
         double desired = 0;

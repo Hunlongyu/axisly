@@ -78,6 +78,15 @@ add_test(NAME axisly.reference.flex_matrix COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.flex_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
+foreach(space IN ITEMS max-content min-content)
+    add_test(NAME axisly.reference.flex_${space}_matrix COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_matrix.py"
+        --scenario "${space}"
+        --axisly "$<TARGET_FILE:axisly_flex_matrix_native>"
+        --taffy "${taffy_tree_output}")
+    set_tests_properties(axisly.reference.flex_${space}_matrix PROPERTIES LABELS reference TIMEOUT 120)
+endforeach()
+
 add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_matrix.py"
     --axisly "$<TARGET_FILE:axisly_grid_matrix_native>"

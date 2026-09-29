@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -31,16 +32,19 @@ constexpr std::array item_sizes{
     Size{22, 17}, Size{29, 23}, Size{18, 31}, Size{27, 14},
 };
 
-std::string case_name(std::size_t direction, std::size_t wrap,
+std::string case_name(std::size_t scenario,
+                      std::size_t direction, std::size_t wrap,
                       std::size_t item, std::size_t content,
                       std::size_t lines, std::size_t rtl) {
-    return "flex-matrix-" + std::to_string(direction) + '-'
+    const auto prefix = scenario == 0 ? "flex-matrix-"
+        : scenario == 1 ? "flex-intrinsic-max-" : "flex-intrinsic-min-";
+    return prefix + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(item) + '-'
         + std::to_string(content) + '-' + std::to_string(lines) + '-'
         + std::to_string(rtl);
 }
 
-void run_case(std::size_t direction, std::size_t wrap,
+void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
               std::size_t item, std::size_t content,
               std::size_t lines, std::size_t rtl) {
     LayoutTree tree;
@@ -51,7 +55,9 @@ void run_case(std::size_t direction, std::size_t wrap,
     root_style.justify_content = {content_positions[content]};
     root_style.align_content = {line_positions[lines]};
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
-    root_style.box.size = {Length::length(72), Length::length(68)};
+    if (scenario == 0) {
+        root_style.box.size = {Length::length(72), Length::length(68)};
+    }
     root_style.box.padding = {Length::length(3), Length::length(3),
         Length::length(3), Length::length(3)};
     root_style.gap = {Length::length(4), Length::length(6)};
@@ -67,15 +73,29 @@ void run_case(std::size_t direction, std::size_t wrap,
         nodes.emplace_back(static_cast<int>(index) + 2, child);
     }
     reference::write_case(std::cout,
-        case_name(direction, wrap, item, content, lines, rtl),
-        tree.compute(root, {AvailableSpace::definite(72),
-            AvailableSpace::definite(68)}), nodes);
+        case_name(scenario, direction, wrap, item, content, lines, rtl),
+        tree.compute(root, scenario == 0
+            ? AvailableSize{AvailableSpace::definite(72), AvailableSpace::definite(68)}
+            : scenario == 1
+                ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
+                : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()}),
+        nodes);
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     try {
-        std::cout << "{\"protocol\":\"AXISLY_FLEX_MATRIX_V1\",\"cases\":[";
+        const std::string_view mode = argc == 2 ? argv[1] : "";
+        if (argc > 2 || (argc == 2 && mode != "--max-content"
+            && mode != "--min-content")) {
+            throw std::invalid_argument("Expected --max-content, --min-content or no argument");
+        }
+        const std::size_t scenario = mode == "--max-content" ? 1
+            : mode == "--min-content" ? 2 : 0;
+        std::cout << "{\"protocol\":\""
+            << (scenario == 0 ? "AXISLY_FLEX_MATRIX_V1"
+                : "AXISLY_FLEX_INTRINSIC_MATRIX_V1")
+            << "\",\"cases\":[";
         bool first = true;
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
@@ -85,7 +105,7 @@ int main() {
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(direction, wrap, item, content, lines, rtl);
+            run_case(scenario, direction, wrap, item, content, lines, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

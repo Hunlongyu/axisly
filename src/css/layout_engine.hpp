@@ -24,10 +24,23 @@ struct Constraints {
     bool operator==(const Constraints&) const = default;
 };
 
+struct MarginStrut {
+    Unit positive{}, negative{};
+    [[nodiscard]] static MarginStrut from(Unit value);
+    [[nodiscard]] MarginStrut merged(MarginStrut other) const;
+    [[nodiscard]] Unit resolve(NodeId node) const;
+};
+
+struct BlockMargins {
+    MarginStrut top, bottom;
+    bool through{};
+};
+
 struct Fragment {
     Size size{};
     std::vector<NodeLayout> nodes;
     std::vector<GridTracks> grid_tracks;
+    std::optional<BlockMargins> block_margins;
 };
 
 struct CacheEntry {

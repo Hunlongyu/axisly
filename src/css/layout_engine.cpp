@@ -14,6 +14,19 @@ Unit checked(double value, NodeId id) {
     return static_cast<Unit>(value);
 }
 
+MarginStrut MarginStrut::from(Unit value) {
+    return {std::max(Unit{0}, value), std::min(Unit{0}, value)};
+}
+
+MarginStrut MarginStrut::merged(MarginStrut other) const {
+    return {std::max(positive, other.positive),
+            std::min(negative, other.negative)};
+}
+
+Unit MarginStrut::resolve(NodeId node) const {
+    return checked(static_cast<double>(positive) + negative, node);
+}
+
 Unit edge(const ResolvedEdge& value, NodeId id) {
     if (value.kind == EdgeKind::Numeric) return value.value;
     if (value.kind == EdgeKind::Auto) return 0;
@@ -169,6 +182,26 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
     if (constraints.ignore_preferred_height) box.preferred.height.reset();
     if (node.children.empty()) {
         fragment = leaf(node, constraints, box);
+        if (node.style.display == Display::Block) {
+            const auto margin = edges(box.margin, node.id);
+            const auto decoration = box.vertical_decoration();
+            const bool in_block_flow = node.parent &&
+                (get(*node.parent).style.display == Display::Block
+                    || get(*node.parent).style.display == Display::FlowRoot);
+            const bool through = in_block_flow && !node.measure
+                && node.style.float_side == FloatSide::None
+                && node.style.contain == Contain::None
+                && node.style.overflow_x != Overflow::Hidden
+                && node.style.overflow_x != Overflow::Scroll
+                && node.style.overflow_y != Overflow::Hidden
+                && node.style.overflow_y != Overflow::Scroll
+                && !constraints.known_height && !box.preferred.height
+                && !box.minimum.height.value_or(Unit{0})
+                && decoration && *decoration == 0 && fragment.size.height == 0;
+            fragment.block_margins = BlockMargins{
+                MarginStrut::from(margin.top), MarginStrut::from(margin.bottom),
+                through};
+        }
         stage(id, constraints, fragment);
         return fragment;
     }

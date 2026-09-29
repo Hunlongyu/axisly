@@ -32,7 +32,7 @@
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束与 Flex 自动最小尺寸；跨算法边界未验收 | P1 | 待建：min-max-node |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束可解析，重新排版规则未完整 | P1 | 待建：min-max-node |
 | `aspect_ratio` | 可选宽高比 | 部分：单轴已知的叶子尺寸推导；替换元素规则未完整 | P1 | 待建：aspect-ratio |
-| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 相邻折叠；父子折叠未完整 | P1 | 已建：content-box-and-negative-margin、block-adjacent-margins、grid-auto-margins |
+| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；clear／浮动等复杂组合未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
 | `border` | 四边 Length／Percent／Calc | 部分：共享盒模型解析，差分覆盖固定数值 | P1 | 已建：content-box-and-negative-margin |
 | `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch 与同一行基线；复杂跨行未验收 | P2/P3 | 已建：flex-baseline、grid-baseline |
@@ -88,6 +88,9 @@
 | `block-legacy-text-align`／`block-contain-float` | 传统对齐与 layout containment 包含浮动 |
 | `grid-absolute-area`／`grid-implicit-negative-lines` | Grid 绝对定位区域、隐式轨道序列与负线号 |
 | `grid-row-dense-holes`／`grid-named-line-occurrences` | Dense 补洞与重复具名线起止／span |
+| `block-parent-child-margins`／`block-empty-margin-chain` | 父子边距与空 Block 连锁折叠；断言折叠后的盒边和根相对位置 |
+| `block-negative-margin-chain` | 正负外边距跨空 Block 累积；验证最大正值与最小负值分别保留 |
+| `block-padding-stops-collapse`／`block-fixed-height-collapse` | 垂直 padding 阻断折叠、固定高度仅允许顶部折叠 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -110,8 +113,10 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二十四组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这二十四组的矩形、盒边和滚动条同时经过新原生树差分。轨道尺寸、放置范围、
+目前有 44 字段清单、二十九组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这二十九组的矩形、盒边和滚动条同时经过新原生树差分。
+差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
+轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。
 
 Taffy 0.14 的 `TaffyTree` 对自定义 `calc` 句柄的解析回调固定返回 `0`，

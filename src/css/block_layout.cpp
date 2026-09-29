@@ -11,12 +11,6 @@ struct FloatRegion {
     Unit left{}, right{}, top{}, bottom{};
 };
 
-Unit collapsed_margin(Unit previous, Unit next, NodeId node) {
-    const double positive = std::max<double>(0, std::max(previous, next));
-    const double negative = std::min<double>(0, std::min(previous, next));
-    return checked(positive + negative, node);
-}
-
 Unit clear_bottom(const std::vector<FloatRegion>& floats, ClearSide clear) {
     Unit bottom = 0;
     for (const auto& region : floats) {
@@ -77,8 +71,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
     std::vector<Fragment> fragments(node.children.size());
     std::vector<FloatRegion> floats;
-    Unit cursor = 0, pending_margin = 0;
-    bool has_flow = false;
+    Unit cursor = 0;
+    MarginStrut pending_margin, leading_margin;
+    bool has_flow = false, has_nonempty_flow = false;
+    bool leading_open = true, leading_clear = false;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto child_id = node.children[source];
         const auto& child = get(child_id);
@@ -123,8 +119,26 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 checked(static_cast<double>(float_x) + outer_float_width, child_id),
                 float_y, checked(static_cast<double>(float_y) + outer_float_height, child_id)});
         } else {
-            const Unit separation = has_flow
-                ? collapsed_margin(pending_margin, margin.top, child_id) : margin.top;
+            const MarginStrut child_top = nested.block_margins
+                ? nested.block_margins->top : MarginStrut::from(margin.top);
+            const MarginStrut child_bottom = nested.block_margins
+                ? nested.block_margins->bottom : MarginStrut::from(margin.bottom);
+            const bool child_through = nested.block_margins
+                && nested.block_margins->through;
+            if (leading_open) {
+                if (child.style.clear != ClearSide::None || !floats.empty()) {
+                    leading_clear = true;
+                }
+                if (!leading_clear) {
+                    leading_margin = leading_margin.merged(child_top);
+                    if (child_through) {
+                        leading_margin = leading_margin.merged(child_bottom);
+                    }
+                }
+                if (!child_through) leading_open = false;
+            }
+            const MarginStrut separation_margin = pending_margin.merged(child_top);
+            const Unit separation = separation_margin.resolve(child_id);
             Unit y = checked(static_cast<double>(cursor) + separation, child_id);
             if (child.style.clear != ClearSide::None) {
                 y = std::max(y, clear_bottom(floats, child.style.clear));
@@ -165,8 +179,13 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             translate(nested,
                 checked(static_cast<double>(x_origin) + x, child_id),
                 checked(static_cast<double>(y_origin) + y, child_id), child_id);
-            cursor = checked(static_cast<double>(y) + nested.size.height, child_id);
-            pending_margin = margin.bottom;
+            if (child_through) {
+                pending_margin = separation_margin.merged(child_bottom);
+            } else {
+                cursor = checked(static_cast<double>(y) + nested.size.height, child_id);
+                pending_margin = child_bottom;
+                has_nonempty_flow = true;
+            }
             has_flow = true;
         }
         const auto [relative_x, relative_y] = relative_offset(child,
@@ -174,11 +193,56 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         translate(nested, relative_x, relative_y, child_id);
         fragments[source] = std::move(nested);
     }
-    Unit content_height = has_flow
-        ? checked(static_cast<double>(cursor) + pending_margin, node.id) : Unit{0};
     const auto scroll_container = [](Overflow overflow) {
         return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
     };
+    const auto own_margin = edges(box.margin, node.id);
+    BlockMargins margins{MarginStrut::from(own_margin.top),
+                         MarginStrut::from(own_margin.bottom), false};
+    const bool block_flow_parent = node.parent
+        && (get(*node.parent).style.display == Display::Block
+            || get(*node.parent).style.display == Display::FlowRoot);
+    const bool independent = node.style.display != Display::Block
+        || node.style.contain != Contain::None
+        || scroll_container(node.style.overflow_x)
+        || scroll_container(node.style.overflow_y)
+        || node.style.float_side != FloatSide::None;
+    const bool collapse_top = block_flow_parent && !independent
+        && border.top == 0 && padding.top == 0 && !leading_clear;
+    const bool collapse_bottom = block_flow_parent && !independent
+        && border.bottom == 0 && padding.bottom == 0
+        && !preferred_height && !box.minimum.height.value_or(Unit{0});
+    const bool through = collapse_top && collapse_bottom
+        && !has_nonempty_flow && floats.empty();
+    Unit top_shift = 0;
+    if (through) {
+        const MarginStrut all = margins.top.merged(margins.bottom)
+            .merged(pending_margin);
+        margins.top = all;
+        margins.bottom = all;
+        margins.through = true;
+        top_shift = pending_margin.resolve(node.id);
+    } else if (collapse_top && has_flow) {
+        margins.top = margins.top.merged(leading_margin);
+        top_shift = leading_margin.resolve(node.id);
+    }
+    if (collapse_bottom && !through && has_flow) {
+        margins.bottom = margins.bottom.merged(pending_margin);
+    }
+    Unit content_height = through ? Unit{0}
+        : has_flow ? checked(static_cast<double>(cursor)
+            + (collapse_bottom ? 0 : pending_margin.resolve(node.id))
+            - top_shift, node.id) : Unit{0};
+    if (top_shift != 0) {
+        for (std::size_t source = 0; source < node.children.size(); ++source) {
+            const auto& child = get(node.children[source]);
+            if (child.style.display != Display::None
+                && child.style.position != Position::Absolute
+                && child.style.float_side == FloatSide::None) {
+                translate(fragments[source], 0, -top_shift, child.id);
+            }
+        }
+    }
     if (node.style.display == Display::FlowRoot
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
@@ -194,6 +258,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
+    result.nodes.front().margin.top = margins.top.resolve(node.id);
+    result.nodes.front().margin.bottom = margins.bottom.resolve(node.id);
+    result.block_margins = margins;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto id = node.children[source];
         if (get(id).style.position == Position::Absolute

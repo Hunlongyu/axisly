@@ -31,6 +31,11 @@ CASES = (
     "grid-implicit-negative-lines",
     "grid-row-dense-holes",
     "grid-named-line-occurrences",
+    "block-parent-child-margins",
+    "block-empty-margin-chain",
+    "block-negative-margin-chain",
+    "block-padding-stops-collapse",
+    "block-fixed-height-collapse",
     "mixed-block-flex-grid",
 )
 
@@ -55,7 +60,16 @@ def main() -> None:
             ).stdout
         )
         reference = by_name[name]
-        expected = {node["id"]: node["rect"] for node in reference["nodes"]}
+        reference_absolute = []
+        for node in reference["nodes"]:
+            x, y, width, height = node["rect"]
+            if node["parent"] is not None:
+                parent_x, parent_y, _, _ = reference_absolute[node["parent"]]
+                x += parent_x
+                y += parent_y
+            reference_absolute.append([x, y, width, height])
+        expected = {node["id"]: rect for node, rect in
+                    zip(reference["nodes"], reference_absolute, strict=True)}
         actual = {node["id"]: node["rect"] for node in native["nodes"]}
         assert actual.keys() == expected.keys(), (name, actual.keys(), expected.keys())
         for node_id, rect in actual.items():

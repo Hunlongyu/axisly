@@ -547,6 +547,108 @@ void grid_named_line_occurrences() {
         {{230, root}, {231, first}, {232, second}});
 }
 
+void block_parent_child_margins() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style parent_style = root_style;
+    parent_style.box.margin.top = Length::length(5);
+    parent_style.box.margin.bottom = Length::length(7);
+    const auto parent = tree.create_node(parent_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size.height = Length::length(10);
+    child_style.box.margin.top = Length::length(20);
+    child_style.box.margin.bottom = Length::length(15);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, parent);
+    tree.append_child(parent, child);
+    print("block-parent-child-margins", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{240, root}, {241, parent}, {242, child}});
+}
+
+void block_empty_margin_chain() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style empty_style;
+    empty_style.display = Display::Block;
+    empty_style.box.margin.top = Length::length(5);
+    empty_style.box.margin.bottom = Length::length(7);
+    const auto parent = tree.create_node(empty_style);
+    empty_style.box.margin.top = Length::length(20);
+    empty_style.box.margin.bottom = Length::length(15);
+    const auto empty = tree.create_node(empty_style);
+    Style next_style;
+    next_style.display = Display::Block;
+    next_style.box.size.height = Length::length(10);
+    next_style.box.margin.top = Length::length(8);
+    const auto next = tree.create_node(next_style);
+    tree.append_child(root, parent);
+    tree.append_child(parent, empty);
+    tree.append_child(root, next);
+    print("block-empty-margin-chain", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{250, root}, {251, parent}, {252, empty}, {253, next}});
+}
+
+void block_negative_margin_chain() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style empty_style;
+    empty_style.display = Display::Block;
+    empty_style.box.margin.top = Length::length(20);
+    empty_style.box.margin.bottom = Length::length(-30);
+    const auto empty = tree.create_node(empty_style);
+    Style next_style;
+    next_style.display = Display::Block;
+    next_style.box.size.height = Length::length(10);
+    next_style.box.margin.top = Length::length(15);
+    const auto next = tree.create_node(next_style);
+    tree.append_child(root, empty);
+    tree.append_child(root, next);
+    print("block-negative-margin-chain", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{260, root}, {261, empty}, {262, next}});
+}
+
+void block_margin_guard(bool fixed_height) {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style parent_style = root_style;
+    if (fixed_height) parent_style.box.size.height = Length::length(50);
+    else {
+        parent_style.box.padding.top = Length::length(3);
+        parent_style.box.padding.bottom = Length::length(4);
+    }
+    const auto parent = tree.create_node(parent_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size.height = Length::length(10);
+    child_style.box.margin.top = Length::length(20);
+    child_style.box.margin.bottom = Length::length(15);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, parent);
+    tree.append_child(parent, child);
+    const char* name = fixed_height
+        ? "block-fixed-height-collapse" : "block-padding-stops-collapse";
+    const int first_id = fixed_height ? 280 : 270;
+    print(name, tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{first_id, root}, {first_id + 1, parent}, {first_id + 2, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -606,6 +708,11 @@ int main(int argc, char** argv) {
         else if (name == "grid-implicit-negative-lines") grid_implicit_negative_lines();
         else if (name == "grid-row-dense-holes") grid_row_dense_holes();
         else if (name == "grid-named-line-occurrences") grid_named_line_occurrences();
+        else if (name == "block-parent-child-margins") block_parent_child_margins();
+        else if (name == "block-empty-margin-chain") block_empty_margin_chain();
+        else if (name == "block-negative-margin-chain") block_negative_margin_chain();
+        else if (name == "block-padding-stops-collapse") block_margin_guard(false);
+        else if (name == "block-fixed-height-collapse") block_margin_guard(true);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

@@ -149,7 +149,7 @@ foreach(space IN ITEMS max-content min-content)
     set_tests_properties(axisly.reference.flex_factors_${space} PROPERTIES LABELS reference TIMEOUT 120)
 endforeach()
 
-foreach(space IN ITEMS definite max-content min-content)
+foreach(space IN ITEMS definite max-content min-content auto-definite)
     add_test(NAME axisly.reference.mixed_nested_${space} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_nested.py"
         --scenario "${space}"

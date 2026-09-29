@@ -44,7 +44,7 @@
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；Flex 自动容器固有尺寸阶段以零为 `calc` 间隙百分比基准，保留固定长度项，尺寸确定后重算主轴分配；Grid 自动容器先按零间隙确定轨道尺寸，再重算偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、calc-flex-gap-basis／auto-gap、calc-grid-gap-item／auto-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；ColumnReverse 的居中、换列、RTL 反向换列与自动外边距已差分，复杂尺寸交互未验收 | P2 | 已建：flex-row-grow、flex-column-reverse-center／wrap／rtl-wrap-reverse／auto-margin |
-| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；`min-content` 下允许换行时以最大单项尺寸确定初始主轴宽度并重新分行；分行采用受项目 min/max 约束的假设尺寸，反向换行溢出时应用行对齐回退；五种策略均与四种主轴方向、RTL、项目和内容对齐在三种尺寸查询下差分；平衡换行的可变内容和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse、test_flex_matrix.py、test_flex_bounds.py |
+| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；确定父级空间下先按可用空间和最大尺寸分行，再由这些行确定容器尺寸，最小尺寸不放宽初次分行上限；`min-content` 下允许换行时以最大单项尺寸确定初始主轴宽度并重新分行；分行采用受项目 min/max 约束的假设尺寸，反向换行溢出时应用行对齐回退；五种策略均与四种主轴方向、RTL、项目和内容对齐在三种尺寸查询下差分；平衡换行的可变内容和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、test_flex_matrix.py、test_flex_bounds.py、test_mixed_nested.py |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；两种 Balance 策略在最少一、二、三行时完成固定尺寸组合差分，更多项目和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance、test_flex_matrix.py |
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分，显式与百分比 basis 已加入三种尺寸查询下的方向／五种换行策略／RTL 组合；固有尺寸贡献与实际基础尺寸分离，自动尺寸容器在 `max-content` 下保持原分行；Flex／Grid 混合树的测量叶节点已覆盖三种尺寸查询，更多嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis、test_flex_factors.py、test_mixed_nested.py |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；四向主轴、五种换行策略、LTR／RTL 与显式／百分比 basis 已组合差分；复杂嵌套仍不足。Taffy 0.14 在系数和小于 1 时对初始剩余空间缩放后再次扣除行间隙；该版本差分已固定，但与 W3C 步骤 9.7 的规则不同，见下文差异记录 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze、test_flex_factors.py |
@@ -215,8 +215,9 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 平衡策略分别设置最少一、二、三行。该测试比较每个
 节点的矩形、盒边、滚动条与溢出，项目尺寸固定。
 `test_flex_bounds.py` 另外组合四种主轴方向、三种普通换行、四组项目主轴
-尺寸上下界和 LTR／RTL，共 96 组；覆盖 flex 基础尺寸、假设尺寸、冻结与
-反向换行溢出的交互。
+尺寸上下界、LTR／RTL，以及明确尺寸、自动尺寸配确定父级空间、自动尺寸
+受最大／最小主轴尺寸约束，共 384 组；覆盖 flex 基础尺寸、假设尺寸、
+冻结与反向换行溢出的交互。
 `test_flex_factors.py` 在确定尺寸、`max-content`、`min-content` 三种查询下
 各组合四种主轴方向、五种换行／平衡策略、六组 grow／shrink／flex-basis
 输入和 LTR／RTL，共 720 组；特别覆盖系数和小于 1 与行间隙交互，以及固有尺寸
@@ -224,7 +225,8 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 
 `test_mixed_nested.py` 组合外层 Flex／Grid、三种项目对齐、四种主轴方向／
 自动流、三种换行／轨道模板、内层 Flex／Grid、两种内层排列方向、两类内层
-basis／增长策略、LTR／RTL 与三种尺寸查询，共 3,456 组。叶节点的最小内容与首选
+basis／增长策略、LTR／RTL 与明确尺寸、自动尺寸配确定父级空间、
+`max-content`、`min-content` 四种尺寸情形，共 4,608 组。叶节点的最小内容与首选
 内容尺寸不同；比较嵌套节点、叶节点的盒尺寸与滚动溢出，并对两级 Grid
 比较轨道起止位置、显式及隐式范围和项目占用线号，验证固有约束
 传递、交叉轴探测、非拉伸 Grid 子容器的尺寸确定及最终双轴布局。
@@ -282,7 +284,7 @@ LTR／RTL、四种自动流、固定或拉伸项目，以及确定／`max-conten
 按原始数字端点估算，之后再解析具名线并扩张占用范围。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 新 CSS `GridTracks` 同时报告实际轨道尺寸、边框盒相对位置、显式轨道数、
-隐式范围和每个在流项目的起止线。上述矩阵、3,456 组混合嵌套树和
+隐式范围和每个在流项目的起止线。上述矩阵、4,608 组混合嵌套树和
 二百六十三组固定树输入已比较这些诊断；详细差分还发现并固定了空 Grid
 误建隐式轨道、非拉伸纵横比项目没有扩大列轨道的问题。
 复杂轨道取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

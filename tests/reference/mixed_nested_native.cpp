@@ -108,14 +108,15 @@ void run_case(std::size_t scenario, std::size_t root_kind,
     tree.append_child(root, measured_child);
 
     const auto prefix = scenario == 0 ? "mixed-nested-"
-        : scenario == 1 ? "mixed-nested-max-" : "mixed-nested-min-";
+        : scenario == 1 ? "mixed-nested-max-"
+        : scenario == 2 ? "mixed-nested-min-" : "mixed-nested-auto-";
     const auto name = prefix + std::to_string(root_kind) + '-'
         + std::to_string(root_alignment) + '-'
         + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(nested_kind)
         + '-' + std::to_string(nested_direction)
         + '-' + std::to_string(variant) + '-' + std::to_string(rtl);
-    const auto available = scenario == 0
+    const auto available = scenario == 0 || scenario == 3
         ? AvailableSize{AvailableSpace::definite(row ? 90.0F : 80.0F),
             AvailableSpace::definite(row ? 80.0F : 90.0F)}
         : scenario == 1
@@ -135,7 +136,8 @@ int main(int argc, char** argv) {
             const std::string_view argument = argv[index];
             if (argument == "--details" && !include_grid_details) {
                 include_grid_details = true;
-            } else if ((argument == "--max-content" || argument == "--min-content")
+            } else if ((argument == "--max-content" || argument == "--min-content"
+                        || argument == "--auto-definite")
                        && mode.empty()) {
                 mode = argument;
             } else {
@@ -143,7 +145,7 @@ int main(int argc, char** argv) {
             }
         }
         const std::size_t scenario = mode == "--max-content" ? 1
-            : mode == "--min-content" ? 2 : 0;
+            : mode == "--min-content" ? 2 : mode == "--auto-definite" ? 3 : 0;
         std::cout << "{\"protocol\":\"AXISLY_MIXED_NESTED_V1\",\"cases\":[";
         bool first = true;
         for (std::size_t root_kind = 0; root_kind < 2; ++root_kind)

@@ -32,7 +32,7 @@ void set_bounds(Style& style, std::size_t variant, std::size_t item, bool row) {
     if (variant == 3 && item == 3) minimum = Length::length(26);
 }
 
-void run_case(std::size_t direction, std::size_t wrap,
+void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
               std::size_t variant, std::size_t rtl) {
     const bool row = direction < 2;
     LayoutTree tree;
@@ -41,8 +41,16 @@ void run_case(std::size_t direction, std::size_t wrap,
     root_style.flex_wrap = wraps[wrap];
     root_style.align_items = {ItemPosition::Start};
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
-    root_style.box.size = {Length::length(row ? 72.0F : 68.0F),
-        Length::length(row ? 68.0F : 72.0F)};
+    if (scenario == 0) {
+        root_style.box.size = {Length::length(row ? 72.0F : 68.0F),
+            Length::length(row ? 68.0F : 72.0F)};
+    } else if (scenario == 2) {
+        (row ? root_style.box.max_size.width : root_style.box.max_size.height)
+            = Length::length(40);
+    } else if (scenario == 3) {
+        (row ? root_style.box.min_size.width : root_style.box.min_size.height)
+            = Length::length(80);
+    }
     root_style.box.padding = {Length::length(3), Length::length(3),
         Length::length(3), Length::length(3)};
     root_style.gap = {Length::length(4), Length::length(6)};
@@ -57,7 +65,8 @@ void run_case(std::size_t direction, std::size_t wrap,
         tree.append_child(root, child);
         nodes.emplace_back(static_cast<int>(index) + 2, child);
     }
-    const auto name = "flex-bounds-" + std::to_string(direction) + '-'
+    const auto name = "flex-bounds-" + std::to_string(scenario) + '-'
+        + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(variant) + '-'
         + std::to_string(rtl);
     reference::write_case(std::cout, name,
@@ -70,13 +79,14 @@ int main() {
     try {
         std::cout << "{\"protocol\":\"AXISLY_FLEX_BOUNDS_MATRIX_V1\",\"cases\":[";
         bool first = true;
+        for (std::size_t scenario = 0; scenario < 4; ++scenario)
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
         for (std::size_t variant = 0; variant < 4; ++variant)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(direction, wrap, variant, rtl);
+            run_case(scenario, direction, wrap, variant, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

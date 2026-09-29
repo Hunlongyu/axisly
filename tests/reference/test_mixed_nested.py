@@ -67,8 +67,9 @@ def make_cases(scenario):
              "measure": {"minimum": [12, 9], "preferred": [28, 16]}},
         ]
         prefix = {"definite": "mixed-nested", "max-content": "mixed-nested-max",
-                  "min-content": "mixed-nested-min"}[scenario]
-        available = [width, height] if scenario == "definite" else [scenario, scenario]
+                  "min-content": "mixed-nested-min",
+                  "auto-definite": "mixed-nested-auto"}[scenario]
+        available = [width, height] if scenario in ("definite", "auto-definite") else [scenario, scenario]
         yield {"name": f"{prefix}-{root_kind}-{root_alignment}-{direction}-{wrap}-{nested_kind}-"
                        f"{nested_direction}-{variant}-{rtl}",
                "available": available, "nodes": nodes}
@@ -78,7 +79,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
-    parser.add_argument("--scenario", choices=("definite", "max-content", "min-content"),
+    parser.add_argument("--scenario", choices=("definite", "max-content", "min-content", "auto-definite"),
                         default="definite")
     parser.add_argument("--details", action="store_true")
     args = parser.parse_args()

@@ -15,8 +15,8 @@ CROSS_SIZES = (18, 24, 16, 20)
 
 
 def make_cases():
-    for direction, wrap, variant, rtl in itertools.product(
-        range(4), range(3), range(4), range(2)
+    for scenario, direction, wrap, variant, rtl in itertools.product(
+        range(4), range(4), range(3), range(4), range(2)
     ):
         row = direction < 2
         width, height = (72, 68) if row else (68, 72)
@@ -24,12 +24,17 @@ def make_cases():
             "display": "Flex", "flex_direction": DIRECTIONS[direction],
             "flex_wrap": WRAPS[wrap], "align_items": "Start",
             "direction": "Rtl" if rtl else "Ltr",
-            "size": {"width": width, "height": height},
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
         }
-        nodes = [{"id": 1, "parent": None, "style": root}]
         axis = "width" if row else "height"
+        if scenario == 0:
+            root["size"] = {"width": width, "height": height}
+        elif scenario == 2:
+            root["max_size"] = {axis: 40}
+        elif scenario == 3:
+            root["min_size"] = {axis: 80}
+        nodes = [{"id": 1, "parent": None, "style": root}]
         for index, (main, cross) in enumerate(zip(MAIN_SIZES, CROSS_SIZES, strict=True)):
             style = {"size": {"width": main if row else cross,
                               "height": cross if row else main}}
@@ -45,7 +50,7 @@ def make_cases():
                 style["min_size"] = {axis: 26}
             nodes.append({"id": index + 2, "parent": 0, "style": style})
         yield {
-            "name": f"flex-bounds-{direction}-{wrap}-{variant}-{rtl}",
+            "name": f"flex-bounds-{scenario}-{direction}-{wrap}-{variant}-{rtl}",
             "available": [width, height], "nodes": nodes,
         }
 
@@ -65,7 +70,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_FLEX_BOUNDS_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 96
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 384
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

@@ -9,7 +9,7 @@ from test_flex_matrix import compare
 
 
 DIRECTIONS = ("Row", "RowReverse", "Column", "ColumnReverse")
-WRAPS = ("NoWrap", "Wrap", "WrapReverse")
+WRAPS = ("NoWrap", "Wrap", "WrapReverse", "Balance", "BalanceReverse")
 GROW_BASES = (12, 14, 10, 8)
 SHRINK_BASES = (32, 28, 20, 15)
 CROSS_SIZES = (18, 24, 16, 20)
@@ -17,7 +17,7 @@ CROSS_SIZES = (18, 24, 16, 20)
 
 def make_cases(scenario="definite"):
     for direction, wrap, variant, rtl in itertools.product(
-        range(4), range(3), range(6), range(2)
+        range(4), range(len(WRAPS)), range(6), range(2)
     ):
         row = direction < 2
         width, height = (72, 68) if row else (68, 72)
@@ -28,6 +28,8 @@ def make_cases(scenario="definite"):
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
         }
+        if wrap >= 3:
+            root["flex_line_count"] = 2
         if scenario == "definite":
             root["size"] = {"width": width, "height": height}
         nodes = [{"id": 1, "parent": None, "style": root}]
@@ -78,7 +80,7 @@ def main():
     assert native["protocol"] == ("AXISLY_FLEX_FACTORS_MATRIX_V1"
                                   if args.scenario == "definite"
                                   else "AXISLY_FLEX_FACTORS_INTRINSIC_V1")
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 144
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 240
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

@@ -17,6 +17,7 @@ constexpr std::array directions{
 };
 constexpr std::array wraps{
     FlexWrap::NoWrap, FlexWrap::Wrap, FlexWrap::WrapReverse,
+    FlexWrap::Balance, FlexWrap::BalanceReverse,
 };
 constexpr std::array grow_bases{12.0F, 14.0F, 10.0F, 8.0F};
 constexpr std::array shrink_bases{32.0F, 28.0F, 20.0F, 15.0F};
@@ -60,6 +61,7 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     Style root_style;
     root_style.flex_direction = directions[direction];
     root_style.flex_wrap = wraps[wrap];
+    if (wrap >= 3) root_style.flex_line_count = 2;
     root_style.align_items = {ItemPosition::Start};
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
     if (scenario == 0) {

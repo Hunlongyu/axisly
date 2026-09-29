@@ -2859,6 +2859,39 @@ void mixed_tree() {
         {AvailableSpace::definite(400), AvailableSpace::max_content()}),
         {{10, root}, {11, flex}, {12, grid}, {13, leaf}, {14, other}});
 }
+
+void wpt_flex_case(std::string_view name) {
+    const bool scrolling = name == "wpt-flex-cross-scroll";
+    LayoutTree tree;
+    Style container;
+    container.display = Display::Flex;
+    container.box.size.width = Length::length(scrolling ? 200.0F : 300.0F);
+    const auto root = tree.create_node(container);
+    Style first_style, second_style;
+    if (scrolling) {
+        for (auto* style : {&first_style, &second_style}) {
+            style->box.size.height = Length::length(200);
+            style->flex_grow = 1;
+            style->flex_shrink = 1;
+            style->flex_basis = Length::length(0);
+            style->overflow_x = Overflow::Scroll;
+            style->overflow_y = Overflow::Scroll;
+        }
+    } else {
+        first_style.box.size = {Length::length(300), Length::length(50)};
+        first_style.flex_shrink = 2;
+        second_style.box.size = {Length::length(200), Length::length(50)};
+    }
+    const auto first = tree.create_node(first_style);
+    const auto second = tree.create_node(second_style);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    const int base = scrolling ? 8000 : 8010;
+    print(scrolling ? "wpt-flex-cross-scroll" : "wpt-flex-scaled-shrink",
+        tree.compute(root, {AvailableSpace::definite(scrolling ? 200.0F : 300.0F),
+            AvailableSpace::max_content()}),
+        {{base, root}, {base + 1, first}, {base + 2, second}});
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -3104,6 +3137,8 @@ int main(int argc, char** argv) {
             || name == "block-float-negative-trailing")
             block_float_negative_margin_case(name);
         else if (name == "mixed-block-flex-grid") mixed_tree();
+        else if (name == "wpt-flex-cross-scroll"
+            || name == "wpt-flex-scaled-shrink") wpt_flex_case(name);
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;
     } catch (const std::exception& error) {

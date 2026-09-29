@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>WPT Flex scaled shrink geometry</title>
+<style>
+  body { margin: 0; }
+  #flex { display: flex; width: 300px; }
+  #flex > div { height: 50px; }
+  #first { flex: 0 2 auto; width: 300px; }
+  #second { width: 200px; }
+</style>
+<div id="flex"><div id="first"></div><div id="second"></div></div>
+<pre id="result"></pre>
+<script>
+  const root = document.getElementById("flex");
+  const boxes = [root, ...root.children].map(element => {
+    const rect = element.getBoundingClientRect();
+    return [rect.x, rect.y, rect.width, rect.height];
+  });
+  const expected = [[0, 0, 300, 50], [0, 0, 150, 50], [150, 0, 150, 50]];
+  document.getElementById("result").textContent =
+    JSON.stringify(boxes) === JSON.stringify(expected)
+      ? "PASS" : `FAIL boxes=${JSON.stringify(boxes)}`;
+</script>

@@ -273,6 +273,8 @@ CASES = (
     "grid-fixed-max-auto",
     "grid-fixed-max-pair",
     "mixed-block-flex-grid",
+    "wpt-flex-cross-scroll",
+    "wpt-flex-scaled-shrink",
 )
 
 

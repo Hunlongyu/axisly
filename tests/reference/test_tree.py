@@ -704,6 +704,10 @@ class TreeReferenceTests(unittest.TestCase):
                 6981: [0, 20, 20, 10], 6982: [20, 0, 10, 20]},
             "flex-auto-overflow": {6990: [0, 0, 20, 20],
                 6991: [0, -5, 20, 30]},
+            "wpt-flex-cross-scroll": {8000: [0, 0, 200, 200],
+                8001: [0, 0, 100, 200], 8002: [100, 0, 100, 200]},
+            "wpt-flex-scaled-shrink": {8010: [0, 0, 300, 50],
+                8011: [0, 0, 150, 50], 8012: [150, 0, 150, 50]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

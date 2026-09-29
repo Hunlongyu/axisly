@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>WPT Flex scroll cross size geometry</title>
+<style>
+  body { margin: 0; }
+  #flex { display: flex; width: 200px; }
+  #flex > div { height: 200px; flex: 1; overflow: scroll; }
+</style>
+<div id="flex"><div></div><div></div></div>
+<pre id="result"></pre>
+<script>
+  const root = document.getElementById("flex");
+  const boxes = [root, ...root.children].map(element => {
+    const rect = element.getBoundingClientRect();
+    return [rect.x, rect.y, rect.width, rect.height];
+  });
+  const expected = [[0, 0, 200, 200], [0, 0, 100, 200], [100, 0, 100, 200]];
+  document.getElementById("result").textContent =
+    JSON.stringify(boxes) === JSON.stringify(expected)
+      ? "PASS" : `FAIL boxes=${JSON.stringify(boxes)}`;
+</script>

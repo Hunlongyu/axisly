@@ -23,7 +23,7 @@ add_executable(axisly_css_flex_tests css/css_flex_tests.cpp)
 target_link_libraries(axisly_css_flex_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_flex_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_css_flex_tests)
-foreach(behavior IN ITEMS row_grow shrink_and_reverse wrap_and_cross_alignment automatic_minimum balanced_lines balanced_zero_item nested_flex_basis)
+foreach(behavior IN ITEMS row_grow shrink_and_reverse wrap_and_cross_alignment automatic_minimum balanced_lines balanced_zero_item nested_flex_basis wpt_scroll_cross_size wpt_scaled_flex_shrink)
     add_test(NAME axisly.css.flex.${behavior} COMMAND axisly_css_flex_tests ${behavior})
 endforeach()
 

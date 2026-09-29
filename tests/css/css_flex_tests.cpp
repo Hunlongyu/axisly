@@ -185,6 +185,53 @@ void nested_flex_basis() {
         && result.find(sibling)->border_box.x == 80,
         "Nested Flex auto basis must use intrinsic content width");
 }
+
+// WPT css/css-flexbox/layout-algorithm_algo-cross-line-001.html.
+void wpt_scroll_cross_size() {
+    LayoutTree tree;
+    Style container;
+    container.box.size.width = Length::length(200);
+    const auto root = tree.create_node(container);
+    Style item;
+    item.box.size.height = Length::length(200);
+    item.flex_grow = 1;
+    item.flex_shrink = 1;
+    item.flex_basis = Length::length(0);
+    item.overflow_x = Overflow::Scroll;
+    item.overflow_y = Overflow::Scroll;
+    const auto first = tree.create_node(item);
+    const auto second = tree.create_node(item);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    const auto& result = tree.compute(root,
+        {AvailableSpace::definite(200), AvailableSpace::max_content()});
+    require(result.succeeded() && result.find(root)->border_box == Rect{0, 0, 200, 200}
+        && result.find(first)->border_box == Rect{0, 0, 100, 200}
+        && result.find(second)->border_box == Rect{100, 0, 100, 200},
+        "Scrolling Flex items must retain the 200px cross size");
+}
+
+// WPT css/css-flexbox/flex-002.htm: scaled shrink factors are 600:200.
+void wpt_scaled_flex_shrink() {
+    LayoutTree tree;
+    Style container;
+    container.box.size.width = Length::length(300);
+    const auto root = tree.create_node(container);
+    Style first_style;
+    first_style.box.size = {Length::length(300), Length::length(50)};
+    first_style.flex_shrink = 2;
+    Style second_style;
+    second_style.box.size = {Length::length(200), Length::length(50)};
+    const auto first = tree.create_node(first_style);
+    const auto second = tree.create_node(second_style);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    const auto& result = tree.compute(root,
+        {AvailableSpace::definite(300), AvailableSpace::max_content()});
+    require(result.succeeded() && result.find(first)->border_box == Rect{0, 0, 150, 50}
+        && result.find(second)->border_box == Rect{150, 0, 150, 50},
+        "Negative free space must be split by flex-shrink times flex base size");
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -198,6 +245,8 @@ int main(int argc, char** argv) {
         else if (name == "balanced_lines") balanced_lines();
         else if (name == "balanced_zero_item") balanced_zero_item();
         else if (name == "nested_flex_basis") nested_flex_basis();
+        else if (name == "wpt_scroll_cross_size") wpt_scroll_cross_size();
+        else if (name == "wpt_scaled_flex_shrink") wpt_scaled_flex_shrink();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

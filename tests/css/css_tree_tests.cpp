@@ -180,6 +180,49 @@ void cache_and_dirty() {
         && first_calls == 2 && second_calls == 1,
         "Changed root space may reuse children with identical constraints");
 }
+
+void inherited_float_invalidation() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    root_style.box.padding = {Length::length(2), Length::length(2),
+        Length::length(2), Length::length(2)};
+    const auto root = tree.create_node(root_style);
+    Style float_style;
+    float_style.display = Display::Block;
+    float_style.float_side = FloatSide::Left;
+    float_style.box.size = {Length::length(30), Length::length(25)};
+    const auto floating = tree.create_node(float_style);
+    tree.append_child(root, floating);
+    Style block_style;
+    block_style.display = Display::Block;
+    block_style.box.size.height = Length::length(12);
+    block_style.box.margin.left = Length::length(3);
+    block_style.box.margin.top = Length::length(5);
+    const auto block = tree.create_node(block_style);
+    tree.append_child(root, block);
+    Style content_style;
+    content_style.display = Display::Flex;
+    content_style.box.size = {Length::length(10), Length::length(8)};
+    const auto content = tree.create_node(content_style);
+    tree.append_child(block, content);
+
+    const AvailableSize space{AvailableSpace::definite(100),
+        AvailableSpace::max_content()};
+    const auto first = tree.compute(root, space);
+    require(first.succeeded() && first.find(content)->border_box.x == 32,
+        "Descendant formatting context must avoid the ancestor's float");
+    const auto reused = tree.compute(root, space);
+    require(reused.cache_hit && reused.layout_count == 0,
+        "Unchanged shared Block context must reuse the root result");
+    float_style.box.size.width = Length::length(45);
+    tree.set_style(floating, float_style);
+    const auto refreshed = tree.compute(root, space);
+    require(refreshed.succeeded() && !refreshed.cache_hit
+        && refreshed.find(content)->border_box.x == 47,
+        "Changing a float must invalidate inherited placement");
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -191,6 +234,7 @@ int main(int argc, char** argv) {
         else if (name == "intrinsic_queries") intrinsic_queries();
         else if (name == "errors_and_exception_atomicity") errors_and_exception_atomicity();
         else if (name == "cache_and_dirty") cache_and_dirty();
+        else if (name == "inherited_float_invalidation") inherited_float_invalidation();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

@@ -54,6 +54,8 @@ struct CacheEntry {
 };
 using CacheMap = std::unordered_map<std::uint64_t, CacheEntry>;
 
+struct BlockContext;
+
 [[nodiscard]] Unit checked(double value, NodeId id);
 [[nodiscard]] Unit edge(const ResolvedEdge& value, NodeId id);
 [[nodiscard]] Insets edges(const ResolvedEdges& values, NodeId id);
@@ -102,11 +104,13 @@ private:
     bool root_hit_{};
     void stage(NodeId id, const Constraints& constraints, const Fragment& fragment);
     [[nodiscard]] const LayoutNode& get(NodeId id) const;
-    [[nodiscard]] Fragment layout(NodeId id, Constraints constraints, std::size_t depth);
+    [[nodiscard]] Fragment layout(NodeId id, Constraints constraints, std::size_t depth,
+                                  BlockContext* block_context = nullptr);
     [[nodiscard]] Fragment leaf(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box);
     [[nodiscard]] Fragment block(const LayoutNode& node, const Constraints& constraints,
-                                 const ResolvedBox& box, std::size_t depth);
+                                 const ResolvedBox& box, std::size_t depth,
+                                 BlockContext* block_context);
     [[nodiscard]] Unit block_content_based_width(const LayoutNode& node,
         AvailableSpace available, std::size_t depth);
     [[nodiscard]] Fragment flex(const LayoutNode& node, const Constraints& constraints,

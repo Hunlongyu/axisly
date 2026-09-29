@@ -57,6 +57,11 @@ target_link_libraries(axisly_mixed_nested_native PRIVATE axisly::axisly)
 set_target_properties(axisly_mixed_nested_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_mixed_nested_native)
 
+add_executable(axisly_block_float_matrix_native block_float_matrix_native.cpp)
+target_link_libraries(axisly_block_float_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_block_float_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_block_float_matrix_native)
+
 add_executable(axisly_grid_matrix_native grid_matrix_native.cpp)
 target_link_libraries(axisly_grid_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_grid_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
@@ -136,6 +141,12 @@ foreach(space IN ITEMS definite max-content min-content)
         --taffy "${taffy_tree_output}")
     set_tests_properties(axisly.reference.mixed_nested_${space} PROPERTIES LABELS reference TIMEOUT 120)
 endforeach()
+
+add_test(NAME axisly.reference.block_float_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_block_float_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_block_float_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.block_float_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_matrix.py"

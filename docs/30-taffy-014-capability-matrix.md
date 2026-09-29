@@ -24,8 +24,8 @@
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 与 Grid 单轨道自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding、grid-scroll-automatic-minimum |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出范围与子项组合仍需差分 | P4 | 已建：flex-scrollbar-reservation、overflow-scroll-padding |
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；Layout／Content 抑制基线，Paint 保留基线；溢出细节仍未完整 | P4 | 已建：block-contain-float、nested-block／flex／grid-layout／paint-contain-baseline |
-| `float` | None／Left／Right，Block 子项 | 部分：独立浮动区域模块计算左右浮动、clear、不同高度的纵向空隙、FlowRoot／Flex／Grid／滚动容器旁的剩余宽度及宽度不足时的下移；FlowRoot 负外边距在浮动盒旁受边缘约束，移到下方后可越过容器边缘；自动宽度浮动 Block 查询子树固有宽度并累计内部浮动贡献；嵌套包含块及完整 CSS 浮动规则未验收 | P4 | 已建：block-float-clear、block-float-flow-root、block-float-fixed-wrap、block-float-both-sides、block-float-vertical-hole、block-float-negative-below、block-float-intrinsic-child、block-float-intrinsic-pair、block-float-intrinsic-flex、block-float-intrinsic-grid |
-| `clear` | None／Left／Right／Both | 部分：普通块按左右浮动底部清除；浮动盒自身清除按 Taffy 0.14 的已有浮动底部下移；复杂折叠未验收 | P4 | 已建：block-float-clear、block-float-self-clear |
+| `float` | None／Left／Right，Block 子项 | 部分：独立浮动区域模块计算左右浮动、clear、不同高度的纵向空隙、FlowRoot／Flex／Grid／滚动容器旁的剩余宽度及宽度不足时的下移；普通 Block 后代共享祖先浮动上下文，已验证后代自身浮动及缓存失效；FlowRoot 负外边距在浮动盒旁受边缘约束，移到下方后可越过容器边缘；自动宽度浮动 Block 查询子树固有宽度并累计内部浮动贡献；更深层嵌套及完整 CSS 浮动规则未验收 | P4 | 已建：block-float-clear、block-float-flow-root、block-float-fixed-wrap、block-float-both-sides、block-float-vertical-hole、block-float-negative-below、block-float-intrinsic-child、block-float-intrinsic-pair、block-float-intrinsic-flex、block-float-intrinsic-grid、block-float-matrix、inherited-float-invalidation |
+| `clear` | None／Left／Right／Both | 部分：普通块按左右浮动底部清除；浮动盒自身清除按 Taffy 0.14 的已有浮动底部下移；双侧浮动与跨层普通 Block 后代组合已差分，复杂折叠未验收 | P4 | 已建：block-float-clear、block-float-self-clear、block-float-matrix |
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；绝对定位自动宽度 Block 查询内容并包含内部浮动；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-block-auto-static、absolute-block-auto-floats、absolute-flex-static-center、absolute-grid-static-center |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；百分比偏移已覆盖 Block／Flex／Grid、边框内包含块和 Grid 指定区域；复杂百分比循环未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint、absolute-percent-basic、absolute-percent-border、absolute-percent-grid-area |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；独立 calc 参考树验证叶子双轴及嵌套 Block／Flex／Grid 的确定基准计算；复杂容器固有尺寸与循环百分比未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width、calc-leaf-size／indefinite／partial-basis、calc-block-child、calc-flex-gap-basis、calc-grid-gap-item；待建：intrinsic-size |
@@ -225,6 +225,14 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 basis／增长策略、LTR／RTL 与三种尺寸查询，共 3,456 组。叶节点的最小内容与首选
 内容尺寸不同；比较嵌套节点、叶节点的盒尺寸与滚动溢出，验证固有约束
 传递、交叉轴探测、非拉伸 Grid 子容器的尺寸确定及最终双轴布局。
+
+`test_block_float_matrix.py` 生成 320 组 Block／Float 组合：根容器 Block／
+FlowRoot、左右双侧浮动、四种 `clear`、普通 Block／FlowRoot／Flex／Grid
+跟随节点、自动／固定宽度与 LTR／RTL；另有 64 组普通 Block 后代的浮动、
+padding、外边距和独立格式化上下文交互。普通 Block 后代使用共享浮动上下文，
+FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚动溢出。
+`inherited_float_invalidation` 验证祖先浮动尺寸修改后，后代布局与缓存失效。
+复杂外边距折叠和更多深层嵌套仍待验收。
 
 `test_grid_matrix.py` 生成 2,646 组 Grid 组合：七类双轨道模板分别用于行列，
 三种横向对齐、三种纵向对齐、LTR／RTL，以及确定尺寸、`max-content`、

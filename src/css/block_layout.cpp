@@ -22,7 +22,8 @@ bool establishes_formatting_context(const LayoutNode& node) {
 } // namespace
 
 Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
-                       const ResolvedBox& box, std::size_t depth) {
+                       const ResolvedBox& box, std::size_t depth,
+                       BlockContext* block_context) {
     const auto decoration_width = box.horizontal_decoration();
     const auto decoration_height = box.vertical_decoration();
     if (!decoration_width || !decoration_height) {
@@ -74,7 +75,53 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
     std::vector<Fragment> fragments(node.children.size());
     std::vector<std::optional<Unit>> static_block_y(node.children.size());
-    FloatContext floats(content_width);
+    FloatContext owned_floats;
+    BlockContext root_context{owned_floats, 0, 0};
+    BlockContext& context = block_context ? *block_context : root_context;
+    FloatContext& floats = context.floats;
+    const FloatBounds float_bounds{context.origin_x,
+        checked(static_cast<double>(context.origin_x) + content_width, node.id)};
+    const auto inline_position = [&](Fragment& fragment,
+        const ResolvedBox& child_box, Insets margin,
+        const std::optional<FloatSlot>& slot, NodeId child_id) {
+        const bool auto_left = child_box.margin.left.kind == EdgeKind::Auto;
+        const bool auto_right = child_box.margin.right.kind == EdgeKind::Auto;
+        Unit used_left = margin.left, used_right = margin.right;
+        const Unit horizontal_free = checked(static_cast<double>(content_width)
+            - fragment.size.width - margin.left - margin.right, child_id);
+        if (horizontal_free > 0 && (auto_left || auto_right)) {
+            const Unit share = checked(static_cast<double>(horizontal_free)
+                / (static_cast<int>(auto_left) + static_cast<int>(auto_right)), child_id);
+            if (auto_left) used_left = share;
+            if (auto_right) used_right = share;
+            fragment.nodes.front().margin.left = used_left;
+            fragment.nodes.front().margin.right = used_right;
+        }
+        const bool rtl = node.style.box.direction == Direction::Rtl;
+        Unit x = rtl
+            ? checked(static_cast<double>(content_width)
+                - fragment.size.width - used_right, child_id)
+            : used_left;
+        const Unit free_align = checked(static_cast<double>(content_width)
+            - fragment.size.width - used_left - used_right, child_id);
+        if (free_align > 0) {
+            if ((node.style.text_align == TextAlign::LegacyLeft && rtl)
+                || (node.style.text_align == TextAlign::LegacyRight && !rtl)) {
+                x = checked(static_cast<double>(x) + (rtl ? -free_align : free_align),
+                    child_id);
+            } else if (node.style.text_align == TextAlign::LegacyCenter) {
+                x = checked(static_cast<double>(x)
+                    + (rtl ? -static_cast<double>(free_align) / 2
+                        : static_cast<double>(free_align) / 2), child_id);
+            }
+        }
+        if (slot) {
+            x = checked(static_cast<double>(slot->x)
+                + (rtl ? static_cast<double>(slot->width)
+                    - fragment.size.width : 0.0), child_id);
+        }
+        return x;
+    };
     Unit cursor = 0;
     MarginStrut pending_margin, leading_margin;
     bool has_flow = false, has_nonempty_flow = false;
@@ -119,8 +166,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             && establishes_formatting_context(child) && !floats.empty()) {
             const Unit separation = pending_margin.merged(
                 MarginStrut::from(margin.top)).resolve(child_id);
-            Unit estimated_y = checked(static_cast<double>(cursor) + separation,
-                child_id);
+            Unit estimated_y = checked(static_cast<double>(context.origin_y)
+                + cursor + separation, child_id);
             if (child.style.clear != ClearSide::None) {
                 estimated_y = std::max(estimated_y,
                     floats.clear_bottom(child.style.clear));
@@ -131,13 +178,45 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                     child_box.minimum.width, child_box.maximum.width))
                 : child_box.minimum.width;
             formatting_slot = floats.place_formatting_context(estimated_y,
-                margin.left, margin.right, required, child_id);
+                margin.left, margin.right, required, float_bounds, child_id);
+            formatting_slot->x = checked(static_cast<double>(formatting_slot->x)
+                - context.origin_x, child_id);
+            formatting_slot->y = checked(static_cast<double>(formatting_slot->y)
+                - context.origin_y, child_id);
             if (child.style.box.size.width.kind() == LengthKind::Auto
                 && !intrinsic_width) {
                 child_constraints.known_width = formatting_slot->width;
             }
         }
-        auto nested = layout(child_id, child_constraints, depth + 1);
+        const bool same_bfc = child.style.display == Display::Block
+            && child.style.float_side == FloatSide::None
+            && child.style.position != Position::Absolute
+            && !intrinsic_width && !establishes_formatting_context(child);
+        FloatContext probe_floats;
+        BlockContext probe_context{probe_floats, 0, 0};
+        auto nested = layout(child_id, child_constraints, depth + 1,
+            same_bfc && !child.children.empty() ? &probe_context : nullptr);
+        if (same_bfc && !child.children.empty()) {
+            const MarginStrut child_top = nested.block_margins
+                ? nested.block_margins->top : MarginStrut::from(margin.top);
+            Unit y = checked(static_cast<double>(cursor)
+                + pending_margin.merged(child_top).resolve(child_id), child_id);
+            if (child.style.clear != ClearSide::None) {
+                y = std::max(y, checked(static_cast<double>(
+                    floats.clear_bottom(child.style.clear)) - context.origin_y, child_id));
+            }
+            const auto child_border = edges(child_box.border, child_id);
+            const auto child_padding = edges(child_box.padding, child_id);
+            // Same-BFC descendants use the containing block's inline insets.
+            // The child's final border-box x may differ under RTL, auto margins,
+            // or text-align; it does not redefine the float coordinate space.
+            BlockContext child_context{floats,
+                checked(static_cast<double>(context.origin_x) + margin.left
+                    + child_border.left + child_padding.left, child_id),
+                checked(static_cast<double>(context.origin_y) + y
+                    + child_border.top + child_padding.top, child_id)};
+            nested = layout(child_id, child_constraints, depth + 1, &child_context);
+        }
         if (child.style.float_side != FloatSide::None) {
             const Unit outer_float_width = checked(static_cast<double>(nested.size.width)
                 + margin.left + margin.right, child_id);
@@ -145,9 +224,13 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 + margin.top + margin.bottom, child_id);
             const auto [float_x, float_y] = floats.place_float(
                 child.style.float_side, child.style.clear, outer_float_width,
-                outer_float_height, cursor, child_id);
-            const Unit left = checked(static_cast<double>(float_x) + margin.left, child_id);
-            const Unit top = checked(static_cast<double>(float_y) + margin.top, child_id);
+                outer_float_height,
+                checked(static_cast<double>(context.origin_y) + cursor, child_id),
+                float_bounds, child_id);
+            const Unit left = checked(static_cast<double>(float_x)
+                - context.origin_x + margin.left, child_id);
+            const Unit top = checked(static_cast<double>(float_y)
+                - context.origin_y + margin.top, child_id);
             translate(nested,
                 checked(static_cast<double>(x_origin) + left, child_id),
                 checked(static_cast<double>(y_origin) + top, child_id), child_id);
@@ -176,41 +259,12 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             const Unit separation = separation_margin.resolve(child_id);
             Unit y = checked(static_cast<double>(cursor) + separation, child_id);
             if (child.style.clear != ClearSide::None) {
-                y = std::max(y, floats.clear_bottom(child.style.clear));
+                y = std::max(y, checked(static_cast<double>(
+                    floats.clear_bottom(child.style.clear)) - context.origin_y, child_id));
             }
             if (formatting_slot) y = std::max(y, formatting_slot->y);
-            const bool auto_left = child_box.margin.left.kind == EdgeKind::Auto;
-            const bool auto_right = child_box.margin.right.kind == EdgeKind::Auto;
-            Unit used_left = margin.left, used_right = margin.right;
-            const Unit horizontal_free = checked(static_cast<double>(content_width)
-                - nested.size.width - margin.left - margin.right, child_id);
-            if (horizontal_free > 0 && (auto_left || auto_right)) {
-                const Unit share = checked(static_cast<double>(horizontal_free)
-                    / (static_cast<int>(auto_left) + static_cast<int>(auto_right)), child_id);
-                if (auto_left) used_left = share;
-                if (auto_right) used_right = share;
-                nested.nodes.front().margin.left = used_left;
-                nested.nodes.front().margin.right = used_right;
-            }
-            Unit x = node.style.box.direction == Direction::Rtl
-                ? checked(static_cast<double>(content_width)
-                    - nested.size.width - used_right, child_id)
-                : used_left;
-            const Unit free_align = checked(static_cast<double>(content_width)
-                - nested.size.width - used_left - used_right, child_id);
-            if (free_align > 0) {
-                const bool rtl = node.style.box.direction == Direction::Rtl;
-                if ((node.style.text_align == TextAlign::LegacyLeft && rtl)
-                    || (node.style.text_align == TextAlign::LegacyRight && !rtl)) {
-                    x = checked(static_cast<double>(x) + (rtl ? -free_align : free_align),
-                        child_id);
-                } else if (node.style.text_align == TextAlign::LegacyCenter) {
-                    x = checked(static_cast<double>(x)
-                        + (rtl ? -static_cast<double>(free_align) / 2
-                            : static_cast<double>(free_align) / 2), child_id);
-                }
-            }
-            if (formatting_slot) x = formatting_slot->x;
+            const Unit x = inline_position(nested, child_box, margin,
+                formatting_slot, child_id);
             translate(nested,
                 checked(static_cast<double>(x_origin) + x, child_id),
                 checked(static_cast<double>(y_origin) + y, child_id), child_id);
@@ -277,19 +331,22 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             }
         }
     }
-    if (!node.parent || node.style.display == Display::FlowRoot
+    const bool contains_floats = !node.parent || node.style.display == Display::FlowRoot
         || node.style.position == Position::Absolute
         || node.style.float_side != FloatSide::None
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
-        || scroll_container(node.style.overflow_y)) {
-        content_height = std::max(content_height, floats.maximum_bottom());
-    }
+        || scroll_container(node.style.overflow_y);
     Size candidate{
         outer_width,
         preferred_height ? *preferred_height
             : checked(static_cast<double>(content_height) + *flow_decoration_height, node.id),
     };
+    if (contains_floats && !preferred_height) {
+        candidate.height = std::max(candidate.height, checked(
+            static_cast<double>(y_origin) + floats.maximum_bottom()
+                - context.origin_y, node.id));
+    }
     candidate = constrain_size(candidate, box);
     Fragment result;
     result.size = candidate;

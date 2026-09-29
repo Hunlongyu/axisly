@@ -182,19 +182,22 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
     return result;
 }
 
-Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
+Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
+                        BlockContext* block_context) {
     if (depth > limits_.maximum_depth) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "CSS layout depth exceeded");
     }
     const auto& node = get(id);
     const auto cached = updates_.find(id.value);
-    if (cached != updates_.end() && cached->second.constraints == constraints) {
+    if (!block_context && cached != updates_.end()
+        && cached->second.constraints == constraints) {
         ++hits_;
         if (depth == 1) root_hit_ = true;
         return cached->second.fragment;
     }
     const auto previous = cache_.find(id.value);
-    if (previous != cache_.end() && previous->second.constraints == constraints) {
+    if (!block_context && previous != cache_.end()
+        && previous->second.constraints == constraints) {
         ++hits_;
         if (depth == 1) root_hit_ = true;
         return previous->second.fragment;
@@ -203,7 +206,7 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
     Fragment fragment;
     if (node.style.display == Display::None) {
         fragment = hidden(node, depth);
-        stage(id, constraints, fragment);
+        if (!block_context) stage(id, constraints, fragment);
         return fragment;
     }
     ResolvedBox box;
@@ -249,12 +252,13 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
                 MarginStrut::from(margin.top), MarginStrut::from(margin.bottom),
                 through};
         }
-        stage(id, constraints, fragment);
+        if (!block_context) stage(id, constraints, fragment);
         return fragment;
     }
     switch (node.style.display) {
     case Display::Block:
-    case Display::FlowRoot: fragment = block(node, constraints, box, depth); break;
+    case Display::FlowRoot:
+        fragment = block(node, constraints, box, depth, block_context); break;
     case Display::Flex: fragment = flex(node, constraints, box, depth); break;
     case Display::Grid: fragment = grid(node, constraints, box, depth); break;
     case Display::None: break;
@@ -266,7 +270,7 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
         fragment.nodes.front().first_baseline.reset();
         fragment.nodes.front().last_baseline.reset();
     }
-    stage(id, constraints, fragment);
+    if (!block_context) stage(id, constraints, fragment);
     return fragment;
 }
 

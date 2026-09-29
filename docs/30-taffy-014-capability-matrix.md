@@ -44,7 +44,7 @@
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；Flex 自动容器固有尺寸阶段以零为 `calc` 间隙百分比基准，保留固定长度项，尺寸确定后重算主轴分配；Grid 自动容器先按零间隙确定轨道尺寸，再重算偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、calc-flex-gap-basis／auto-gap、calc-grid-gap-item／auto-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；ColumnReverse 的居中、换列、RTL 反向换列与自动外边距已差分，复杂尺寸交互未验收 | P2 | 已建：flex-row-grow、flex-column-reverse-center／wrap／rtl-wrap-reverse／auto-margin |
-| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；确定父级空间下先按可用空间和最大尺寸分行，再由这些行确定容器尺寸，最小尺寸不放宽初次分行上限；`min-content` 下允许换行时以最大单项尺寸确定初始主轴宽度并重新分行；分行采用受项目 min/max 约束的假设尺寸，反向换行溢出时应用行对齐回退；五种策略均与四种主轴方向、RTL、项目和内容对齐在四种尺寸查询下差分；项目主轴上下界及负外边距与盒边的组合已差分，平衡换行的更多边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、test_flex_matrix.py、test_flex_bounds.py、test_mixed_nested.py |
+| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；自动尺寸容器先按父级可用空间及最大尺寸收集行，最小尺寸大于最大尺寸时采用最小尺寸作为上限；`min-content` 查询无确定上限时每项单独成行，之后保持初次分组；分行采用受项目 min/max 约束的假设尺寸，反向换行溢出时应用行对齐回退；五种策略均与四种主轴方向、RTL、项目和内容对齐在四种尺寸查询下差分；项目主轴上下界及负外边距与盒边的组合已差分，平衡换行的更多边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、test_flex_matrix.py、test_flex_bounds.py、test_mixed_nested.py |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；两种 Balance 策略在最少一、二、三行时完成固定及自动尺寸组合差分，更多项目和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance、test_flex_matrix.py |
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分，显式与百分比 basis 已加入四种尺寸查询下的方向／五种换行策略／RTL 组合；小于盒边的 basis 抬至盒边下限，收缩权重使用扣除 padding 和 border 后的内容盒基准；列向固有贡献先计入负外边距再用 basis 设下限；Flex／Grid 混合树的测量叶节点已覆盖四种尺寸情形，更多嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis、test_flex_factors.py、test_flex_bounds.py、test_mixed_nested.py |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；四向主轴、五种换行策略、LTR／RTL 与显式／百分比 basis 已组合差分；复杂嵌套仍不足。Taffy 0.14 在系数和小于 1 时对初始剩余空间缩放后再次扣除行间隙；该版本差分已固定，但与 W3C 步骤 9.7 的规则不同，见下文差异记录 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze、test_flex_factors.py |
@@ -266,12 +266,17 @@ FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚
 溢出，并比较实际轨道、起止位置和项目占用线号。自动重复计数使用与参考
 实现一致的单精度运算；固有尺寸阶段区分百分比解析基准与可用空间，有限
 增长上限参与最大内容尺寸，`fr` 单位受容器最小／最大尺寸约束。
-`test_grid_triple_span.py` 组合八类三轨道模板、相互重叠的两轨道跨度、
-单格项目的四种插入顺序、行列双轴、LTR／RTL，以及明确尺寸、自动尺寸配
-确定父级空间、`max-content`、`min-content` 四种查询，共 512 组；
+`test_grid_triple_span.py` 组合十二类三轨道模板、相互重叠的两轨道跨度与
+真正跨三轨的项目；该项目的最小尺寸大于首选尺寸，覆盖完整项目集的四种
+插入顺序和五种项目子集。行列双轴、LTR／RTL，以及明确尺寸、自动尺寸配
+确定父级空间、`max-content`、`min-content` 四种查询共 1,728 组；
 全部作为 CTest 差分回归，包含实际轨道尺寸、位置和项目占用线号。
 跨格固有贡献先受单格项目形成的增长上限约束，同批项目只提交各轨道的
-最大计划增量；零内容单格项目不创建有限增长上限。轨道尺寸计算分别传入
+最大计划增量；零内容单格项目不创建有限增长上限。自动最小轨道在
+`max-content` 查询下继续增长基础尺寸；固有尺寸查询下的最小贡献采用受限
+`min-content`。增长上限先按最小内容、再按最大内容贡献分阶段分配，
+有无限增长能力的轨道优先吸收缺额，`fit-content()` 参数限制其增长。
+轨道尺寸计算分别传入
 网格可用空间和容器内部尺寸；自动容器的百分比轨道在容器尺寸确定后
 按 Taffy 的列重算与行基准钳制阶段处理；父级提供确定可用空间时保留
 第一次尺寸结果。根节点的 RTL 位置按确定的可用宽度减去自身宽度计算。

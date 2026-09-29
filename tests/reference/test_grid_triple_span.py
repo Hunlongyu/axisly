@@ -17,12 +17,18 @@ TRACKS = (
     "minmax(10px, 40px) auto 1fr",
     "minmax(20px, max-content) fit-content(30px) auto",
     "20% minmax(5px, 1fr) 30%",
+    "minmax(10px, 50px) minmax(5px, 35px) auto",
+    "min-content max-content auto",
+    "fit-content(20px) fit-content(30px) 1fr",
+    "30% 1fr auto",
 )
-MAIN_SIZES = (80, 75, 30, 22)
-CROSS_SIZES = (20, 25, 15, 15)
-MAIN_PLACES = ((1, 3), (2, 4), (1, 2), (3, 4))
-CROSS_PLACES = ((1, 2), (2, 3), (2, 3), (1, 2))
-ITEM_ORDERS = ((0, 1, 2, 3), (1, 0, 3, 2), (2, 3, 1, 0), (3, 2, 1, 0))
+MAIN_SIZES = (80, 75, 30, 22, 120)
+CROSS_SIZES = (20, 25, 15, 15, 18)
+MAIN_PLACES = ((1, 3), (2, 4), (1, 2), (3, 4), (1, 4))
+CROSS_PLACES = ((1, 2), (2, 3), (2, 3), (1, 2), (1, 3))
+ITEM_ORDERS = ((0, 1, 2, 3, 4), (4, 0, 1, 2, 3),
+               (1, 4, 0, 3, 2), (2, 3, 1, 0, 4),
+               (4,), (0, 4), (1, 4), (0, 1, 4), (2, 3, 4))
 
 
 def make_cases():
@@ -50,6 +56,8 @@ def make_cases():
             nodes.append({"id": index + 2, "parent": 0, "style": {
                 "size": {"width": main if columns else cross,
                           "height": cross if columns else main},
+                **({"min_size": {"width" if columns else "height": 140}}
+                   if source == 4 else {}),
                 "grid_column": {"start": str(col[0]), "end": str(col[1])},
                 "grid_row": {"start": str(row[0]), "end": str(row[1])},
             }})
@@ -69,19 +77,23 @@ def main():
     args = parser.parse_args()
     cases = list(make_cases())
     protocol = "AXISLY_TREE_GRID_DETAILS_V1" if args.details else "AXISLY_TREE_V1"
-    oracle = json.loads(subprocess.run(
-        [args.taffy], input=json.dumps({"protocol": protocol, "cases": cases}),
-        text=True, capture_output=True, check=True
-    ).stdout)
+    oracle_cases = []
+    for offset in range(0, len(cases), 512):
+        oracle = json.loads(subprocess.run(
+            [args.taffy], input=json.dumps({"protocol": protocol,
+                                           "cases": cases[offset:offset + 512]}),
+            text=True, capture_output=True, check=True
+        ).stdout)
+        assert oracle["taffy"] == "0.14.0"
+        oracle_cases.extend(oracle["cases"])
     native = json.loads(subprocess.run(
         [args.axisly] + (["--details"] if args.details else []),
         text=True, capture_output=True, check=True
     ).stdout)
-    assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_GRID_TRIPLE_SPAN_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 512
+    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1728
     failures = []
-    for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
+    for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:
             compare(actual, expected)
             if args.details:

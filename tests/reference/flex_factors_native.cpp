@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -52,7 +53,7 @@ void configure_item(Style& style, std::size_t variant,
     }
 }
 
-void run_case(std::size_t direction, std::size_t wrap,
+void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
               std::size_t variant, std::size_t rtl) {
     const bool row = direction < 2;
     LayoutTree tree;
@@ -61,8 +62,10 @@ void run_case(std::size_t direction, std::size_t wrap,
     root_style.flex_wrap = wraps[wrap];
     root_style.align_items = {ItemPosition::Start};
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
-    root_style.box.size = {Length::length(row ? 72.0F : 68.0F),
-        Length::length(row ? 68.0F : 72.0F)};
+    if (scenario == 0) {
+        root_style.box.size = {Length::length(row ? 72.0F : 68.0F),
+            Length::length(row ? 68.0F : 72.0F)};
+    }
     root_style.box.padding = {Length::length(3), Length::length(3),
         Length::length(3), Length::length(3)};
     root_style.gap = {Length::length(4), Length::length(6)};
@@ -75,18 +78,34 @@ void run_case(std::size_t direction, std::size_t wrap,
         tree.append_child(root, child);
         nodes.emplace_back(static_cast<int>(index) + 2, child);
     }
-    const auto name = "flex-factors-" + std::to_string(direction) + '-'
+    const auto prefix = scenario == 0 ? "flex-factors-"
+        : scenario == 1 ? "flex-factors-max-" : "flex-factors-min-";
+    const auto name = prefix + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(variant) + '-'
         + std::to_string(rtl);
     reference::write_case(std::cout, name,
-        tree.compute(root, {AvailableSpace::definite(row ? 72.0F : 68.0F),
-            AvailableSpace::definite(row ? 68.0F : 72.0F)}), nodes);
+        tree.compute(root, scenario == 0
+            ? AvailableSize{AvailableSpace::definite(row ? 72.0F : 68.0F),
+                AvailableSpace::definite(row ? 68.0F : 72.0F)}
+            : scenario == 1
+                ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
+                : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()}), nodes);
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     try {
-        std::cout << "{\"protocol\":\"AXISLY_FLEX_FACTORS_MATRIX_V1\",\"cases\":[";
+        const std::string_view mode = argc == 2 ? argv[1] : "";
+        if (argc > 2 || (argc == 2 && mode != "--max-content"
+            && mode != "--min-content")) {
+            throw std::invalid_argument("Expected an intrinsic query or no argument");
+        }
+        const std::size_t scenario = mode == "--max-content" ? 1
+            : mode == "--min-content" ? 2 : 0;
+        std::cout << "{\"protocol\":\""
+            << (scenario == 0 ? "AXISLY_FLEX_FACTORS_MATRIX_V1"
+                : "AXISLY_FLEX_FACTORS_INTRINSIC_V1")
+            << "\",\"cases\":[";
         bool first = true;
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
@@ -94,7 +113,7 @@ int main() {
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(direction, wrap, variant, rtl);
+            run_case(scenario, direction, wrap, variant, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

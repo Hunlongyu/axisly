@@ -15,7 +15,7 @@ SHRINK_BASES = (32, 28, 20, 15)
 CROSS_SIZES = (18, 24, 16, 20)
 
 
-def make_cases():
+def make_cases(scenario="definite"):
     for direction, wrap, variant, rtl in itertools.product(
         range(4), range(3), range(6), range(2)
     ):
@@ -25,10 +25,11 @@ def make_cases():
             "display": "Flex", "flex_direction": DIRECTIONS[direction],
             "flex_wrap": WRAPS[wrap], "align_items": "Start",
             "direction": "Rtl" if rtl else "Ltr",
-            "size": {"width": width, "height": height},
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
         }
+        if scenario == "definite":
+            root["size"] = {"width": width, "height": height}
         nodes = [{"id": 1, "parent": None, "style": root}]
         for index in range(4):
             main = SHRINK_BASES[index] if variant in (1, 3) else GROW_BASES[index]
@@ -50,25 +51,33 @@ def make_cases():
             elif variant == 5 and index in (0, 1, 3):
                 style["flex_basis"] = ("25%", "40%", None, "10%")[index]
             nodes.append({"id": index + 2, "parent": 0, "style": style})
-        yield {"name": f"flex-factors-{direction}-{wrap}-{variant}-{rtl}",
-               "available": [width, height], "nodes": nodes}
+        prefix = {"definite": "flex-factors", "max-content": "flex-factors-max",
+                  "min-content": "flex-factors-min"}[scenario]
+        available = [width, height] if scenario == "definite" else [scenario, scenario]
+        yield {"name": f"{prefix}-{direction}-{wrap}-{variant}-{rtl}",
+               "available": available, "nodes": nodes}
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
+    parser.add_argument("--scenario", choices=("definite", "max-content", "min-content"),
+                        default="definite")
     args = parser.parse_args()
-    cases = list(make_cases())
+    cases = list(make_cases(args.scenario))
     oracle = json.loads(subprocess.run(
         [args.taffy], input=json.dumps({"protocol": "AXISLY_TREE_V1", "cases": cases}),
         text=True, capture_output=True, check=True
     ).stdout)
     native = json.loads(subprocess.run(
-        [args.axisly], text=True, capture_output=True, check=True
+        [args.axisly] + ([] if args.scenario == "definite" else ["--" + args.scenario]),
+        text=True, capture_output=True, check=True
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
-    assert native["protocol"] == "AXISLY_FLEX_FACTORS_MATRIX_V1"
+    assert native["protocol"] == ("AXISLY_FLEX_FACTORS_MATRIX_V1"
+                                  if args.scenario == "definite"
+                                  else "AXISLY_FLEX_FACTORS_INTRINSIC_V1")
     assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 144
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):

@@ -43,6 +43,7 @@ struct FlexItem {
     ResolvedBox box;
     Insets margin;
     Unit base{};
+    Unit content_main{};
     Unit target{};
     Unit minimum{};
     std::optional<Unit> maximum;
@@ -50,6 +51,7 @@ struct FlexItem {
     Unit cross{};
     bool auto_main_start{}, auto_main_end{};
     bool auto_cross_start{}, auto_cross_end{};
+    bool scroll_container{};
 };
 
 struct FlexLine {
@@ -170,6 +172,29 @@ ContentAlignment alignment_fallback(ContentAlignment alignment,
 Unit clamped_main_size(const FlexItem& item, double value) {
     if (item.maximum) value = std::min(value, static_cast<double>(*item.maximum));
     return checked(std::max(value, static_cast<double>(item.minimum)), item.id);
+}
+
+Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
+    const auto preferred = axis(item.box.preferred, row, true);
+    const double clamping_basis = preferred
+        ? std::max<double>(item.base, *preferred) : item.base;
+    const double minimum = std::max<double>(item.minimum,
+        item.shrink == 0 ? clamping_basis : item.minimum);
+    const double maximum = std::min<double>(item.maximum.value_or(
+        std::numeric_limits<Unit>::infinity()),
+        item.grow == 0 ? clamping_basis : std::numeric_limits<Unit>::infinity());
+    if (maximum <= minimum) return checked(minimum, item.id);
+    if (preferred && maximum <= *preferred) {
+        return checked(std::max(minimum, maximum), item.id);
+    }
+    if (item.scroll_container) return item.base;
+    double content = preferred.value_or(item.content_main);
+    if (!row) content = std::max(content, static_cast<double>(item.base));
+    content = std::max(content, static_cast<double>(
+        axis(item.box.minimum, row, true).value_or(Unit{0})));
+    if (item.maximum) content = std::min(content,
+        static_cast<double>(*item.maximum));
+    return checked(content, item.id);
 }
 
 void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
@@ -424,13 +449,19 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         const auto& margin_end = row ? child_box.margin.right : child_box.margin.bottom;
         const auto& cross_start = row ? child_box.margin.top : child_box.margin.left;
         const auto& cross_end = row ? child_box.margin.bottom : child_box.margin.right;
-        items.push_back({id, source, child_box, margin, basis, basis,
+        const bool scroll_container = child.style.overflow_x == Overflow::Hidden
+            || child.style.overflow_x == Overflow::Scroll
+            || child.style.overflow_y == Overflow::Hidden
+            || child.style.overflow_y == Overflow::Scroll;
+        items.push_back({id, source, child_box, margin, basis,
+            axis(base_layout.size, row, true), basis,
             minimum.value_or(Unit{0}), maximum, child.style.flex_grow, child.style.flex_shrink,
             axis(base_layout.size, row, false),
             (main_reverse ? margin_end : margin_start).kind == EdgeKind::Auto,
             (main_reverse ? margin_start : margin_end).kind == EdgeKind::Auto,
             (cross_reverse ? cross_end : cross_start).kind == EdgeKind::Auto,
-            (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto});
+            (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto,
+            scroll_container});
     }
 
     auto line_break_limit = main_available;
@@ -449,14 +480,20 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     }
     auto lines = collect_flex_lines(items, row, line_break_limit, main_gap,
         node.style.flex_wrap, node.style.flex_line_count);
+    bool reflow_after_intrinsic = main_query != AvailableKind::MaxContent;
     if (!main_available) {
+        const bool intrinsic_contribution = main_query == AvailableKind::MaxContent
+            || (main_query == AvailableKind::MinContent
+                && node.style.flex_wrap == FlexWrap::NoWrap);
         double desired = 0;
         for (const auto& line : lines) {
             double line_size = line.items.empty() ? 0
                 : static_cast<double>(line.items.size() - 1) * main_gap;
             for (const auto index : line.items) {
                 const auto& item = items[index];
-                line_size += item.base + axis(item.margin, row, true, true)
+                line_size += (intrinsic_contribution
+                    ? intrinsic_item_main_size(item, row) : item.base)
+                    + axis(item.margin, row, true, true)
                     + axis(item.margin, row, true, false);
             }
             desired = std::max(desired, line_size);
@@ -473,16 +510,21 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         }
         const Unit constrained_main = row ? *inner_width : *inner_height;
         if (constrained_main < inner && node.style.flex_wrap != FlexWrap::NoWrap) {
+            reflow_after_intrinsic = true;
             lines = collect_flex_lines(items, row, constrained_main, main_gap,
                 node.style.flex_wrap, node.style.flex_line_count);
         }
     }
     const Unit main_size = row ? *inner_width : *inner_height;
     if (!main_available) {
-        main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
+        const Unit final_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
             main_size, node.id);
-        lines = collect_flex_lines(items, row, main_size, main_gap,
-            node.style.flex_wrap, node.style.flex_line_count);
+        reflow_after_intrinsic |= final_gap != main_gap;
+        main_gap = final_gap;
+        if (reflow_after_intrinsic) {
+            lines = collect_flex_lines(items, row, main_size, main_gap,
+                node.style.flex_wrap, node.style.flex_line_count);
+        }
     }
     for (auto& line : lines) {
         resolve_flexible_lengths(line, items, main_size, main_gap, row);

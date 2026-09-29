@@ -54,6 +54,8 @@ using CacheMap = std::unordered_map<std::uint64_t, CacheEntry>;
 [[nodiscard]] Insets edges(const ResolvedEdges& values, NodeId id);
 [[nodiscard]] Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
                                 Unit first_border, Unit last_border);
+[[nodiscard]] Unit constrain_axis(Unit value, std::optional<Unit> minimum,
+                                  std::optional<Unit> maximum);
 [[nodiscard]] AvailableSpace subtract_decoration(AvailableSpace space, Unit amount);
 [[nodiscard]] ResolvedBox resolve_layout_box(const LayoutNode& node,
     std::optional<Unit> containing_width, std::optional<Unit> containing_height);

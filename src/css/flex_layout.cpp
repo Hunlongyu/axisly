@@ -182,6 +182,14 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     if (!border_width && constraints.available.width.kind == AvailableKind::Definite) {
         border_width = constraints.available.width.value;
     }
+    if (border_width) {
+        *border_width = constrain_axis(*border_width,
+            box.minimum.width, box.maximum.width);
+    }
+    if (border_height) {
+        *border_height = constrain_axis(*border_height,
+            box.minimum.height, box.maximum.height);
+    }
     auto inner_width = border_width
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *deco_width)) : std::nullopt;
     auto inner_height = border_height
@@ -355,8 +363,15 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             desired = std::max(desired, line_size);
         }
         const Unit inner = checked(std::max(0.0, desired), node.id);
-        if (row) { inner_width = inner; border_width = checked(static_cast<double>(inner) + *deco_width, node.id); }
-        else { inner_height = inner; border_height = checked(static_cast<double>(inner) + *deco_height, node.id); }
+        if (row) {
+            border_width = constrain_axis(checked(static_cast<double>(inner)
+                + *deco_width, node.id), box.minimum.width, box.maximum.width);
+            inner_width = std::max(Unit{0}, *border_width - *deco_width);
+        } else {
+            border_height = constrain_axis(checked(static_cast<double>(inner)
+                + *deco_height, node.id), box.minimum.height, box.maximum.height);
+            inner_height = std::max(Unit{0}, *border_height - *deco_height);
+        }
     }
     const Unit main_size = row ? *inner_width : *inner_height;
     for (auto& line : lines) {
@@ -406,12 +421,14 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     double used_cross = lines.empty() ? 0 : static_cast<double>(lines.size() - 1) * cross_gap;
     for (const auto& line : lines) used_cross += line.cross;
     if (row && !border_height) {
-        inner_height = checked(used_cross, node.id);
-        border_height = checked(used_cross + *deco_height, node.id);
+        border_height = constrain_axis(checked(used_cross + *deco_height,
+            node.id), box.minimum.height, box.maximum.height);
+        inner_height = std::max(Unit{0}, *border_height - *deco_height);
     }
     if (!row && !border_width) {
-        inner_width = checked(used_cross, node.id);
-        border_width = checked(used_cross + *deco_width, node.id);
+        border_width = constrain_axis(checked(used_cross + *deco_width,
+            node.id), box.minimum.width, box.maximum.width);
+        inner_width = std::max(Unit{0}, *border_width - *deco_width);
     }
     const Unit cross_size = row ? *inner_height : *inner_width;
     if (lines.size() == 1) lines.front().cross = cross_size;

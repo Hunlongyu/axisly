@@ -52,6 +52,11 @@ CASES = (
     "absolute-flex-static-padding-rtl",
     "absolute-grid-static-padding",
     "absolute-block-static-flow",
+    "block-min-width-before-children",
+    "flex-min-width-before-children",
+    "grid-min-width-before-tracks",
+    "flex-auto-min-height",
+    "grid-auto-min-height",
     "mixed-block-flex-grid",
 )
 

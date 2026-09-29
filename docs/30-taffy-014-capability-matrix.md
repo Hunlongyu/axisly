@@ -29,8 +29,8 @@
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-flex-static-center、absolute-grid-static-center |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；复杂百分比未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint；待建：percent-inset |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束已接入，容器固有尺寸未完整 | P1 | 已建：flex-row-grow；待建：intrinsic-size |
-| `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束与 Flex 自动最小尺寸；跨算法边界未验收 | P1 | 待建：min-max-node |
-| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束可解析，重新排版规则未完整 | P1 | 待建：min-max-node |
+| `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height |
+| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；自动尺寸和复杂重排未完整 | P1 | 待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：单轴已知的叶子尺寸推导；替换元素规则未完整 | P1 | 待建：aspect-ratio |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；clear／浮动等复杂组合未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
@@ -99,6 +99,8 @@
 | `absolute-grid-static-center`／`absolute-grid-static-end` | Grid 绝对定位子项无 inset 时依据项目对齐计算静态位置 |
 | `absolute-block-static-padding`／`absolute-flex-static-padding-rtl`／`absolute-grid-static-padding` | 含 padding 的 Block/Flex 静态位置与 Grid 定位区域边界 |
 | `absolute-block-static-flow` | Block 绝对定位子项在正常流中的静态纵坐标，不占用后续子项空间 |
+| `block-min-width-before-children`／`flex-min-width-before-children`／`grid-min-width-before-tracks` | 三算法在排子项与轨道前应用容器最小宽度 |
+| `flex-auto-min-height`／`grid-auto-min-height` | 自动高度受最小高度约束后重新分配 Flex 交叉轴与 Grid `fr` 轨道 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -121,8 +123,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、四十五组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这四十五组的矩形、盒边和滚动条同时经过新原生树差分。
+目前有 44 字段清单、五十组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这五十组的矩形、盒边和滚动条同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

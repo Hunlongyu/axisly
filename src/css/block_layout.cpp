@@ -60,9 +60,16 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     }
     const auto preferred_width = constraints.known_width ? constraints.known_width : box.preferred.width;
     const auto available_width = constraints.available.width.definite_value();
-    const Unit outer_width = preferred_width.value_or(available_width.value_or(Unit{0}));
+    const Unit outer_width = constrain_axis(
+        preferred_width.value_or(available_width.value_or(Unit{0})),
+        box.minimum.width, box.maximum.width);
     const Unit content_width = std::max(Unit{0}, outer_width - *decoration_width);
-    const auto preferred_height = constraints.known_height ? constraints.known_height : box.preferred.height;
+    auto preferred_height = constraints.known_height
+        ? constraints.known_height : box.preferred.height;
+    if (preferred_height) {
+        *preferred_height = constrain_axis(*preferred_height,
+            box.minimum.height, box.maximum.height);
+    }
     const Unit content_height_basis = preferred_height
         ? std::max(Unit{0}, *preferred_height - *decoration_height) : Unit{0};
     const auto border = edges(box.border, node.id);

@@ -134,6 +134,16 @@ class TreeReferenceTests(unittest.TestCase):
             "absolute-block-static-flow": {510: [0, 0, 100, 100],
                                            511: [0, 0, 100, 20], 512: [0, 35, 20, 10],
                                            513: [0, 35, 100, 20]},
+            "block-min-width-before-children": {600: [0, 0, 200, 40],
+                                                601: [0, 0, 200, 10]},
+            "flex-min-width-before-children": {610: [0, 0, 200, 40],
+                                               611: [0, 0, 200, 10]},
+            "grid-min-width-before-tracks": {620: [0, 0, 200, 40],
+                                             621: [0, 0, 200, 10]},
+            "flex-auto-min-height": {700: [0, 0, 100, 100],
+                                     701: [0, 0, 20, 100]},
+            "grid-auto-min-height": {710: [0, 0, 100, 100],
+                                     711: [0, 0, 20, 100]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

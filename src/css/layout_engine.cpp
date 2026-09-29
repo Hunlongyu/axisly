@@ -44,6 +44,13 @@ Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
     return std::max(Unit{0}, border_size - first_padding - last_padding - first_border - last_border);
 }
 
+Unit constrain_axis(Unit value, std::optional<Unit> minimum,
+                    std::optional<Unit> maximum) {
+    if (maximum) value = std::min(value, *maximum);
+    if (minimum) value = std::max(value, *minimum);
+    return value;
+}
+
 AvailableSpace subtract_decoration(AvailableSpace space, Unit amount) {
     if (space.kind != AvailableKind::Definite) return space;
     return AvailableSpace::definite(std::max(Unit{0}, space.value - amount));

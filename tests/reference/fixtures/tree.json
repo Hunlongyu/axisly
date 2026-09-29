@@ -391,6 +391,46 @@
         {"id": 512, "parent": 0, "style": {"display": "Block", "position": "Absolute", "size": {"width": 20, "height": 10}, "margin": {"top": 5}}},
         {"id": 513, "parent": 0, "style": {"display": "Block", "size": {"height": 20}, "margin": {"top": 15}}}
       ]
+    },
+    {
+      "name": "block-min-width-before-children",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 600, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 40}, "min_size": {"width": 200}}},
+        {"id": 601, "parent": 0, "style": {"display": "Block", "size": {"height": 10}}}
+      ]
+    },
+    {
+      "name": "flex-min-width-before-children",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 610, "parent": null, "style": {"display": "Flex", "size": {"width": 100, "height": 40}, "min_size": {"width": 200}}},
+        {"id": 611, "parent": 0, "style": {"display": "Block", "size": {"height": 10}, "flex_grow": 1}}
+      ]
+    },
+    {
+      "name": "grid-min-width-before-tracks",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 620, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 40}, "min_size": {"width": 200}, "grid_template_columns": "1fr"}},
+        {"id": 621, "parent": 0, "style": {"display": "Block", "size": {"height": 10}}}
+      ]
+    },
+    {
+      "name": "flex-auto-min-height",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 700, "parent": null, "style": {"display": "Flex", "size": {"width": 100}, "min_size": {"height": 100}}},
+        {"id": 701, "parent": 0, "style": {"display": "Block", "size": {"width": 20}}, "measure": {"minimum": [20, 10], "preferred": [20, 10]}}
+      ]
+    },
+    {
+      "name": "grid-auto-min-height",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 710, "parent": null, "style": {"display": "Grid", "size": {"width": 100}, "min_size": {"height": 100}, "grid_template_rows": "1fr"}},
+        {"id": 711, "parent": 0, "style": {"display": "Block", "size": {"width": 20}}, "measure": {"minimum": [20, 10], "preferred": [20, 10]}}
+      ]
     }
   ]
 }

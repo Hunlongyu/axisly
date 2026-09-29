@@ -805,6 +805,49 @@ void absolute_block_static_flow() {
         {{510, root}, {511, first}, {512, absolute}, {513, last}});
 }
 
+void constrained_container(std::string_view name) {
+    const bool block = name == "block-min-width-before-children";
+    const bool flex = name == "flex-min-width-before-children";
+    const int first_id = block ? 600 : flex ? 610 : 620;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = block ? Display::Block : flex ? Display::Flex : Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(40)};
+    root_style.box.min_size.width = Length::length(200);
+    if (!block && !flex) root_style.grid.template_columns = {TrackSizing::fraction(1)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size.height = Length::length(10);
+    if (flex) child_style.flex_grow = 1;
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(40)}),
+        {{first_id, root}, {first_id + 1, child}});
+}
+
+void auto_min_height(std::string_view name) {
+    const bool grid = name == "grid-auto-min-height";
+    const int first_id = grid ? 710 : 700;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = grid ? Display::Grid : Display::Flex;
+    root_style.box.size.width = Length::length(100);
+    root_style.box.min_size.height = Length::length(100);
+    if (grid) root_style.grid.template_rows = {TrackSizing::fraction(1)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size.width = Length::length(20);
+    const auto child = tree.create_node(child_style,
+        [](const MeasureRequest&) { return Measurement{{20, 10}, {}, {}}; });
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{first_id, root}, {first_id + 1, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -885,6 +928,11 @@ int main(int argc, char** argv) {
             || name == "absolute-flex-static-padding-rtl"
             || name == "absolute-grid-static-padding") absolute_static_padding(name);
         else if (name == "absolute-block-static-flow") absolute_block_static_flow();
+        else if (name == "block-min-width-before-children"
+            || name == "flex-min-width-before-children"
+            || name == "grid-min-width-before-tracks") constrained_container(name);
+        else if (name == "flex-auto-min-height"
+            || name == "grid-auto-min-height") auto_min_height(name);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

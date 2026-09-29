@@ -683,6 +683,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     if (!border_width && constraints.available.width.kind == AvailableKind::Definite) {
         border_width = constraints.available.width.value;
     }
+    if (border_width) {
+        *border_width = constrain_axis(*border_width,
+            box.minimum.width, box.maximum.width);
+    }
+    if (border_height) {
+        *border_height = constrain_axis(*border_height,
+            box.minimum.height, box.maximum.height);
+    }
     auto inner_width = border_width
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *decoration_width)) : std::nullopt;
     auto inner_height = border_height
@@ -766,13 +774,29 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         : track_columns.offsets.back();
     const Unit measured_height = track_rows.offsets.empty() ? 0
         : track_rows.offsets.back();
-    if (!border_width) {
-        inner_width = measured_width;
-        border_width = checked(static_cast<double>(measured_width) + *decoration_width, node.id);
+    const bool intrinsic_width = !border_width;
+    const bool intrinsic_height = !border_height;
+    if (intrinsic_width) {
+        border_width = constrain_axis(checked(static_cast<double>(measured_width)
+            + *decoration_width, node.id), box.minimum.width, box.maximum.width);
+        inner_width = std::max(Unit{0}, *border_width - *decoration_width);
     }
-    if (!border_height) {
-        inner_height = measured_height;
-        border_height = checked(static_cast<double>(measured_height) + *decoration_height, node.id);
+    if (intrinsic_height) {
+        border_height = constrain_axis(checked(static_cast<double>(measured_height)
+            + *decoration_height, node.id), box.minimum.height, box.maximum.height);
+        inner_height = std::max(Unit{0}, *border_height - *decoration_height);
+    }
+    if (intrinsic_width && *inner_width != measured_width) {
+        track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+            min_column, max_column, inner_width, column_gap, node.id);
+        collapse_auto_fit(track_columns, columns, placements, true);
+        size_axis(track_columns, contributions, true, inner_width, node.id);
+    }
+    if (intrinsic_height && *inner_height != measured_height) {
+        track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+            min_row, max_row, inner_height, row_gap, node.id);
+        collapse_auto_fit(track_rows, rows, placements, false);
+        size_axis(track_rows, contributions, false, inner_height, node.id);
     }
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);

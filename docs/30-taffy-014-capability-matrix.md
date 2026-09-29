@@ -213,6 +213,11 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 `test_grid_matrix.py` 生成 864 组 Grid 组合：四类双轨道模板分别用于行列，
 三种横向对齐、三种纵向对齐、LTR／RTL，以及确定尺寸、`max-content`、
 `min-content` 三种查询。项目尺寸固定，比较范围与 Flex 组合相同。
+`test_grid_span_matrix.py` 是单独运行的差异审计，增加跨两条行／列轨道的
+项目；192 组中有 64 组尚与 Taffy 不一致，集中在跨 `fr`／fit-content
+轨道时的固有贡献、轨道增长和容器溢出。该审计当前退出失败，不列为已通过
+差分或 CTest 验收。运行时将两个可执行文件分别作为 `--axisly` 和 `--taffy`
+参数传入。修正轨道尺寸阶段后再加入正式回归。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -38,9 +39,8 @@ std::string case_name(std::size_t scenario, std::size_t columns, std::size_t row
         + std::to_string(align) + '-' + std::to_string(rtl);
 }
 
-void run_case(std::size_t scenario, std::size_t columns, std::size_t rows,
-              std::size_t justify, std::size_t align, std::size_t rtl) {
-    LayoutTree tree;
+Style container_style(std::size_t scenario, std::size_t columns,
+                      std::size_t rows, std::size_t rtl) {
     Style root_style;
     root_style.display = Display::Grid;
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
@@ -52,6 +52,21 @@ void run_case(std::size_t scenario, std::size_t columns, std::size_t rows,
     root_style.gap = {Length::length(4), Length::length(6)};
     root_style.grid.template_columns = tracks(columns);
     root_style.grid.template_rows = tracks(rows);
+    return root_style;
+}
+
+AvailableSize available_size(std::size_t scenario) {
+    if (scenario == 0) return {
+        AvailableSpace::definite(120), AvailableSpace::definite(90)};
+    if (scenario == 1) return {
+        AvailableSpace::max_content(), AvailableSpace::max_content()};
+    return {AvailableSpace::min_content(), AvailableSpace::min_content()};
+}
+
+void run_case(std::size_t scenario, std::size_t columns, std::size_t rows,
+              std::size_t justify, std::size_t align, std::size_t rtl) {
+    LayoutTree tree;
+    Style root_style = container_style(scenario, columns, rows, rtl);
     root_style.justify_items = {positions[justify]};
     root_style.align_items = {positions[align]};
     const auto root = tree.create_node(root_style);
@@ -66,28 +81,71 @@ void run_case(std::size_t scenario, std::size_t columns, std::size_t rows,
     }
     reference::write_case(std::cout,
         case_name(scenario, columns, rows, justify, align, rtl),
-        tree.compute(root, scenario == 0
-            ? AvailableSize{AvailableSpace::definite(120), AvailableSpace::definite(90)}
-            : scenario == 1
-                ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
-                : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()}),
-        nodes);
+        tree.compute(root, available_size(scenario)), nodes);
+}
+
+void run_span_case(std::size_t scenario, std::size_t columns,
+                   std::size_t rows, std::size_t mode, std::size_t rtl) {
+    LayoutTree tree;
+    Style root_style = container_style(scenario, columns, rows, rtl);
+    root_style.justify_items = {ItemPosition::Start};
+    root_style.align_items = {ItemPosition::Start};
+    const auto root = tree.create_node(root_style);
+    std::vector<reference::IdentifiedNode> nodes{{1, root}};
+    const std::array sizes = mode == 0
+        ? std::array{Size{70, 20}, Size{25, 30}, Size{15, 15}}
+        : std::array{Size{20, 70}, Size{30, 25}, Size{15, 15}};
+    for (std::size_t index = 0; index < sizes.size(); ++index) {
+        Style child_style;
+        child_style.box.size = {Length::length(sizes[index].width),
+            Length::length(sizes[index].height)};
+        if (mode == 0) {
+            child_style.grid.column = index == 0
+                ? GridPlacement{GridLine::index(1), GridLine::index(3)}
+                : GridPlacement{GridLine::index(static_cast<std::int16_t>(index)),
+                    GridLine::index(static_cast<std::int16_t>(index + 1))};
+            child_style.grid.row = index == 0
+                ? GridPlacement{GridLine::index(1), GridLine::index(2)}
+                : GridPlacement{GridLine::index(2), GridLine::index(3)};
+        } else {
+            child_style.grid.column = index == 0
+                ? GridPlacement{GridLine::index(1), GridLine::index(2)}
+                : GridPlacement{GridLine::index(2), GridLine::index(3)};
+            child_style.grid.row = index == 0
+                ? GridPlacement{GridLine::index(1), GridLine::index(3)}
+                : GridPlacement{GridLine::index(static_cast<std::int16_t>(index)),
+                    GridLine::index(static_cast<std::int16_t>(index + 1))};
+        }
+        const auto child = tree.create_node(child_style);
+        tree.append_child(root, child);
+        nodes.emplace_back(static_cast<int>(index) + 2, child);
+    }
+    const auto name = "grid-span-matrix-" + std::to_string(scenario) + '-'
+        + std::to_string(columns) + '-' + std::to_string(rows) + '-'
+        + std::to_string(mode) + '-' + std::to_string(rtl);
+    reference::write_case(std::cout, name,
+        tree.compute(root, available_size(scenario)), nodes);
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     try {
-        std::cout << "{\"protocol\":\"AXISLY_GRID_MATRIX_V1\",\"cases\":[";
+        const bool spanning = argc == 2 && std::string_view(argv[1]) == "--span";
+        if (argc != 1 && !spanning) throw std::invalid_argument("Expected --span or no argument");
+        std::cout << "{\"protocol\":\""
+            << (spanning ? "AXISLY_GRID_SPAN_MATRIX_V1" : "AXISLY_GRID_MATRIX_V1")
+            << "\",\"cases\":[";
         bool first = true;
         for (std::size_t scenario = 0; scenario < 3; ++scenario)
         for (std::size_t columns = 0; columns < 4; ++columns)
         for (std::size_t rows = 0; rows < 4; ++rows)
-        for (std::size_t justify = 0; justify < positions.size(); ++justify)
-        for (std::size_t align = 0; align < positions.size(); ++align)
+        for (std::size_t first_axis = 0; first_axis < (spanning ? 2 : positions.size()); ++first_axis)
+        for (std::size_t second_axis = 0; second_axis < (spanning ? 1 : positions.size()); ++second_axis)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, columns, rows, justify, align, rtl);
+            if (spanning) run_span_case(scenario, columns, rows, first_axis, rtl);
+            else run_case(scenario, columns, rows, first_axis, second_axis, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

@@ -214,8 +214,11 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
         if (raw_factor_sum == 0) break;
         double free = static_cast<double>(main_size) - occupied;
         if (raw_factor_sum < 1) {
-            const double scaled_initial = initial_free * raw_factor_sum;
-            if (std::abs(scaled_initial) < std::abs(free)) free = scaled_initial;
+            // Taffy 0.14 subtracts the line gutters again when scaling a
+            // factor sum below one. Preserve that observable layout result.
+            const double scaled_initial = initial_free * raw_factor_sum - gutters;
+            free = growing ? std::min(free, scaled_initial)
+                : std::max(free, scaled_initial);
         }
         double total_violation = 0;
         std::vector<double> violations(line.items.size());

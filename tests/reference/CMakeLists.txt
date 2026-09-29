@@ -47,6 +47,11 @@ target_link_libraries(axisly_flex_bounds_native PRIVATE axisly::axisly)
 set_target_properties(axisly_flex_bounds_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_flex_bounds_native)
 
+add_executable(axisly_flex_factors_native flex_factors_native.cpp)
+target_link_libraries(axisly_flex_factors_native PRIVATE axisly::axisly)
+set_target_properties(axisly_flex_factors_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_flex_factors_native)
+
 add_executable(axisly_grid_matrix_native grid_matrix_native.cpp)
 target_link_libraries(axisly_grid_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_grid_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
@@ -97,6 +102,12 @@ add_test(NAME axisly.reference.flex_bounds_matrix COMMAND "${Python3_EXECUTABLE}
     --axisly "$<TARGET_FILE:axisly_flex_bounds_native>"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.flex_bounds_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.flex_factors_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_factors.py"
+    --axisly "$<TARGET_FILE:axisly_flex_factors_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.flex_factors_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_matrix.py"

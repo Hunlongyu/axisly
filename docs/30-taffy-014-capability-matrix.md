@@ -23,10 +23,10 @@
 | `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入基本方向规则，混合树未验收 | P1/P4 | 已建：rtl-block-child；待建：rtl-mixed |
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 自动最小尺寸依赖 overflow；裁剪与溢出结果未实现 | P4 | 待建：overflow-min-size |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出区域未实现 | P4 | 已建：flex-scrollbar-reservation |
-| `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 未支持 | P4 | 待建：contain-layout-paint |
+| `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；溢出与基线规则未完整 | P4 | 已建：block-contain-float |
 | `float` | None／Left／Right，Block 子项 | 部分：Block 浮动排布与 FlowRoot 包含；复杂环绕未验收 | P4 | 已建：block-float-clear |
 | `clear` | None／Left／Right／Both | 部分：按左右浮动底部清除，复杂折叠未验收 | P4 | 已建：block-float-clear |
-| `position` | Relative／Absolute | 部分：共享相对偏移与绝对定位；静态位置及祖先包含块未完整 | P4 | 已建：hidden-and-positioned |
+| `position` | Relative／Absolute | 部分：共享相对偏移与绝对定位，Grid 指定区域可作包含块；静态位置及祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移和双边拉伸；自动 margin 未完整 | P4 | 已建：hidden-and-positioned；待建：percent-inset |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束已接入，容器固有尺寸未完整 | P1 | 已建：flex-row-grow；待建：intrinsic-size |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束与 Flex 自动最小尺寸；跨算法边界未验收 | P1 | 待建：min-max-node |
@@ -42,7 +42,7 @@
 | `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；循环百分比未完整 | P2/P3 | 已建：flex-row-grow；待建：percent-gap |
-| `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 未支持 | P4 | 待建：block-text-align |
+| `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐已接入；RTL 组合未验收 | P4 | 已建：block-legacy-text-align |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；复杂组合未验收 | P2 | 已建：flex-balance-lines；待建：wrap-reverse |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines |
@@ -53,12 +53,12 @@
 | `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；复杂尺寸阶段未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
-| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；组合规则未完整 | P3 | 待建：css-auto-placement |
+| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；RowDense 补洞通过差分 | P3 | 已建：grid-row-dense-holes |
 | `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
-| `grid_template_column_names` | 显式列网格线名 | 部分：显式与重复线名可解析；多次出现未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
+| `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences |
 | `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；多次出现未完整 | P3 | 已建：named-area-placement |
-| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement；待建：negative-named-lines |
-| `grid_column` | 起止线、负索引、span、名称 | 部分：各输入可表达；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement；待建：negative-named-lines |
+| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；区域与绝对定位通过固定差分 | P3 | 已建：named-area-placement、grid-absolute-area |
+| `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域通过差分 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences |
 | `dummy` | Rust 泛型编译占位字段 | 内部字段 | — | 无需用例 |
 
 ## 跨字段验收轴
@@ -85,6 +85,9 @@
 | `flex-intrinsic-basis`／`flex-baseline` | 固有 Flex 基准尺寸与两个项目的首基线对齐 |
 | `grid-baseline`／`grid-auto-margins` | 网格项目首基线对齐与自动外边距的已使用值 |
 | `rtl-block-child`／`flex-scrollbar-reservation` | RTL Block 放置与 Flex 滚动条预留宽度 |
+| `block-legacy-text-align`／`block-contain-float` | 传统对齐与 layout containment 包含浮动 |
+| `grid-absolute-area`／`grid-implicit-negative-lines` | Grid 绝对定位区域、隐式轨道序列与负线号 |
+| `grid-row-dense-holes`／`grid-named-line-occurrences` | Dense 补洞与重复具名线起止／span |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -107,8 +110,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、十八组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这十八组的矩形、盒边和滚动条同时经过新原生树差分。轨道尺寸、放置范围、
+目前有 44 字段清单、二十四组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这二十四组的矩形、盒边和滚动条同时经过新原生树差分。轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。
 
 Taffy 0.14 的 `TaffyTree` 对自定义 `calc` 句柄的解析回调固定返回 `0`，

@@ -241,6 +241,7 @@ std::int32_t named_span(const ExpandedTemplate& axis, std::int32_t anchor,
             --remaining;
         }
     }
+    if (!remaining) return index;
     return index + (forward ? remaining - 1 : 1 - remaining);
 }
 
@@ -708,11 +709,15 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         !border_height && !box.maximum.height, node.id);
     apply_areas(node.style.grid, rows, columns);
     std::vector<Placement> placements(node.children.size());
+    std::vector<AxisPlacement> absolute_rows(node.children.size());
+    std::vector<AxisPlacement> absolute_columns(node.children.size());
     for (std::size_t i = 0; i < node.children.size(); ++i) {
         const auto& child = get(node.children[i]);
         if (child.style.display == Display::None) { placements[i].hidden = true; continue; }
         if (child.style.position == Position::Absolute) {
             placements[i].hidden = true;
+            absolute_rows[i] = axis_placement(child.style.grid.row, rows);
+            absolute_columns[i] = axis_placement(child.style.grid.column, columns);
             continue;
         }
         placements[i].row = axis_placement(child.style.grid.row, rows);
@@ -805,7 +810,33 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto& child = get(id);
         if (child.style.position == Position::Absolute
             && child.style.display != Display::None) {
-            fragments[i] = absolute(node, id, candidate, box, depth);
+            Rect area{border.left, border.top,
+                std::max(Unit{0}, candidate.width - border.left - border.right),
+                std::max(Unit{0}, candidate.height - border.top - border.bottom)};
+            const auto explicit_span = [](const GridPlacement& placement,
+                const AxisPlacement& resolved, const TrackAxis& tracks) {
+                if (!resolved.start || placement.start.kind() == GridLineKind::Auto
+                    || placement.end.kind() == GridLineKind::Auto) return false;
+                const auto finish = *resolved.start + resolved.span;
+                return *resolved.start >= tracks.origin
+                    && finish <= tracks.origin
+                        + static_cast<std::int32_t>(tracks.tracks.size());
+            };
+            if (explicit_span(child.style.grid.column, absolute_columns[i], track_columns)) {
+                const auto start = *absolute_columns[i].start;
+                const auto end = start + absolute_columns[i].span;
+                area.x = checked(static_cast<double>(content_x)
+                    + track_columns.line(start), id);
+                area.width = track_columns.span(start, end);
+            }
+            if (explicit_span(child.style.grid.row, absolute_rows[i], track_rows)) {
+                const auto start = *absolute_rows[i].start;
+                const auto end = start + absolute_rows[i].span;
+                area.y = checked(static_cast<double>(content_y)
+                    + track_rows.line(start), id);
+                area.height = track_rows.span(start, end);
+            }
+            fragments[i] = absolute(node, id, candidate, box, depth, area);
             continue;
         }
         if (placements[i].hidden) { fragments[i] = hidden(child, depth + 1); continue; }

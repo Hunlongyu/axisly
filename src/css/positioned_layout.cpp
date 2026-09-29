@@ -29,13 +29,19 @@ std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
 
 Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                           Size parent_size, const ResolvedBox& parent_box,
-                          std::size_t depth) {
+                          std::size_t depth,
+                          std::optional<Rect> containing_override) {
     const auto& child = get(child_id);
     const auto border = edges(parent_box.border, parent.id);
-    const Unit containing_width = std::max(Unit{0}, checked(
-        static_cast<double>(parent_size.width) - border.left - border.right, parent.id));
-    const Unit containing_height = std::max(Unit{0}, checked(
-        static_cast<double>(parent_size.height) - border.top - border.bottom, parent.id));
+    const Rect containing = containing_override.value_or(Rect{
+        border.left, border.top,
+        std::max(Unit{0}, checked(static_cast<double>(parent_size.width)
+            - border.left - border.right, parent.id)),
+        std::max(Unit{0}, checked(static_cast<double>(parent_size.height)
+            - border.top - border.bottom, parent.id)),
+    });
+    const Unit containing_width = containing.width;
+    const Unit containing_height = containing.height;
     const auto& inset = child.style.inset;
     const auto left = inset_value(inset.left, containing_width, child.id);
     const auto right = inset_value(inset.right, containing_width, child.id);
@@ -70,8 +76,8 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         : bottom ? checked(static_cast<double>(containing_height) - *bottom
             - fragment.size.height - margin.bottom, child.id) : margin.top;
     translate(fragment,
-        checked(static_cast<double>(border.left) + x, child.id),
-        checked(static_cast<double>(border.top) + y, child.id), child.id);
+        checked(static_cast<double>(containing.x) + x, child.id),
+        checked(static_cast<double>(containing.y) + y, child.id), child.id);
     return fragment;
 }
 } // namespace axisly::css::detail

@@ -160,6 +160,58 @@
         {"id": 170, "parent": null, "style": {"display": "Flex", "size": {"width": 100, "height": 50}, "overflow": {"x": "Visible", "y": "Scroll"}, "scrollbar_width": 10}},
         {"id": 171, "parent": 0, "style": {"flex_grow": 1, "size": {"height": 20}}, "measure": {"minimum": [20, 20], "preferred": [30, 20]}}
       ]
+    },
+    {
+      "name": "block-legacy-text-align",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 180, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 40}, "text_align": "LegacyCenter"}},
+        {"id": 181, "parent": 0, "style": {"display": "Block", "size": {"width": 20, "height": 10}}}
+      ]
+    },
+    {
+      "name": "block-contain-float",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 190, "parent": null, "style": {"display": "Block", "size": {"width": 100}, "contain": 1}},
+        {"id": 191, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 20, "height": 30}}}
+      ]
+    },
+    {
+      "name": "grid-absolute-area",
+      "available": [200, 100],
+      "nodes": [
+        {"id": 200, "parent": null, "style": {"display": "Grid", "size": {"width": 200, "height": 100}, "grid_template_columns": "50px 150px", "grid_template_rows": "30px 70px"}},
+        {"id": 201, "parent": 0, "style": {"position": "Absolute", "grid_column": {"start": "2", "end": "3"}, "grid_row": {"start": "2", "end": "3"}, "inset": {"left": 10, "top": 5}, "size": {"width": 20, "height": 10}}}
+      ]
+    },
+    {
+      "name": "grid-implicit-negative-lines",
+      "available": [100, 30],
+      "nodes": [
+        {"id": 210, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 30}, "grid_template_columns": "30px 30px", "grid_template_rows": "20px", "grid_auto_columns": "15px 20px"}},
+        {"id": 211, "parent": 0, "style": {"size": {"width": 10, "height": 10}, "grid_column": {"start": "-2", "end": "span 1"}, "grid_row": {"start": "1", "end": "span 1"}}},
+        {"id": 212, "parent": 0, "style": {"size": {"width": 10, "height": 10}, "grid_column": {"start": "4", "end": "span 1"}, "grid_row": {"start": "1", "end": "span 1"}}}
+      ]
+    },
+    {
+      "name": "grid-row-dense-holes",
+      "available": [90, 40],
+      "nodes": [
+        {"id": 220, "parent": null, "style": {"display": "Grid", "size": {"width": 90, "height": 40}, "grid_template_columns": "30px 30px 30px", "grid_template_rows": "20px 20px", "grid_auto_flow": "RowDense"}},
+        {"id": 221, "parent": 0, "style": {"size": {"width": 10, "height": 10}, "grid_column": {"end": "span 2"}}},
+        {"id": 222, "parent": 0, "style": {"size": {"width": 10, "height": 10}, "grid_column": {"end": "span 2"}}},
+        {"id": 223, "parent": 0, "style": {"size": {"width": 10, "height": 10}}}
+      ]
+    },
+    {
+      "name": "grid-named-line-occurrences",
+      "available": [90, 30],
+      "nodes": [
+        {"id": 230, "parent": null, "style": {"display": "Grid", "size": {"width": 90, "height": 30}, "grid_template_columns": "[x] 20px [x] 30px [x] 40px [x]", "grid_template_rows": "20px"}},
+        {"id": 231, "parent": 0, "style": {"size": {"width": 10, "height": 10}, "grid_column": {"start": "2 x", "end": "span 1"}}},
+        {"id": 232, "parent": 0, "style": {"size": {"height": 10}, "grid_column": {"start": "1", "end": "span 2 x"}}}
+      ]
     }
   ]
 }

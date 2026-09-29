@@ -25,6 +25,12 @@ CASES = (
     "grid-auto-margins",
     "rtl-block-child",
     "flex-scrollbar-reservation",
+    "block-legacy-text-align",
+    "block-contain-float",
+    "grid-absolute-area",
+    "grid-implicit-negative-lines",
+    "grid-row-dense-holes",
+    "grid-named-line-occurrences",
     "mixed-block-flex-grid",
 )
 

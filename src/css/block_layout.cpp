@@ -142,12 +142,26 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 nested.nodes.front().margin.left = used_left;
                 nested.nodes.front().margin.right = used_right;
             }
-            const Unit x = auto_left || auto_right
+            Unit x = auto_left || auto_right
                 ? used_left
                 : node.style.box.direction == Direction::Rtl
                     ? checked(static_cast<double>(content_width)
                         - nested.size.width - used_right, child_id)
                     : used_left;
+            const Unit free_align = checked(static_cast<double>(content_width)
+                - nested.size.width - used_left - used_right, child_id);
+            if (free_align > 0) {
+                const bool rtl = node.style.box.direction == Direction::Rtl;
+                if ((node.style.text_align == TextAlign::LegacyLeft && rtl)
+                    || (node.style.text_align == TextAlign::LegacyRight && !rtl)) {
+                    x = checked(static_cast<double>(x) + (rtl ? -free_align : free_align),
+                        child_id);
+                } else if (node.style.text_align == TextAlign::LegacyCenter) {
+                    x = checked(static_cast<double>(x)
+                        + (rtl ? -static_cast<double>(free_align) / 2
+                            : static_cast<double>(free_align) / 2), child_id);
+                }
+            }
             translate(nested,
                 checked(static_cast<double>(x_origin) + x, child_id),
                 checked(static_cast<double>(y_origin) + y, child_id), child_id);
@@ -162,7 +176,13 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     }
     Unit content_height = has_flow
         ? checked(static_cast<double>(cursor) + pending_margin, node.id) : Unit{0};
-    if (node.style.display == Display::FlowRoot) {
+    const auto scroll_container = [](Overflow overflow) {
+        return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
+    };
+    if (node.style.display == Display::FlowRoot
+        || node.style.contain != Contain::None
+        || scroll_container(node.style.overflow_x)
+        || scroll_container(node.style.overflow_y)) {
         for (const auto& region : floats) content_height = std::max(content_height, region.bottom);
     }
     Size candidate{

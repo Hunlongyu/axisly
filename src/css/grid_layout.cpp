@@ -453,6 +453,10 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         : track_rows.offsets.back();
     const bool intrinsic_width = !border_width;
     const bool intrinsic_height = !border_height;
+    const bool cyclic_columns = intrinsic_width
+        && has_cyclic_percentage(track_columns);
+    const bool cyclic_rows = intrinsic_height
+        && has_cyclic_percentage(track_rows);
     if (intrinsic_width) {
         border_width = constrain_axis(checked(static_cast<double>(measured_width)
             + *decoration_width, node.id), box.minimum.width, box.maximum.width);
@@ -463,14 +467,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             + *decoration_height, node.id), box.minimum.height, box.maximum.height);
         inner_height = std::max(Unit{0}, *border_height - *decoration_height);
     }
-    if (intrinsic_width && *inner_width != measured_width) {
+    if (intrinsic_width && (*inner_width != measured_width || cyclic_columns)) {
         track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
             min_column, max_column, inner_width, column_gap, node.id);
         collapse_auto_fit(track_columns, columns, placements, true);
         size_axis(track_columns, contributions, true, inner_width,
             constraints.available.width.kind, node.id);
     }
-    if (intrinsic_height && *inner_height != measured_height) {
+    if (intrinsic_height && (*inner_height != measured_height || cyclic_rows)) {
         track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
             min_row, max_row, inner_height, row_gap, node.id);
         collapse_auto_fit(track_rows, rows, placements, false);

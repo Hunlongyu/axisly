@@ -56,6 +56,21 @@ TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
     return axis;
 }
 
+bool has_cyclic_percentage(const TrackAxis& axis) {
+    const auto needs_basis = [](const TrackBreadth& breadth) {
+        const auto kind = breadth.kind();
+        return kind == TrackBreadthKind::Percent
+            || kind == TrackBreadthKind::FitContentPercent
+            || (kind == TrackBreadthKind::Calc
+                && !breadth.resolve_numeric(std::nullopt));
+    };
+    return std::any_of(axis.tracks.begin(), axis.tracks.end(),
+        [&](const TrackState& track) {
+            return needs_basis(track.style.minimum)
+                || needs_basis(track.style.maximum);
+        });
+}
+
 void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
                        const std::vector<Placement>& placements, bool columns) {
     for (std::size_t index = 0; index < definition.auto_fit.size(); ++index) {

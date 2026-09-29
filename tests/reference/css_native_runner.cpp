@@ -1532,6 +1532,94 @@ void absolute_block_intrinsic_case(std::string_view name) {
         {AvailableSpace::definite(100), AvailableSpace::definite(80)}), nodes);
 }
 
+void grid_track_phases_case(std::string_view name) {
+    const bool fit_fr = name == "grid-fit-fr-tracks";
+    const bool minmax_fr = name == "grid-minmax-fr-tracks";
+    const bool minmax_auto = name == "grid-minmax-auto-tracks";
+    const bool percent = name == "grid-percent-indefinite-tracks";
+    const int id = fit_fr ? 1690 : minmax_fr ? 1700
+        : minmax_auto ? 1710 : percent ? 1720 : 1730;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    if (!percent) root_style.box.size.width = Length::length(100);
+    root_style.box.size.height = Length::length(10);
+    root_style.grid.template_rows = {TrackSizing::fixed(10)};
+    if (fit_fr) {
+        root_style.grid.template_columns = {TrackSizing::fit_content_length(30),
+            TrackSizing::fraction(1)};
+    } else if (minmax_fr) {
+        root_style.grid.template_columns = {TrackSizing::minmax(
+            TrackBreadth::length(20), TrackBreadth::fraction(1)),
+            TrackSizing::fraction(1)};
+    } else if (minmax_auto) {
+        root_style.grid.template_columns = {TrackSizing::minmax(
+            TrackBreadth::min_content(), TrackBreadth::max_content()),
+            TrackSizing::automatic()};
+    } else if (percent) {
+        root_style.grid.template_columns = {TrackSizing::percent(0.5f),
+            TrackSizing::percent(0.5f)};
+    } else {
+        root_style.grid.template_columns = {TrackSizing::fit_content_length(30),
+            TrackSizing::fit_content_length(40)};
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (int index = 0; index < 2; ++index) {
+        Style item_style;
+        item_style.grid.column = {GridLine::index(
+            static_cast<std::int16_t>(index + 1)), GridLine::span(1)};
+        const Unit minimum = index == 0 && minmax_fr ? 50.0f
+            : index == 0 ? 20.0f : 10.0f;
+        const Unit preferred = index == 0 ? 70.0f : 20.0f;
+        const auto child = tree.create_node(item_style,
+            [minimum, preferred](const MeasureRequest& request) {
+                const Unit width = request.known_content_width.value_or(
+                    request.available_width.kind == AvailableKind::MinContent
+                        ? minimum : preferred);
+                return Measurement{{width,
+                    request.known_content_height.value_or(10.0f)},
+                    {}, {}, Size{preferred, 10}};
+            });
+        tree.append_child(root, child);
+        nodes.emplace_back(id + index + 1, child);
+    }
+    print(name.data(), tree.compute(root,
+        {percent ? AvailableSpace::max_content() : AvailableSpace::definite(100),
+            AvailableSpace::definite(10)}), nodes);
+}
+
+void grid_cyclic_percentage_rows() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size.width = Length::length(10);
+    root_style.grid.template_columns = {TrackSizing::fixed(10)};
+    root_style.grid.template_rows = {TrackSizing::percent(0.5f),
+        TrackSizing::percent(0.5f)};
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{1740, root}};
+    for (int index = 0; index < 2; ++index) {
+        Style item_style;
+        item_style.grid.row = {GridLine::index(
+            static_cast<std::int16_t>(index + 1)), GridLine::span(1)};
+        const Unit minimum = index == 0 ? 20.0f : 10.0f;
+        const Unit preferred = index == 0 ? 70.0f : 20.0f;
+        const auto child = tree.create_node(item_style,
+            [minimum, preferred](const MeasureRequest& request) {
+                const Unit height = request.known_content_height.value_or(
+                    request.available_height.kind == AvailableKind::MinContent
+                        ? minimum : preferred);
+                return Measurement{{request.known_content_width.value_or(10.0f),
+                    height}, {}, {}, Size{10, preferred}};
+            });
+        tree.append_child(root, child);
+        nodes.emplace_back(1741 + index, child);
+    }
+    print("grid-percent-indefinite-rows", tree.compute(root,
+        {AvailableSpace::definite(10), AvailableSpace::max_content()}), nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1617,6 +1705,14 @@ int main(int argc, char** argv) {
             || name == "absolute-block-auto-percent"
             || name == "absolute-block-auto-trailing"
             || name == "absolute-block-auto-floats") absolute_block_intrinsic_case(name);
+        else if (name == "grid-fit-fr-tracks"
+            || name == "grid-minmax-fr-tracks"
+            || name == "grid-minmax-auto-tracks"
+            || name == "grid-percent-indefinite-tracks"
+            || name == "grid-fit-pair-tracks") grid_track_phases_case(name);
+        else if (name == "grid-percent-indefinite-rows") {
+            grid_cyclic_percentage_rows();
+        }
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

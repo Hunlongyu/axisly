@@ -130,6 +130,12 @@ CASES = (
     "absolute-block-auto-percent",
     "absolute-block-auto-trailing",
     "absolute-block-auto-floats",
+    "grid-fit-fr-tracks",
+    "grid-minmax-fr-tracks",
+    "grid-minmax-auto-tracks",
+    "grid-percent-indefinite-tracks",
+    "grid-fit-pair-tracks",
+    "grid-percent-indefinite-rows",
     "mixed-block-flex-grid",
 )
 

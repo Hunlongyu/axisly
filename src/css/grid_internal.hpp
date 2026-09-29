@@ -63,6 +63,7 @@ struct ExpandedTemplate {
 [[nodiscard]] TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
     const std::vector<TrackSizing>& auto_tracks, std::int32_t minimum_line,
     std::int32_t maximum_line, std::optional<Unit> available, Unit gap, NodeId id);
+[[nodiscard]] bool has_cyclic_percentage(const TrackAxis& axis);
 void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
     const std::vector<Placement>& placements, bool columns);
 [[nodiscard]] Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,

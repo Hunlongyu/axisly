@@ -23,6 +23,15 @@ std::vector<TemplateTrack> tracks(std::size_t index) {
         TrackSizing::fraction(1)};
     case 4: return {TrackSizing::fraction(0.2F), TrackSizing::fraction(0),
         TrackSizing::fraction(0.5F)};
+    case 5: return {TrackSizing::minmax(
+        TrackBreadth::length(10), TrackBreadth::length(40)),
+        TrackSizing::automatic(), TrackSizing::fraction(1)};
+    case 6: return {TrackSizing::minmax(
+        TrackBreadth::length(20), TrackBreadth::max_content()),
+        TrackSizing::fit_content_length(30), TrackSizing::automatic()};
+    case 7: return {TrackSizing::percent(0.2F), TrackSizing::minmax(
+        TrackBreadth::length(5), TrackBreadth::fraction(1)),
+        TrackSizing::percent(0.3F)};
     default: throw std::invalid_argument("Unknown three-track template");
     }
 }
@@ -33,7 +42,8 @@ GridPlacement placement(int start, int end) {
 }
 
 void run_case(std::size_t scenario, std::size_t track,
-              std::size_t axis, std::size_t rtl, bool details) {
+              std::size_t axis, std::size_t rtl, std::size_t order,
+              bool details) {
     const bool columns = axis == 0;
     LayoutTree tree;
     Style root_style;
@@ -67,19 +77,24 @@ void run_case(std::size_t scenario, std::size_t track,
         std::array{1, 2}, std::array{2, 3},
         std::array{2, 3}, std::array{1, 2},
     };
+    constexpr std::array item_orders{
+        std::array{0, 1, 2, 3}, std::array{1, 0, 3, 2},
+        std::array{2, 3, 1, 0}, std::array{3, 2, 1, 0},
+    };
     for (std::size_t index = 0; index < main_sizes.size(); ++index) {
+        const auto source = item_orders[order][index];
         Style child;
-        child.box.size = {Length::length(columns ? main_sizes[index] : cross_sizes[index]),
-            Length::length(columns ? cross_sizes[index] : main_sizes[index])};
-        const auto main = placement(main_places[index][0], main_places[index][1]);
-        const auto cross = placement(cross_places[index][0], cross_places[index][1]);
+        child.box.size = {Length::length(columns ? main_sizes[source] : cross_sizes[source]),
+            Length::length(columns ? cross_sizes[source] : main_sizes[source])};
+        const auto main = placement(main_places[source][0], main_places[source][1]);
+        const auto cross = placement(cross_places[source][0], cross_places[source][1]);
         child.grid.column = columns ? main : cross;
         child.grid.row = columns ? cross : main;
         const auto id = tree.create_node(child);
         tree.append_child(root, id);
         nodes.emplace_back(static_cast<int>(index) + 2, id);
     }
-    const auto available = scenario == 0
+    const auto available = scenario == 0 || scenario == 3
         ? AvailableSize{AvailableSpace::definite(columns ? 160.0F : 100.0F),
             AvailableSpace::definite(columns ? 100.0F : 140.0F)}
         : scenario == 1
@@ -87,7 +102,7 @@ void run_case(std::size_t scenario, std::size_t track,
             : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()};
     const auto name = "grid-triple-span-" + std::to_string(scenario) + '-'
         + std::to_string(track) + '-' + std::to_string(axis) + '-'
-        + std::to_string(rtl);
+        + std::to_string(rtl) + '-' + std::to_string(order);
     reference::write_case(std::cout, name, tree.compute(root, available), nodes, details);
 }
 } // namespace
@@ -98,13 +113,14 @@ int main(int argc, char** argv) {
         if (argc != 1 && !details) throw std::invalid_argument("Expected --details or no argument");
         std::cout << "{\"protocol\":\"AXISLY_GRID_TRIPLE_SPAN_V1\",\"cases\":[";
         bool first = true;
-        for (std::size_t scenario = 0; scenario < 3; ++scenario)
-        for (std::size_t track = 0; track < 5; ++track)
+        for (std::size_t scenario = 0; scenario < 4; ++scenario)
+        for (std::size_t track = 0; track < 8; ++track)
         for (std::size_t axis = 0; axis < 2; ++axis)
-        for (std::size_t rtl = 0; rtl < 2; ++rtl) {
+        for (std::size_t rtl = 0; rtl < 2; ++rtl)
+        for (std::size_t order = 0; order < 4; ++order) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, track, axis, rtl, details);
+            run_case(scenario, track, axis, rtl, order, details);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

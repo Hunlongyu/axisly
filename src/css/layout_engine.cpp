@@ -189,6 +189,15 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
         result.size = fragment.size;
         result.nodes = std::move(fragment.nodes);
         result.grid_tracks = std::move(fragment.grid_tracks);
+        if (get(root).style.box.direction == Direction::Rtl
+            && available.width.kind == AvailableKind::Definite) {
+            const Unit root_x = checked(static_cast<double>(available.width.value)
+                - result.size.width, root);
+            for (auto& layout : result.nodes) {
+                layout.border_box.x = checked(static_cast<double>(layout.border_box.x)
+                    + root_x, layout.node);
+            }
+        }
         compute_scrollable_overflow(result.nodes, nodes_);
     } catch (const LayoutFailure& error) {
         result.error = {error.code, error.node, error.what()};

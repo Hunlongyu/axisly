@@ -20,7 +20,7 @@
 | `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 部分：标记使 Block 子项不拉伸自动宽度并阻断父子边距折叠；复杂内在尺寸未完整 | P4 | 已建：block-table-intrinsic、block-table-margin-boundary |
 | `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；叶子测量后的纵横比与约束、Flex 拉伸交叉轴传递到主轴基准、Grid 行区域对自动列的比例贡献已差分；更多跨算法组合未完整 | P1/P2/P3 | 已建：block-replaced-intrinsic、block-replaced-ratio、flex-replaced-ratio、grid-replaced-ratio |
 | `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸、Flex 及带 `calc` 宽度／盒边的 ContentBox 叶子已差分，嵌套复杂尺寸未完整 | P1 | 已建：content-box-and-negative-margin、calc-leaf-content-box |
-| `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入方向规则；Grid/Flex 的 self-start／self-end 按项目自身方向解析；三种混合容器方向切换与 Block RTL 自动边距溢出已差分，更多定位和内在尺寸组合未完整 | P1/P4 | 已建：rtl-block-child、rtl-mixed-block-flex-grid／grid-flex-block／flex-reverse、rtl-block-auto-overflow-both／left／right、grid-self-ltr-rtl、flex-self-rtl-ltr |
+| `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入方向规则；Grid/Flex 的 self-start／self-end 按项目自身方向解析；三种混合容器方向切换与 Block RTL 自动边距溢出已差分；根节点宽度小于确定的可用宽度时，RTL 根盒及后代按该空间右边定位；更多定位和内在尺寸组合未完整 | P1/P4 | 已建：rtl-block-child、rtl-mixed-block-flex-grid／grid-flex-block／flex-reverse、rtl-block-auto-overflow-both／left／right、grid-self-ltr-rtl、flex-self-rtl-ltr、test_grid_triple_span.py |
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 与 Grid 单轨道自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding、grid-scroll-automatic-minimum |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出范围与子项组合仍需差分 | P4 | 已建：flex-scrollbar-reservation、overflow-scroll-padding |
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；Layout／Content 抑制基线，Paint 保留基线；溢出细节仍未完整 | P4 | 已建：block-contain-float、nested-block／flex／grid-layout／paint-contain-baseline |
@@ -49,8 +49,8 @@
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分，显式与百分比 basis 已加入三种尺寸查询下的方向／五种换行策略／RTL 组合；固有尺寸贡献与实际基础尺寸分离，自动尺寸容器在 `max-content` 下保持原分行；Flex／Grid 混合树的测量叶节点已覆盖三种尺寸查询，更多嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis、test_flex_factors.py、test_mixed_nested.py |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；四向主轴、五种换行策略、LTR／RTL 与显式／百分比 basis 已组合差分；复杂嵌套仍不足。Taffy 0.14 在系数和小于 1 时对初始剩余空间缩放后再次扣除行间隙；该版本差分已固定，但与 W3C 步骤 9.7 的规则不同，见下文差异记录 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze、test_flex_factors.py |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；四向主轴、五种换行策略、LTR／RTL 已组合差分；嵌套 Flex 收缩中按真实约束违例冻结，避免浮点舍入把未违例项目一起冻结；其他复杂嵌套仍不足。低系数与行间隙的版本行为见上项 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze、test_flex_factors.py、test_mixed_nested.py |
-| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；自动重复行的百分比间隙与最小／最大高度组合已差分；容器固有高度确定后重新解析循环百分比轨道；`min-content` 查询下弹性轨道保留基准尺寸，`max-content` 按项目跨越轨道求 `fr` 单位，双轴固有查询已加入组合差分；自动重复的双轴、尺寸约束和空轨道折叠已加入组合差分；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows、repeat-gap-row-max／min、test_grid_matrix.py、test_grid_span_matrix.py、test_grid_repeat_matrix.py |
-| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入，百分比间隙及轨道在自动重复计数中按尺寸约束解析；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，跨弹性轨道的单格和跨格项目合批规划基础尺寸，仅向弹性轨道分配该批的固有贡献；固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分，`min-content` 查询不放大弹性轨道；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，自动重复的双轴、尺寸约束和空轨道折叠已加入组合差分，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair、repeat-gap-fixed-percent-track、test_grid_matrix.py、test_grid_span_matrix.py、test_grid_repeat_matrix.py |
+| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；自动重复行的百分比间隙与最小／最大高度组合已差分；容器固有高度确定后重新解析循环百分比轨道；`min-content` 查询下弹性轨道保留基准尺寸，`max-content` 按项目跨越轨道求 `fr` 单位，双轴固有查询已加入组合差分；自动重复的双轴、尺寸约束和空轨道折叠，以及固定／固有／百分比／弹性轨道的重叠跨格贡献已加入组合差分；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows、repeat-gap-row-max／min、test_grid_matrix.py、test_grid_span_matrix.py、test_grid_repeat_matrix.py、test_grid_triple_span.py |
+| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入，百分比间隙及轨道在自动重复计数中按尺寸约束解析；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，跨弹性轨道的单格和跨格项目合批规划基础尺寸，仅向弹性轨道分配该批的固有贡献；固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分，`min-content` 查询不放大弹性轨道；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，自动重复的双轴、尺寸约束和空轨道折叠，以及固定／固有／百分比／弹性轨道的重叠跨格贡献已加入组合差分，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair、repeat-gap-fixed-percent-track、test_grid_matrix.py、test_grid_span_matrix.py、test_grid_repeat_matrix.py、test_grid_triple_span.py |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持显式网格后的正向循环及前方的逆向序列，含双侧隐式行；复杂放置组合未验收 | P3 | 已建：grid-implicit-positive-rows、grid-implicit-negative-rows、grid-implicit-mixed-rows |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
 | `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；按“确定双轴、确定次轴、自动游标”阶段排布，原始网格线先估算初始范围，确定位置的项目再扩张占用范围；稀疏／Dense 的行列方向与具名线、负隐式线、第二项目的确定主轴／次轴位置已组合差分，复杂跨格组合未完整 | P3 | 已建：grid-row-dense-holes、placement-row／column-secondary-first、placement-row／column-dense-secondary、placement-negative-column／row-start、placement-row／column-primary-backtrack、test_grid_line_matrix.py |
@@ -255,9 +255,15 @@ FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚
 溢出，并比较实际轨道、起止位置和项目占用线号。自动重复计数使用与参考
 实现一致的单精度运算；固有尺寸阶段区分百分比解析基准与可用空间，有限
 增长上限参与最大内容尺寸，`fr` 单位受容器最小／最大尺寸约束。
-`test_grid_triple_span.py` 再组合五类三轨道模板、相互重叠的两轨道跨度、
-单格项目、行列双轴、LTR／RTL 与三种尺寸查询，共 60 组；全部作为
-CTest 差分回归，包含实际轨道尺寸、位置和项目占用线号。
+`test_grid_triple_span.py` 组合八类三轨道模板、相互重叠的两轨道跨度、
+单格项目的四种插入顺序、行列双轴、LTR／RTL，以及明确尺寸、自动尺寸配
+确定父级空间、`max-content`、`min-content` 四种查询，共 512 组；
+全部作为 CTest 差分回归，包含实际轨道尺寸、位置和项目占用线号。
+跨格固有贡献先受单格项目形成的增长上限约束，同批项目只提交各轨道的
+最大计划增量；零内容单格项目不创建有限增长上限。轨道尺寸计算分别传入
+网格可用空间和容器内部尺寸；自动容器的百分比轨道在容器尺寸确定后
+按 Taffy 的列重算与行基准钳制阶段处理；父级提供确定可用空间时保留
+第一次尺寸结果。根节点的 RTL 位置按确定的可用宽度减去自身宽度计算。
 `test_grid_line_matrix.py` 组合 12 种起始线和 12 种终止线、行／列轴、
 LTR／RTL、四种自动流、第二项目的自动／确定次轴／确定主轴／确定双轴位置、
 固定尺寸／自动拉伸尺寸及默认／双尺寸隐式轨道序列，共 36,864 组；

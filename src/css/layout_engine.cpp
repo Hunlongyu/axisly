@@ -56,6 +56,14 @@ AvailableSpace subtract_decoration(AvailableSpace space, Unit amount) {
     return AvailableSpace::definite(std::max(Unit{0}, space.value - amount));
 }
 
+ResolvedDimensions requested_size(const Constraints& constraints,
+                                  const ResolvedBox& box) {
+    return transfer_aspect_ratio({
+        constraints.known_width ? constraints.known_width : box.preferred.width,
+        constraints.known_height ? constraints.known_height : box.preferred.height,
+    }, box);
+}
+
 ResolvedBox resolve_layout_box(const LayoutNode& node,
                                std::optional<Unit> containing_width,
                                std::optional<Unit> containing_height) {
@@ -295,30 +303,18 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
         if (!limit) return maximum;
         return std::max(minimum, std::min(maximum, *limit));
     };
-    auto width = constraints.known_width ? constraints.known_width : box.preferred.width;
-    auto height = constraints.known_height ? constraints.known_height : box.preferred.height;
+    const auto requested = requested_size(constraints, box);
+    auto width = requested.width;
+    auto height = requested.height;
     if (!width && !constraints.ignore_preferred_width) {
         width = intrinsic(node.style.box.size.width, true);
     }
     if (!height && !constraints.ignore_preferred_height) {
         height = intrinsic(node.style.box.size.height, false);
     }
-    if (box.aspect_ratio && width.has_value() != height.has_value()) {
-        const double ratio = *box.aspect_ratio;
-        if (width) {
-            const double base = box.box_sizing == BoxSizing::ContentBox
-                ? std::max(0.0, static_cast<double>(*width) - *decoration_width) : *width;
-            const double target = base / ratio
-                + (box.box_sizing == BoxSizing::ContentBox ? *decoration_height : 0.0);
-            height = std::max(checked(target, node.id), *decoration_height);
-        } else {
-            const double base = box.box_sizing == BoxSizing::ContentBox
-                ? std::max(0.0, static_cast<double>(*height) - *decoration_height) : *height;
-            const double target = base * ratio
-                + (box.box_sizing == BoxSizing::ContentBox ? *decoration_width : 0.0);
-            width = std::max(checked(target, node.id), *decoration_width);
-        }
-    }
+    const auto transferred = transfer_aspect_ratio({width, height}, box);
+    width = transferred.width;
+    height = transferred.height;
     MeasureRequest request;
     request.known_content_width = width
         ? std::optional<Unit>(std::max(Unit{0}, *width - *decoration_width)) : std::nullopt;

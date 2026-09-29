@@ -25,6 +25,9 @@ struct Constraints {
     bool operator==(const Constraints&) const = default;
 };
 
+[[nodiscard]] ResolvedDimensions requested_size(const Constraints& constraints,
+    const ResolvedBox& box);
+
 struct MarginStrut {
     Unit positive{}, negative{};
     [[nodiscard]] static MarginStrut from(Unit value);

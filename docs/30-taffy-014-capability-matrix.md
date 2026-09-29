@@ -28,10 +28,10 @@
 | `clear` | None／Left／Right／Both | 部分：普通块按左右浮动底部清除；浮动盒自身清除按 Taffy 0.14 的已有浮动底部下移；复杂折叠未验收 | P4 | 已建：block-float-clear、block-float-self-clear |
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-flex-static-center、absolute-grid-static-center |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；复杂百分比未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint；待建：percent-inset |
-| `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询已接入；Flex/Grid 和循环百分比等容器固有尺寸未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width；待建：intrinsic-size |
+| `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；复杂容器固有尺寸与循环百分比未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width；待建：intrinsic-size |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；自动尺寸和复杂重排未完整 | P1 | 待建：max-size-reflow |
-| `aspect_ratio` | 可选宽高比 | 部分：单轴已知的叶子尺寸推导；替换元素规则未完整 | P1 | 待建：aspect-ratio |
+| `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选及最小／最大尺寸；Block／Flex／Grid 的单轴指定值和自动内容宽度、border／content box 已差分；替换元素和复杂 min/max 组合未完整 | P1 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box；待建：ratio-replaced |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；clear／浮动等复杂组合未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
 | `border` | 四边 Length／Percent／Calc | 部分：共享盒模型解析，差分覆盖固定数值 | P1 | 已建：content-box-and-negative-margin |
@@ -122,6 +122,11 @@
 | `block-float-intrinsic-pair` | 自动宽度的浮动 Block 累计并排的两个内部浮动盒，且包含内部浮动高度 |
 | `block-max-content-width`／`block-min-content-width` | 自动宽度 Block 对子树执行最大内容／最小内容宽度查询 |
 | `block-float-intrinsic-flex`／`block-float-intrinsic-grid` | 浮动 Block 的内容宽度查询穿过 Flex／Grid 子树 |
+| `block-ratio-width`／`block-ratio-height`／`block-ratio-auto-width` | Block 指定单轴或由可用宽度决定自动宽度时的纵横比传递 |
+| `flex-ratio-width`／`flex-ratio-height`／`flex-ratio-auto-width` | Flex 容器指定单轴及自动宽度的纵横比与子项交叉轴排布 |
+| `grid-ratio-width`／`grid-ratio-height`／`grid-ratio-auto-width` | Grid 容器指定单轴及自动宽度的纵横比与项目拉伸 |
+| `block-ratio-content-box`／`flex-ratio-content-box`／`grid-ratio-content-box` | 纵横比按 content box 转换并加回内边距，区分 border-box 尺寸 |
+| `flex-auto-content-width`／`grid-auto-content-width` | 根 Flex／Grid 在可用空间确定但自身宽度为 auto 时按内容确定宽度 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -144,8 +149,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、九十三组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这九十三组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、一百零七组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这一百零七组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

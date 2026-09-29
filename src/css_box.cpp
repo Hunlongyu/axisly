@@ -69,28 +69,6 @@ Unit safe_nonnegative(double value) {
     return static_cast<Unit>(value);
 }
 
-void transfer_preferred_ratio(ResolvedBox& box) {
-    if (!box.aspect_ratio || box.preferred.width.has_value() == box.preferred.height.has_value()) return;
-    const auto horizontal = box.horizontal_decoration();
-    const auto vertical = box.vertical_decoration();
-    if (!horizontal || !vertical) return;
-    const double ratio = *box.aspect_ratio;
-    if (box.preferred.width) {
-        const double base = box.box_sizing == BoxSizing::ContentBox
-            ? std::max(0.0, static_cast<double>(*box.preferred.width) - *horizontal)
-            : *box.preferred.width;
-        const double height = base / ratio
-            + (box.box_sizing == BoxSizing::ContentBox ? *vertical : 0.0);
-        box.preferred.height = std::max(safe_nonnegative(height), *vertical);
-    } else {
-        const double base = box.box_sizing == BoxSizing::ContentBox
-            ? std::max(0.0, static_cast<double>(*box.preferred.height) - *vertical)
-            : *box.preferred.height;
-        const double width = base * ratio
-            + (box.box_sizing == BoxSizing::ContentBox ? *horizontal : 0.0);
-        box.preferred.width = std::max(safe_nonnegative(width), *horizontal);
-    }
-}
 } // namespace
 
 std::optional<Unit> ResolvedEdge::numeric() const noexcept {
@@ -117,6 +95,33 @@ std::optional<Unit> ResolvedBox::horizontal_decoration() const {
 std::optional<Unit> ResolvedBox::vertical_decoration() const {
     const auto value = decoration(padding, border, false);
     return value ? std::optional<Unit>(safe_add(*value, scrollbar.height)) : std::nullopt;
+}
+
+ResolvedDimensions transfer_aspect_ratio(ResolvedDimensions size,
+                                         const ResolvedBox& box) {
+    if (!box.aspect_ratio || size.width.has_value() == size.height.has_value()) {
+        return size;
+    }
+    const auto horizontal = box.horizontal_decoration();
+    const auto vertical = box.vertical_decoration();
+    if (!horizontal || !vertical) return size;
+    const double ratio = *box.aspect_ratio;
+    if (size.width) {
+        const double base = box.box_sizing == BoxSizing::ContentBox
+            ? std::max(0.0, static_cast<double>(*size.width) - *horizontal)
+            : *size.width;
+        const double height = base / ratio
+            + (box.box_sizing == BoxSizing::ContentBox ? *vertical : 0.0);
+        size.height = std::max(safe_nonnegative(height), *vertical);
+    } else {
+        const double base = box.box_sizing == BoxSizing::ContentBox
+            ? std::max(0.0, static_cast<double>(*size.height) - *vertical)
+            : *size.height;
+        const double width = base * ratio
+            + (box.box_sizing == BoxSizing::ContentBox ? *horizontal : 0.0);
+        size.width = std::max(safe_nonnegative(width), *horizontal);
+    }
+    return size;
 }
 
 ResolvedBox resolve_box(const BoxStyle& style,
@@ -146,7 +151,9 @@ ResolvedBox resolve_box(const BoxStyle& style,
     result.preferred = convert(style.size);
     result.minimum = convert(style.min_size);
     result.maximum = convert(style.max_size);
-    transfer_preferred_ratio(result);
+    result.preferred = transfer_aspect_ratio(result.preferred, result);
+    result.minimum = transfer_aspect_ratio(result.minimum, result);
+    result.maximum = transfer_aspect_ratio(result.maximum, result);
     return result;
 }
 

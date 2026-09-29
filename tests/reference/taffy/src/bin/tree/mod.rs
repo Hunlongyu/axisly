@@ -332,7 +332,7 @@ pub(super) fn run(input: &str) -> Result<()> {
         return Ok(());
     }
     let document: Document = serde_json::from_value(value).map_err(|e| e.to_string())?;
-    if document.protocol != TREE_PROTOCOL || document.cases.is_empty() || document.cases.len() > 100
+    if document.protocol != TREE_PROTOCOL || document.cases.is_empty() || document.cases.len() > 1024
     {
         return Err("Invalid tree protocol or case count".into());
     }

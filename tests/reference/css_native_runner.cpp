@@ -1360,6 +1360,46 @@ void block_intrinsic_width_case(std::string_view name) {
             AvailableSpace::max_content()}), nodes);
 }
 
+void container_size_case(std::string_view name) {
+    const bool block = name.starts_with("block-");
+    const bool flex = name.starts_with("flex-");
+    const bool ratio = name.find("-ratio-") != std::string_view::npos;
+    const bool content_box = name.ends_with("-content-box");
+    const bool width = content_box || (name.ends_with("-width")
+        && !name.ends_with("-auto-width")
+        && !name.ends_with("-auto-content-width"));
+    const bool height = name.ends_with("-height");
+    const int id = content_box ? (block ? 1480 : flex ? 1490 : 1500)
+        : !ratio ? (flex ? 1510 : 1520)
+        : block ? (width ? 1390 : height ? 1400 : 1410)
+        : flex ? (width ? 1420 : height ? 1430 : 1440)
+        : (width ? 1450 : height ? 1460 : 1470);
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = block ? Display::Block
+        : flex ? Display::Flex : Display::Grid;
+    if (ratio) root_style.box.aspect_ratio = 2.0f;
+    if (content_box) {
+        root_style.box.box_sizing = BoxSizing::ContentBox;
+        root_style.box.padding.left = Length::length(10);
+        root_style.box.padding.right = Length::length(10);
+        root_style.box.padding.top = Length::length(5);
+        root_style.box.padding.bottom = Length::length(5);
+    }
+    if (width) root_style.box.size.width = Length::length(100);
+    if (height) root_style.box.size.height = Length::length(40);
+    const auto root = tree.create_node(root_style);
+    const auto child = tree.create_node({}, [](const MeasureRequest& request) {
+        return Measurement{{request.known_content_width.value_or(20.0f),
+            request.known_content_height.value_or(10.0f)},
+            {}, {}, Size{20, 10}};
+    });
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{id, root}, {id + 1, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1413,6 +1453,16 @@ int main(int argc, char** argv) {
             || name == "block-float-intrinsic-grid"
             || name == "block-max-content-width"
             || name == "block-min-content-width") block_intrinsic_width_case(name);
+        else if (name == "block-ratio-width" || name == "block-ratio-height"
+            || name == "block-ratio-auto-width" || name == "flex-ratio-width"
+            || name == "flex-ratio-height" || name == "flex-ratio-auto-width"
+            || name == "grid-ratio-width" || name == "grid-ratio-height"
+            || name == "grid-ratio-auto-width"
+            || name == "block-ratio-content-box"
+            || name == "flex-ratio-content-box"
+            || name == "grid-ratio-content-box"
+            || name == "flex-auto-content-width"
+            || name == "grid-auto-content-width") container_size_case(name);
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

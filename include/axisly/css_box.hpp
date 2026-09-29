@@ -72,6 +72,11 @@ struct ResolvedBox {
     [[nodiscard]] std::optional<Unit> vertical_decoration() const;
 };
 
+// Transfer a single definite axis through aspect-ratio. Inputs and output are
+// border-box sizes; the box-sizing mode determines the ratio's reference box.
+[[nodiscard]] ResolvedDimensions transfer_aspect_ratio(
+    ResolvedDimensions size, const ResolvedBox& box);
+
 // Percentage padding, border and margin use the containing block's inline size.
 // Width and height percentages use the corresponding containing-block axis.
 // Unknown bases stay explicit, including calc expressions containing percentages.

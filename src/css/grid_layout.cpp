@@ -346,12 +346,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
             "Grid decoration requires a definite containing inline size");
     }
-    auto border_width = constraints.known_width ? constraints.known_width : box.preferred.width;
-    auto border_height = constraints.known_height ? constraints.known_height : box.preferred.height;
-    if (!border_width && !constraints.content_based_width
-        && constraints.available.width.kind == AvailableKind::Definite) {
-        border_width = constraints.available.width.value;
-    }
+    const auto requested = requested_size(constraints, box);
+    auto border_width = requested.width;
+    auto border_height = requested.height;
     if (border_width) {
         *border_width = constrain_axis(*border_width,
             box.minimum.width, box.maximum.width);

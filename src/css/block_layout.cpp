@@ -29,7 +29,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
             "Block decoration requires a definite containing inline size");
     }
-    const auto preferred_width = constraints.known_width ? constraints.known_width : box.preferred.width;
+    const auto requested = requested_size(constraints, box);
+    const auto preferred_width = requested.width;
     const auto available_width = constraints.available.width.definite_value();
     const bool content_based_width = !preferred_width
         && (constraints.content_based_width
@@ -45,8 +46,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             ? measured_width : available_width.value_or(Unit{0})),
         box.minimum.width, box.maximum.width);
     const Unit content_width = std::max(Unit{0}, outer_width - *decoration_width);
-    auto preferred_height = constraints.known_height
-        ? constraints.known_height : box.preferred.height;
+    auto preferred_height = requested.height;
+    if (!preferred_height) {
+        preferred_height = transfer_aspect_ratio({outer_width, std::nullopt}, box).height;
+    }
     if (preferred_height) {
         *preferred_height = constrain_axis(*preferred_height,
             box.minimum.height, box.maximum.height);

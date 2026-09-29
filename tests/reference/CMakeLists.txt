@@ -15,15 +15,17 @@ set(rust_host "${CMAKE_MATCH_1}")
 set(taffy_manifest "${CMAKE_CURRENT_SOURCE_DIR}/taffy/Cargo.toml")
 set(taffy_output "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/axisly-taffy-reference${CMAKE_EXECUTABLE_SUFFIX}")
 set(taffy_tree_output "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/axisly-taffy-tree-reference${CMAKE_EXECUTABLE_SUFFIX}")
-add_custom_command(OUTPUT "${taffy_output}" "${taffy_tree_output}"
-    COMMAND "${AXISLY_CARGO_EXECUTABLE}" build --release --locked
+set(taffy_calc_output "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/calc_reference${CMAKE_EXECUTABLE_SUFFIX}")
+add_custom_command(OUTPUT "${taffy_output}" "${taffy_tree_output}" "${taffy_calc_output}"
+    COMMAND "${AXISLY_CARGO_EXECUTABLE}" build --release --locked --bins
         --manifest-path "${taffy_manifest}" --target "${rust_host}"
         --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
     DEPENDS "${taffy_manifest}" taffy/Cargo.lock taffy/src/main.rs taffy/src/advanced.rs
         taffy/src/bin/tree_reference.rs taffy/src/bin/tree/mod.rs taffy/src/bin/tree/style.rs
+        taffy/src/bin/calc_reference.rs
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Building pinned Taffy reference tool (development only)" VERBATIM)
-add_custom_target(axisly_taffy_reference ALL DEPENDS "${taffy_output}" "${taffy_tree_output}")
+add_custom_target(axisly_taffy_reference ALL DEPENDS "${taffy_output}" "${taffy_tree_output}" "${taffy_calc_output}")
 
 add_executable(axisly_reference_native native_runner.cpp)
 target_link_libraries(axisly_reference_native PRIVATE axisly::axisly)
@@ -59,3 +61,10 @@ add_test(NAME axisly.reference.css_tree COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}"
     --fixture "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/tree.json")
 set_tests_properties(axisly.reference.css_tree PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_calc.py"
+    --axisly "$<TARGET_FILE:axisly_css_reference_native>"
+    --taffy "${taffy_calc_output}"
+    --fixture "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/calc.json")
+set_tests_properties(axisly.reference.calc PROPERTIES LABELS reference TIMEOUT 120)

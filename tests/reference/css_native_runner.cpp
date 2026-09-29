@@ -757,6 +757,83 @@ void named_line_implicit_case(std::string_view name) {
         {{base, root}, {base + 1, child}});
 }
 
+void calc_leaf_case(std::string_view name) {
+    constexpr std::array<std::string_view, 8> names{
+        "calc-leaf-size", "calc-leaf-content-box", "calc-leaf-min-max",
+        "calc-leaf-margins", "calc-leaf-clamp", "calc-leaf-indefinite",
+        "calc-leaf-partial-basis", "calc-leaf-inverted-clamp"};
+    const auto found = std::find(names.begin(), names.end(), name);
+    if (found == names.end()) throw std::invalid_argument("Unknown calc leaf fixture");
+    const auto variant = static_cast<int>(found - names.begin());
+    const auto length = [](Unit value) { return Calculation::length(value); };
+    const auto percent = [](Unit value) { return Calculation::percent(value); };
+    LayoutTree tree;
+    Style style;
+    switch (variant) {
+    case 0:
+        style.box.size.width = Length::calc(Calculation::add(length(20), percent(0.25f)));
+        style.box.size.height = Length::calc(Calculation::subtract(length(80), percent(0.2f)));
+        break;
+    case 1:
+        style.box.box_sizing = BoxSizing::ContentBox;
+        style.box.size.width = Length::calc(Calculation::add(length(25), percent(0.25f)));
+        style.box.size.height = Length::calc(length(20));
+        style.box.padding.left = Length::calc(Calculation::add(length(5), percent(0.05f)));
+        style.box.padding.right = Length::calc(Calculation::minimum(length(30), percent(0.1f)));
+        style.box.border.left = Length::calc(length(2));
+        style.box.border.right = Length::calc(length(3));
+        break;
+    case 2:
+        style.box.size.width = Length::calc(Calculation::add(length(50), percent(0.5f)));
+        style.box.size.height = Length::calc(length(10));
+        style.box.min_size.width = Length::calc(Calculation::maximum(length(30), percent(0.3f)));
+        style.box.max_size.width = Length::calc(Calculation::clamp(
+            length(50), length(80), length(70)));
+        break;
+    case 3:
+        style.box.size = {Length::calc(length(50)), Length::calc(length(20))};
+        style.box.margin.left = Length::calc(Calculation::scale(percent(0.1f), 2));
+        style.box.margin.top = Length::calc(Calculation::add(length(5), percent(0.1f)));
+        style.box.margin.right = Length::calc(Calculation::subtract(length(10), percent(0.02f)));
+        style.box.margin.bottom = Length::calc(Calculation::maximum(length(0), percent(0.1f)));
+        break;
+    case 4:
+        style.box.size.width = Length::calc(Calculation::clamp(length(50),
+            Calculation::add(length(20), percent(0.5f)), length(100)));
+        style.box.size.height = Length::calc(Calculation::minimum(length(40), percent(0.3f)));
+        break;
+    case 5:
+        style.box.size.width = Length::calc(Calculation::add(length(20), percent(0.25f)));
+        style.box.size.height = Length::calc(Calculation::add(length(10), percent(0.5f)));
+        style.box.margin.left = Length::calc(Calculation::add(length(5), percent(0.1f)));
+        style.box.padding.left = Length::calc(Calculation::add(length(5), percent(0.1f)));
+        break;
+    case 6:
+        style.box.size.width = Length::calc(Calculation::add(length(20), percent(0.25f)));
+        style.box.size.height = Length::calc(Calculation::add(length(10), percent(0.5f)));
+        style.box.margin.top = Length::calc(Calculation::add(length(2), percent(0.05f)));
+        style.box.padding.top = Length::calc(Calculation::add(length(2), percent(0.05f)));
+        style.box.border.top = Length::calc(length(3));
+        break;
+    case 7:
+        style.box.size.width = Length::calc(Calculation::clamp(
+            length(100), length(80), length(50)));
+        style.box.size.height = Length::calc(length(10));
+        break;
+    default: break;
+    }
+    const auto root = tree.create_node(style, [](const MeasureRequest&) {
+        return Measurement{{10, 10}, {}, {}};
+    });
+    const AvailableSize available = variant == 5
+        ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
+        : variant == 6
+            ? AvailableSize{AvailableSpace::definite(200), AvailableSpace::max_content()}
+            : AvailableSize{AvailableSpace::definite(200), AvailableSpace::definite(100)};
+    print(name.data(), tree.compute(root, available),
+        {{7000 + variant * 10, root}});
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2506,6 +2583,8 @@ int main(int argc, char** argv) {
             grid_line_conflict_case(name);
         else if (name.starts_with("named-line-"))
             named_line_implicit_case(name);
+        else if (name.starts_with("calc-leaf-"))
+            calc_leaf_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

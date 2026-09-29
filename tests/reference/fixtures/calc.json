@@ -1,0 +1,77 @@
+{
+  "protocol": "AXISLY_CALC_V1",
+  "cases": [
+    {
+      "name": "calc-leaf-size", "available": [200, 100], "content": [10, 10],
+      "style": {
+        "width": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.25}},
+        "height": {"op": "subtract", "left": {"op": "length", "value": 80}, "right": {"op": "percent", "value": 0.2}}
+      }
+    },
+    {
+      "name": "calc-leaf-content-box", "available": [200, 100], "content": [10, 10],
+      "style": {
+        "content_box": true,
+        "width": {"op": "add", "left": {"op": "length", "value": 25}, "right": {"op": "percent", "value": 0.25}},
+        "height": {"op": "length", "value": 20},
+        "padding_left": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.05}},
+        "padding_right": {"op": "min", "left": {"op": "length", "value": 30}, "right": {"op": "percent", "value": 0.1}},
+        "border_left": {"op": "length", "value": 2},
+        "border_right": {"op": "length", "value": 3}
+      }
+    },
+    {
+      "name": "calc-leaf-min-max", "available": [200, 100], "content": [10, 10],
+      "style": {
+        "width": {"op": "add", "left": {"op": "length", "value": 50}, "right": {"op": "percent", "value": 0.5}},
+        "height": {"op": "length", "value": 10},
+        "min_width": {"op": "max", "left": {"op": "length", "value": 30}, "right": {"op": "percent", "value": 0.3}},
+        "max_width": {"op": "clamp", "lower": {"op": "length", "value": 50}, "value": {"op": "length", "value": 80}, "upper": {"op": "length", "value": 70}}
+      }
+    },
+    {
+      "name": "calc-leaf-margins", "available": [200, 100], "content": [10, 10],
+      "style": {
+        "width": {"op": "length", "value": 50},
+        "height": {"op": "length", "value": 20},
+        "margin_left": {"op": "scale", "value": {"op": "percent", "value": 0.1}, "factor": 2},
+        "margin_top": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.1}},
+        "margin_right": {"op": "subtract", "left": {"op": "length", "value": 10}, "right": {"op": "percent", "value": 0.02}},
+        "margin_bottom": {"op": "max", "left": {"op": "length", "value": 0}, "right": {"op": "percent", "value": 0.1}}
+      }
+    },
+    {
+      "name": "calc-leaf-clamp", "available": [200, 100], "content": [10, 10],
+      "style": {
+        "width": {"op": "clamp", "lower": {"op": "length", "value": 50}, "value": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.5}}, "upper": {"op": "length", "value": 100}},
+        "height": {"op": "min", "left": {"op": "length", "value": 40}, "right": {"op": "percent", "value": 0.3}}
+      }
+    },
+    {
+      "name": "calc-leaf-indefinite", "available": ["max-content", "max-content"], "content": [10, 10],
+      "style": {
+        "width": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.25}},
+        "height": {"op": "add", "left": {"op": "length", "value": 10}, "right": {"op": "percent", "value": 0.5}},
+        "margin_left": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.1}},
+        "padding_left": {"op": "add", "left": {"op": "length", "value": 5}, "right": {"op": "percent", "value": 0.1}}
+      }
+    },
+    {
+      "name": "calc-leaf-partial-basis", "available": [200, "max-content"], "content": [10, 10],
+      "style": {
+        "width": {"op": "add", "left": {"op": "length", "value": 20}, "right": {"op": "percent", "value": 0.25}},
+        "height": {"op": "add", "left": {"op": "length", "value": 10}, "right": {"op": "percent", "value": 0.5}},
+        "margin_top": {"op": "add", "left": {"op": "length", "value": 2}, "right": {"op": "percent", "value": 0.05}},
+        "padding_top": {"op": "add", "left": {"op": "length", "value": 2}, "right": {"op": "percent", "value": 0.05}},
+        "border_top": {"op": "length", "value": 3}
+      }
+    },
+    {
+      "name": "calc-leaf-inverted-clamp", "available": [200, 100], "content": [10, 10],
+      "style": {
+        "width": {"op": "clamp", "lower": {"op": "length", "value": 100}, "value": {"op": "length", "value": 80}, "upper": {"op": "length", "value": 50}},
+        "height": {"op": "length", "value": 10}
+      }
+    }
+  ]
+}

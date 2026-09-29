@@ -159,7 +159,9 @@ std::optional<Unit> Length::resolve_numeric(std::optional<Unit> basis) const {
     case LengthKind::Length: return value_;
     case LengthKind::Percent:
         return basis ? checked(static_cast<double>(value_) * *basis) : std::nullopt;
-    case LengthKind::Calc: return calculation_->resolve(basis);
+    // Taffy's opaque calc callback is invoked only after its containing basis
+    // becomes definite, even when the expression contains only fixed lengths.
+    case LengthKind::Calc: return basis ? calculation_->resolve(basis) : std::nullopt;
     default: return std::nullopt;
     }
 }

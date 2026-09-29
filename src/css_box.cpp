@@ -23,14 +23,17 @@ Unit safe_add(Unit first, Unit second) {
 }
 
 ResolvedEdge resolve_edge(const Length& value, std::optional<Unit> basis,
-                          bool allow_auto, bool allow_negative) {
+                          bool allow_auto, bool allow_negative,
+                          IndefiniteEdgeBasis indefinite) {
     if (value.kind() == LengthKind::Auto && allow_auto) return {EdgeKind::Auto, 0};
     if (value.kind() != LengthKind::Length && value.kind() != LengthKind::Percent
         && value.kind() != LengthKind::Calc) {
         throw std::invalid_argument("Unsupported CSS edge value");
     }
     const auto numeric = value.resolve_numeric(basis);
-    if (!numeric) return {EdgeKind::UnresolvedPercentage, 0};
+    if (!numeric) return indefinite == IndefiniteEdgeBasis::Zero
+        ? ResolvedEdge{EdgeKind::Numeric, 0}
+        : ResolvedEdge{EdgeKind::UnresolvedPercentage, 0};
     if (!allow_negative && *numeric < 0) {
         throw std::invalid_argument("CSS padding and border must be nonnegative");
     }
@@ -38,12 +41,13 @@ ResolvedEdge resolve_edge(const Length& value, std::optional<Unit> basis,
 }
 
 ResolvedEdges resolve_edges(const EdgeValues& edges, std::optional<Unit> basis,
-                            bool allow_auto, bool allow_negative) {
+                            bool allow_auto, bool allow_negative,
+                            IndefiniteEdgeBasis indefinite) {
     return {
-        resolve_edge(edges.left, basis, allow_auto, allow_negative),
-        resolve_edge(edges.top, basis, allow_auto, allow_negative),
-        resolve_edge(edges.right, basis, allow_auto, allow_negative),
-        resolve_edge(edges.bottom, basis, allow_auto, allow_negative),
+        resolve_edge(edges.left, basis, allow_auto, allow_negative, indefinite),
+        resolve_edge(edges.top, basis, allow_auto, allow_negative, indefinite),
+        resolve_edge(edges.right, basis, allow_auto, allow_negative, indefinite),
+        resolve_edge(edges.bottom, basis, allow_auto, allow_negative, indefinite),
     };
 }
 
@@ -134,12 +138,9 @@ ResolvedBox resolve_box(const BoxStyle& style,
         throw std::invalid_argument("CSS aspect ratio must be finite and positive");
     }
     ResolvedBox result;
-    const auto resolved_edge_basis = containing_width
-        ? containing_width : edge_basis == IndefiniteEdgeBasis::Zero
-            ? std::optional<Unit>(Unit{0}) : std::nullopt;
-    result.margin = resolve_edges(style.margin, resolved_edge_basis, true, true);
-    result.padding = resolve_edges(style.padding, resolved_edge_basis, false, false);
-    result.border = resolve_edges(style.border, resolved_edge_basis, false, false);
+    result.margin = resolve_edges(style.margin, containing_width, true, true, edge_basis);
+    result.padding = resolve_edges(style.padding, containing_width, false, false, edge_basis);
+    result.border = resolve_edges(style.border, containing_width, false, false, edge_basis);
     result.aspect_ratio = style.aspect_ratio;
     result.box_sizing = style.box_sizing;
     result.direction = style.direction;

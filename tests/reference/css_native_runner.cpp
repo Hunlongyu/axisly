@@ -1557,6 +1557,36 @@ void block_float_vertical_case(std::string_view name) {
         {AvailableSpace::definite(100), AvailableSpace::max_content()}), nodes);
 }
 
+void block_float_negative_margin_case(std::string_view name) {
+    const bool alongside = name == "block-float-negative-alongside";
+    const bool below = name == "block-float-negative-below";
+    const bool overwide = name == "block-float-negative-below-overwide";
+    const int id = alongside ? 2140 : below ? 2150 : overwide ? 2160 : 2170;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style float_style;
+    float_style.display = Display::Block;
+    float_style.float_side = id == 2170 ? FloatSide::Right : FloatSide::Left;
+    float_style.box.size = {Length::length(30), Length::length(10)};
+    const auto floating = tree.create_node(float_style);
+    Style child_style;
+    child_style.display = Display::FlowRoot;
+    child_style.box.size = {Length::length(overwide ? 110.0f
+        : id == 2170 ? 80.0f : 20.0f), Length::length(10)};
+    if (id == 2170) child_style.box.margin.right = Length::length(-10);
+    else child_style.box.margin.left = Length::length(-10);
+    if (below || overwide) child_style.box.margin.top = Length::length(20);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, floating);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{id, root}, {id + 1, floating}, {id + 2, child}});
+}
+
 void block_intrinsic_width_case(std::string_view name) {
     const bool floating = name.starts_with("block-float-intrinsic-");
     const bool overflow = name == "block-float-intrinsic-overflow";
@@ -2170,6 +2200,11 @@ int main(int argc, char** argv) {
             || name == "block-float-hole-flow-root"
             || name == "block-float-hole-wide-flow-root"
             || name == "block-float-zero-height") block_float_vertical_case(name);
+        else if (name == "block-float-negative-alongside"
+            || name == "block-float-negative-below"
+            || name == "block-float-negative-below-overwide"
+            || name == "block-float-negative-trailing")
+            block_float_negative_margin_case(name);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

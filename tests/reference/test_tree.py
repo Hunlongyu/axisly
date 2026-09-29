@@ -466,6 +466,18 @@ class TreeReferenceTests(unittest.TestCase):
             "grid-auto-row-percent-gap": {2130: [0, 0, 20, 20],
                                           2131: [0, 0, 20, 10],
                                           2132: [0, 12, 20, 10]},
+            "block-float-negative-alongside": {2140: [0, 0, 100, 10],
+                                               2141: [0, 0, 30, 10],
+                                               2142: [30, 0, 20, 10]},
+            "block-float-negative-below": {2150: [0, 0, 100, 30],
+                                           2151: [0, 0, 30, 10],
+                                           2152: [-10, 20, 20, 10]},
+            "block-float-negative-below-overwide": {2160: [0, 0, 100, 30],
+                                                    2161: [0, 0, 30, 10],
+                                                    2162: [-10, 20, 110, 10]},
+            "block-float-negative-trailing": {2170: [0, 0, 100, 20],
+                                              2171: [70, 0, 30, 10],
+                                              2172: [0, 10, 80, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

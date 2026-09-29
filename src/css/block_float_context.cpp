@@ -97,6 +97,13 @@ FloatSlot FloatContext::place_formatting_context(Unit initial_y,
     std::optional<Unit> preferred_width, NodeId node) const {
     Unit y = initial_y;
     for (std::size_t attempt = 0; attempt <= regions_.size(); ++attempt) {
+        const auto next_bottom = next_occupied_bottom(y, y);
+        if (!next_bottom) {
+            const Unit width = std::max(Unit{0}, checked(
+                static_cast<double>(content_width_) - margin_left - margin_right,
+                node));
+            return {margin_left, y, width};
+        }
         const auto free = free_intervals(y, y);
         for (const auto& interval : free) {
             const Unit x = std::max(margin_left, interval.left);
@@ -107,13 +114,6 @@ FloatSlot FloatContext::place_formatting_context(Unit initial_y,
             if (!preferred_width || *preferred_width <= width) {
                 return {x, y, width};
             }
-        }
-        const auto next_bottom = next_occupied_bottom(y, y);
-        if (!next_bottom) {
-            const Unit x = margin_left;
-            const Unit width = std::max(Unit{0}, checked(
-                static_cast<double>(content_width_) - x - margin_right, node));
-            return {x, y, width};
         }
         y = *next_bottom;
     }

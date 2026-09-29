@@ -1463,6 +1463,42 @@
         {"id": 2131, "parent": 0, "style": {"size": {"width": 20, "height": 10}, "grid_row": {"start": "1", "end": "2"}}},
         {"id": 2132, "parent": 0, "style": {"size": {"width": 20, "height": 10}, "grid_row": {"start": "2", "end": "3"}}}
       ]
+    },
+    {
+      "name": "block-float-negative-alongside",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 2140, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 2141, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 30, "height": 10}}},
+        {"id": 2142, "parent": 0, "style": {"display": "FlowRoot", "size": {"width": 20, "height": 10}, "margin": {"left": -10}}}
+      ]
+    },
+    {
+      "name": "block-float-negative-below",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 2150, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 2151, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 30, "height": 10}}},
+        {"id": 2152, "parent": 0, "style": {"display": "FlowRoot", "size": {"width": 20, "height": 10}, "margin": {"left": -10, "top": 20}}}
+      ]
+    },
+    {
+      "name": "block-float-negative-below-overwide",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 2160, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 2161, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 30, "height": 10}}},
+        {"id": 2162, "parent": 0, "style": {"display": "FlowRoot", "size": {"width": 110, "height": 10}, "margin": {"left": -10, "top": 20}}}
+      ]
+    },
+    {
+      "name": "block-float-negative-trailing",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 2170, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 2171, "parent": 0, "style": {"display": "Block", "float": "Right", "size": {"width": 30, "height": 10}}},
+        {"id": 2172, "parent": 0, "style": {"display": "FlowRoot", "size": {"width": 80, "height": 10}, "margin": {"right": -10}}}
+      ]
     }
   ]
 }

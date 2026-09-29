@@ -126,16 +126,20 @@ ResolvedDimensions transfer_aspect_ratio(ResolvedDimensions size,
 
 ResolvedBox resolve_box(const BoxStyle& style,
                         std::optional<Unit> containing_width,
-                        std::optional<Unit> containing_height) {
+                        std::optional<Unit> containing_height,
+                        IndefiniteEdgeBasis edge_basis) {
     nonnegative_basis(containing_width);
     nonnegative_basis(containing_height);
     if (style.aspect_ratio && (!std::isfinite(*style.aspect_ratio) || *style.aspect_ratio <= 0)) {
         throw std::invalid_argument("CSS aspect ratio must be finite and positive");
     }
     ResolvedBox result;
-    result.margin = resolve_edges(style.margin, containing_width, true, true);
-    result.padding = resolve_edges(style.padding, containing_width, false, false);
-    result.border = resolve_edges(style.border, containing_width, false, false);
+    const auto resolved_edge_basis = containing_width
+        ? containing_width : edge_basis == IndefiniteEdgeBasis::Zero
+            ? std::optional<Unit>(Unit{0}) : std::nullopt;
+    result.margin = resolve_edges(style.margin, resolved_edge_basis, true, true);
+    result.padding = resolve_edges(style.padding, resolved_edge_basis, false, false);
+    result.border = resolve_edges(style.border, resolved_edge_basis, false, false);
     result.aspect_ratio = style.aspect_ratio;
     result.box_sizing = style.box_sizing;
     result.direction = style.direction;

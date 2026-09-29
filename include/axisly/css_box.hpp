@@ -38,6 +38,7 @@ struct BoxStyle {
 };
 
 enum class EdgeKind { Numeric, Auto, UnresolvedPercentage };
+enum class IndefiniteEdgeBasis { Unresolved, Zero };
 
 struct ResolvedEdge {
     EdgeKind kind{EdgeKind::Numeric};
@@ -79,9 +80,11 @@ struct ResolvedBox {
 
 // Percentage padding, border and margin use the containing block's inline size.
 // Width and height percentages use the corresponding containing-block axis.
-// Unknown bases stay explicit, including calc expressions containing percentages.
+// By default, unknown bases stay explicit. Layout algorithms may instead
+// resolve percentage edges against zero during an intrinsic-size pass.
 [[nodiscard]] ResolvedBox resolve_box(const BoxStyle& style,
-    std::optional<Unit> containing_width, std::optional<Unit> containing_height);
+    std::optional<Unit> containing_width, std::optional<Unit> containing_height,
+    IndefiniteEdgeBasis edge_basis = IndefiniteEdgeBasis::Unresolved);
 
 // Resolve min/max in CSS order: max size first, then min size, so min wins if
 // min exceeds max. The caller supplies the content-derived border-box size.

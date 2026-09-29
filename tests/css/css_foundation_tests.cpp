@@ -78,6 +78,12 @@ void box() {
     require(unresolved.padding.left.kind == EdgeKind::UnresolvedPercentage,
         "Unknown inline basis must not turn percentage padding into zero");
     require(!unresolved.preferred.width, "Unresolved padding prevents a definite border-box size");
+    const auto intrinsic = resolve_box(style, std::nullopt, 200.0f,
+        IndefiniteEdgeBasis::Zero);
+    require(intrinsic.padding.left.numeric() == 0
+        && intrinsic.horizontal_decoration() == 4
+        && !intrinsic.preferred.width,
+        "Intrinsic edge resolution must keep percentage dimensions indefinite");
     require(resolve_box(style, 0.0f, 0.0f).preferred.width == 4,
         "Known zero basis must resolve percentage width and padding");
     style.size.height = Length::automatic();

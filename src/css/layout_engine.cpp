@@ -73,7 +73,8 @@ ResolvedDimensions requested_size(const Constraints& constraints,
 ResolvedBox resolve_layout_box(const LayoutNode& node,
                                std::optional<Unit> containing_width,
                                std::optional<Unit> containing_height) {
-    auto resolved = resolve_box(node.style.box, containing_width, containing_height);
+    auto resolved = resolve_box(node.style.box, containing_width, containing_height,
+        IndefiniteEdgeBasis::Zero);
     resolved.scrollbar.width = node.style.overflow_y == Overflow::Scroll
         ? node.style.scrollbar_width : Unit{0};
     resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
@@ -106,7 +107,8 @@ NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& res
     const Unit height = std::max(Unit{0}, content_axis(size.height,
         padding.top, padding.bottom, border.top, border.bottom) - resolved.scrollbar.height);
     return {node.id, node.parent, {0, 0, size.width, size.height},
-        {left, top, width, height}, margin, padding, border, resolved.scrollbar,
+        {left, top, width, height}, margin, padding, border, border,
+        resolved.scrollbar,
         first_baseline ? std::optional<Unit>(*first_baseline + top) : std::nullopt,
         last_baseline ? std::optional<Unit>(*last_baseline + top) : std::nullopt};
 }

@@ -48,6 +48,9 @@ struct NodeLayout {
     // Root-relative border and content rectangles; margin is outside border.
     Rect border_box{}, content_box{};
     Insets margin{}, padding{}, border{};
+    // Origin used when child overflow propagates. A content-sized Block may
+    // resolve cyclic percentage borders after its reported edges are frozen.
+    Insets overflow_origin_border{};
     Size scrollbar{};
     std::optional<Unit> first_baseline, last_baseline;
     // Node-local scrollable region; unlike border_box, it is not root-relative.

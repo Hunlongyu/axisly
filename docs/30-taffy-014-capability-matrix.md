@@ -32,9 +32,9 @@
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限、Flex 拉伸交叉轴基准和 Grid 自动轨道比例贡献已差分；未定交叉轴及复杂 min/max 组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width；待建：ratio-indefinite-cross-axis |
-| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距差分已覆盖，复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins、block-float-negative-below |
-| `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
-| `border` | 四边 Length／Percent／Calc | 部分：共享盒模型解析，差分覆盖固定数值 | P1 | 已建：content-box-and-negative-margin |
+| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分，复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent |
+| `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，Flex/Grid 根容器按固有阶段零值布局；其他百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent；待建：nested-percent-padding |
+| `border` | 四边 Length／Percent／Calc | 部分：固定数值与根容器未定宽度的百分比边框已差分；Block 用确定后的边框作为子项和溢出坐标原点；嵌套循环未完整 | P1 | 已建：content-box-and-negative-margin、root-block／flex／grid-border-percent |
 | `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择与滚动项目基线钳制已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline |
 | `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；固定交叉尺寸项目在反向换行时按 flex-start 对齐；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline；待建：align-self-full |
 | `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 常用位置与 stretch；安全值未完整 | P3 | 待建：justify-items |
@@ -160,6 +160,8 @@
 | `flex-wrap-reverse-baseline`／`flex-column-reverse-baseline` | Flex 容器从视觉起始行或列反向的起始项目生成首基线，固定交叉尺寸项目遵守反向换行的 flex-start |
 | `grid-first-row-baseline`／`grid-aligned-baseline` | Grid 按行号选择首行，优先使用参与基线对齐的项目及其行内基线位移 |
 | `flex-scroll-baseline`／`grid-scroll-baseline` | 滚动项目即使报告超过盒高的内容基线，参与基线对齐时也按边框盒高度钳制 |
+| `root-block-padding-percent`／`root-block-border-percent`／`root-block-margin-percent` | Block 根的未定包含块宽度使报告的百分比边值为零；自身宽度确定后重新解析内边距和边框用于子项排布及溢出坐标 |
+| `root-flex-padding-percent`／`root-flex-border-percent`／`root-flex-margin-percent`／`root-grid-padding-percent`／`root-grid-border-percent`／`root-grid-margin-percent` | Flex/Grid 根在未定包含块宽度下的百分比边值按零参与布局与报告，不把自身内容宽度误作包含块基准 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -182,8 +184,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、一百八十九组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这一百八十九组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、一百九十八组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这一百九十八组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

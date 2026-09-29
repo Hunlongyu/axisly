@@ -110,18 +110,17 @@ void intrinsic_queries() {
 
 void errors_and_exception_atomicity() {
     LayoutTree tree;
-    Style unsupported_style;
-    unsupported_style.display = Display::Block;
-    unsupported_style.box.padding.left = Length::percent(0.5f);
-    const auto root = tree.create_node(unsupported_style);
-    const auto unsupported_child = tree.create_node();
-    tree.append_child(root, unsupported_child);
-    const auto& unsupported = tree.compute(root,
+    Style indefinite_style;
+    indefinite_style.display = Display::Block;
+    indefinite_style.box.padding.left = Length::percent(0.5f);
+    const auto root = tree.create_node(indefinite_style);
+    const auto child = tree.create_node();
+    tree.append_child(root, child);
+    const auto& indefinite = tree.compute(root,
         {AvailableSpace::indefinite(), AvailableSpace::definite(100)});
-    require(unsupported.error.code == LayoutErrorCode::UnresolvedPercentage
-        && unsupported.nodes.empty(),
-        "Unresolved input must return an empty error result");
-    tree.detach(unsupported_child);
+    require(indefinite.succeeded() && indefinite.find(root)->padding.left == 0,
+        "Indefinite percentage padding must resolve to zero in layout");
+    tree.detach(child);
     tree.set_style(root, Style{});
     tree.set_measure(root, [](const MeasureRequest&) { return Measurement{{-1, 0}, {}, {}}; });
     const auto& invalid = tree.compute(root,

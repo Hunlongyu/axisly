@@ -506,6 +506,39 @@ void scroll_baseline_case(std::string_view name) {
         {{base, root}, {base + 1, scroll}, {base + 2, normal}});
 }
 
+void root_percentage_edges_case(std::string_view name) {
+    LayoutTree tree;
+    const bool block = name.starts_with("root-block-");
+    const bool flex = name.starts_with("root-flex-");
+    const int kind = block ? 0 : flex ? 1 : 2;
+    const bool padding = name.find("-padding-") != std::string_view::npos;
+    const bool margin = name.find("-margin-") != std::string_view::npos;
+    const int variant = padding ? 0 : margin ? 1 : 2;
+    const int base = 6000 + kind * 30 + variant * 10;
+    Style root_style;
+    root_style.display = block ? Display::Block : flex ? Display::Flex : Display::Grid;
+    if (padding) {
+        root_style.box.padding.left = Length::percent(0.1f);
+        root_style.box.padding.right = Length::percent(0.2f);
+        root_style.box.padding.top = Length::percent(0.1f);
+        root_style.box.padding.bottom = Length::percent(0.2f);
+    } else if (margin) {
+        root_style.box.margin.left = Length::percent(0.1f);
+        root_style.box.margin.top = Length::percent(0.2f);
+    } else {
+        root_style.box.border.left = Length::percent(0.1f);
+        root_style.box.border.top = Length::percent(0.2f);
+    }
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::max_content(), AvailableSpace::max_content()}),
+        {{base, root}, {base + 1, child}});
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2244,6 +2277,9 @@ int main(int argc, char** argv) {
             || name == "grid-aligned-baseline") container_baseline_edge(name);
         else if (name == "flex-scroll-baseline"
             || name == "grid-scroll-baseline") scroll_baseline_case(name);
+        else if (name.starts_with("root-block-")
+            || name.starts_with("root-flex-")
+            || name.starts_with("root-grid-")) root_percentage_edges_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

@@ -45,7 +45,14 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         preferred_width.value_or(content_based_width
             ? measured_width : available_width.value_or(Unit{0})),
         box.minimum.width, box.maximum.width);
-    const Unit content_width = std::max(Unit{0}, outer_width - *decoration_width);
+    // A content-sized Block determines its outer width before cyclic percentage
+    // edges can be used. Taffy then resolves those edges against that width for
+    // child layout while retaining the original reported box edges.
+    const ResolvedBox flow_box = constraints.containing_width ? box
+        : resolve_layout_box(node, outer_width, constraints.containing_height);
+    const auto flow_decoration_width = flow_box.horizontal_decoration();
+    const auto flow_decoration_height = flow_box.vertical_decoration();
+    const Unit content_width = std::max(Unit{0}, outer_width - *flow_decoration_width);
     auto preferred_height = requested.height;
     if (!preferred_height) {
         preferred_height = transfer_aspect_ratio({outer_width, std::nullopt}, box).height;
@@ -55,9 +62,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             box.minimum.height, box.maximum.height);
     }
     const Unit content_height_basis = preferred_height
-        ? std::max(Unit{0}, *preferred_height - *decoration_height) : Unit{0};
-    const auto border = edges(box.border, node.id);
-    const auto padding = edges(box.padding, node.id);
+        ? std::max(Unit{0}, *preferred_height - *flow_decoration_height) : Unit{0};
+    const auto border = edges(flow_box.border, node.id);
+    const auto padding = edges(flow_box.padding, node.id);
     const Unit x_origin = checked(static_cast<double>(border.left) + padding.left, node.id);
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
     std::vector<Fragment> fragments(node.children.size());
@@ -276,14 +283,15 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         content_height = std::max(content_height, floats.maximum_bottom());
     }
     Size candidate{
-        checked(static_cast<double>(content_width) + *decoration_width, node.id),
+        outer_width,
         preferred_height ? *preferred_height
-            : checked(static_cast<double>(content_height) + *decoration_height, node.id),
+            : checked(static_cast<double>(content_height) + *flow_decoration_height, node.id),
     };
     candidate = constrain_size(candidate, box);
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
+    result.nodes.front().overflow_origin_border = border;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto& child = get(node.children[source]);
         if (child.style.display == Display::None
@@ -307,7 +315,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 static_block_y[source] = checked(
                     static_cast<double>(*static_block_y[source]) - top_shift, id);
             }
-            fragments[source] = absolute(node, id, candidate, box, depth,
+            fragments[source] = absolute(node, id, candidate, flow_box, depth,
                 std::nullopt, static_block_y[source]);
         }
         auto& nested = fragments[source];

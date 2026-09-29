@@ -502,6 +502,97 @@ void grid_implicit_negative_lines() {
         {{210, root}, {211, first}, {212, second}});
 }
 
+void grid_implicit_rows(std::string_view name) {
+    const bool positive = name == "grid-implicit-positive-rows";
+    const bool negative = name == "grid-implicit-negative-rows";
+    const int id = positive ? 1890 : negative ? 1900 : 1910;
+    const std::vector<std::pair<int, int>> lines = positive
+        ? std::vector<std::pair<int, int>>{{2, 3}, {3, 4}, {4, 5}}
+        : negative ? std::vector<std::pair<int, int>>{
+            {-4, -3}, {-3, -2}, {-2, -1}}
+        : std::vector<std::pair<int, int>>{
+            {-3, -2}, {-2, -1}, {2, 3}, {3, 4}};
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    root_style.grid.template_columns = {TrackSizing::fixed(20)};
+    root_style.grid.template_rows = {TrackSizing::fixed(10)};
+    root_style.grid.auto_rows = {TrackSizing::fixed(15), TrackSizing::fixed(25)};
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (const auto [start, end] : lines) {
+        Style style;
+        style.grid.row = {GridLine::index(static_cast<std::int16_t>(start)),
+                          GridLine::index(static_cast<std::int16_t>(end))};
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + static_cast<int>(nodes.size()), child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}), nodes);
+}
+
+void self_alignment_direction_case(std::string_view name) {
+    const bool grid = name.starts_with("grid-");
+    const bool ltr = name.ends_with("ltr-rtl");
+    const int id = grid ? (ltr ? 1920 : 1930) : (ltr ? 1940 : 1950);
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = grid ? Display::Grid : Display::Flex;
+    root_style.box.direction = ltr ? Direction::Ltr : Direction::Rtl;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    if (grid) {
+        root_style.grid.template_columns = {TrackSizing::fixed(100)};
+        root_style.grid.template_rows = {TrackSizing::fixed(100)};
+    } else {
+        root_style.flex_direction = FlexDirection::Column;
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (const auto alignment : {ItemPosition::SelfStart, ItemPosition::SelfEnd}) {
+        Style style;
+        style.box.direction = ltr ? Direction::Rtl : Direction::Ltr;
+        style.box.size = {Length::length(20), Length::length(10)};
+        if (grid) {
+            style.justify_self = ItemAlignment{alignment};
+            style.grid.row = {GridLine::index(1), GridLine::index(2)};
+            style.grid.column = {GridLine::index(1), GridLine::index(2)};
+        } else {
+            style.align_self = ItemAlignment{alignment};
+        }
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + static_cast<int>(nodes.size()), child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}), nodes);
+}
+
+void flex_wrap_reverse_physical_case(std::string_view name) {
+    const bool row = name.ends_with("row");
+    const int id = row ? 1960 : 1970;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Flex;
+    root_style.flex_direction = row ? FlexDirection::Row : FlexDirection::Column;
+    root_style.flex_wrap = FlexWrap::WrapReverse;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (const auto alignment : {ItemPosition::Start, ItemPosition::End,
+         ItemPosition::FlexStart, ItemPosition::FlexEnd}) {
+        Style style;
+        style.box.size = {Length::length(20), Length::length(20)};
+        style.align_self = ItemAlignment{alignment};
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + static_cast<int>(nodes.size()), child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}), nodes);
+}
+
 void grid_row_dense_holes() {
     LayoutTree tree;
     Style root_style;
@@ -1860,6 +1951,15 @@ int main(int argc, char** argv) {
         else if (name == "block-contain-float") block_contain_float();
         else if (name == "grid-absolute-area") grid_absolute_area();
         else if (name == "grid-implicit-negative-lines") grid_implicit_negative_lines();
+        else if (name == "grid-implicit-positive-rows"
+            || name == "grid-implicit-negative-rows"
+            || name == "grid-implicit-mixed-rows") grid_implicit_rows(name);
+        else if (name == "grid-self-ltr-rtl" || name == "grid-self-rtl-ltr"
+            || name == "flex-self-ltr-rtl" || name == "flex-self-rtl-ltr")
+            self_alignment_direction_case(name);
+        else if (name == "flex-wrap-reverse-physical-row"
+            || name == "flex-wrap-reverse-physical-column")
+            flex_wrap_reverse_physical_case(name);
         else if (name == "grid-row-dense-holes") grid_row_dense_holes();
         else if (name == "grid-named-line-occurrences") grid_named_line_occurrences();
         else if (name == "block-parent-child-margins") block_parent_child_margins();

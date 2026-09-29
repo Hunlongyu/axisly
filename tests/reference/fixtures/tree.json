@@ -1242,6 +1242,95 @@
         {"id": 1881, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 50, "height": 0}}},
         {"id": 1882, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 60, "height": 10}}}
       ]
+    },
+    {
+      "name": "grid-implicit-positive-rows",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1890, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}, "grid_template_columns": "20px", "grid_template_rows": "10px", "grid_auto_rows": "15px 25px"}},
+        {"id": 1891, "parent": 0, "style": {"grid_row": {"start": "2", "end": "3"}}},
+        {"id": 1892, "parent": 0, "style": {"grid_row": {"start": "3", "end": "4"}}},
+        {"id": 1893, "parent": 0, "style": {"grid_row": {"start": "4", "end": "5"}}}
+      ]
+    },
+    {
+      "name": "grid-implicit-negative-rows",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1900, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}, "grid_template_columns": "20px", "grid_template_rows": "10px", "grid_auto_rows": "15px 25px"}},
+        {"id": 1901, "parent": 0, "style": {"grid_row": {"start": "-4", "end": "-3"}}},
+        {"id": 1902, "parent": 0, "style": {"grid_row": {"start": "-3", "end": "-2"}}},
+        {"id": 1903, "parent": 0, "style": {"grid_row": {"start": "-2", "end": "-1"}}}
+      ]
+    },
+    {
+      "name": "grid-implicit-mixed-rows",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1910, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}, "grid_template_columns": "20px", "grid_template_rows": "10px", "grid_auto_rows": "15px 25px"}},
+        {"id": 1911, "parent": 0, "style": {"grid_row": {"start": "-3", "end": "-2"}}},
+        {"id": 1912, "parent": 0, "style": {"grid_row": {"start": "-2", "end": "-1"}}},
+        {"id": 1913, "parent": 0, "style": {"grid_row": {"start": "2", "end": "3"}}},
+        {"id": 1914, "parent": 0, "style": {"grid_row": {"start": "3", "end": "4"}}}
+      ]
+    },
+    {
+      "name": "grid-self-ltr-rtl",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1920, "parent": null, "style": {"display": "Grid", "direction": "Ltr", "size": {"width": 100, "height": 100}, "grid_template_columns": "100px", "grid_template_rows": "100px"}},
+        {"id": 1921, "parent": 0, "style": {"direction": "Rtl", "size": {"width": 20, "height": 10}, "justify_self": "SelfStart", "grid_row": {"start": "1", "end": "2"}, "grid_column": {"start": "1", "end": "2"}}},
+        {"id": 1922, "parent": 0, "style": {"direction": "Rtl", "size": {"width": 20, "height": 10}, "justify_self": "SelfEnd", "grid_row": {"start": "1", "end": "2"}, "grid_column": {"start": "1", "end": "2"}}}
+      ]
+    },
+    {
+      "name": "grid-self-rtl-ltr",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1930, "parent": null, "style": {"display": "Grid", "direction": "Rtl", "size": {"width": 100, "height": 100}, "grid_template_columns": "100px", "grid_template_rows": "100px"}},
+        {"id": 1931, "parent": 0, "style": {"direction": "Ltr", "size": {"width": 20, "height": 10}, "justify_self": "SelfStart", "grid_row": {"start": "1", "end": "2"}, "grid_column": {"start": "1", "end": "2"}}},
+        {"id": 1932, "parent": 0, "style": {"direction": "Ltr", "size": {"width": 20, "height": 10}, "justify_self": "SelfEnd", "grid_row": {"start": "1", "end": "2"}, "grid_column": {"start": "1", "end": "2"}}}
+      ]
+    },
+    {
+      "name": "flex-self-ltr-rtl",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1940, "parent": null, "style": {"display": "Flex", "direction": "Ltr", "flex_direction": "Column", "size": {"width": 100, "height": 100}}},
+        {"id": 1941, "parent": 0, "style": {"direction": "Rtl", "size": {"width": 20, "height": 10}, "align_self": "SelfStart"}},
+        {"id": 1942, "parent": 0, "style": {"direction": "Rtl", "size": {"width": 20, "height": 10}, "align_self": "SelfEnd"}}
+      ]
+    },
+    {
+      "name": "flex-self-rtl-ltr",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1950, "parent": null, "style": {"display": "Flex", "direction": "Rtl", "flex_direction": "Column", "size": {"width": 100, "height": 100}}},
+        {"id": 1951, "parent": 0, "style": {"direction": "Ltr", "size": {"width": 20, "height": 10}, "align_self": "SelfStart"}},
+        {"id": 1952, "parent": 0, "style": {"direction": "Ltr", "size": {"width": 20, "height": 10}, "align_self": "SelfEnd"}}
+      ]
+    },
+    {
+      "name": "flex-wrap-reverse-physical-row",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1960, "parent": null, "style": {"display": "Flex", "flex_direction": "Row", "flex_wrap": "WrapReverse", "size": {"width": 100, "height": 100}}},
+        {"id": 1961, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "Start"}},
+        {"id": 1962, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "End"}},
+        {"id": 1963, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "FlexStart"}},
+        {"id": 1964, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "FlexEnd"}}
+      ]
+    },
+    {
+      "name": "flex-wrap-reverse-physical-column",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1970, "parent": null, "style": {"display": "Flex", "flex_direction": "Column", "flex_wrap": "WrapReverse", "size": {"width": 100, "height": 100}}},
+        {"id": 1971, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "Start"}},
+        {"id": 1972, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "End"}},
+        {"id": 1973, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "FlexStart"}},
+        {"id": 1974, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "FlexEnd"}}
+      ]
     }
   ]
 }

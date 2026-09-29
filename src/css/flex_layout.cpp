@@ -1,5 +1,6 @@
 #include "layout_engine.hpp"
 #include "balanced_lines.hpp"
+#include "item_alignment.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -519,11 +520,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             }
             if (!(item.auto_cross_start || item.auto_cross_end)
                 && !(alignment.safety == AlignmentSafety::Safe && cross_remain < 0)) {
-                if (alignment.position == ItemPosition::End
-                    || alignment.position == ItemPosition::FlexEnd
-                    || alignment.position == ItemPosition::SelfEnd) {
+                const auto edge = item_edge(alignment.position, !row,
+                    node.style.box.direction, child_style.box.direction,
+                    cross_reverse, cross_reverse);
+                if (edge == ItemEdge::End) {
                     cross_offset = checked(cross_margin_start + cross_remain, item.id);
-                } else if (alignment.position == ItemPosition::Center) {
+                } else if (edge == ItemEdge::Center) {
                     cross_offset = checked(cross_margin_start + cross_remain / 2, item.id);
                 }
             }

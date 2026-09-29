@@ -1,4 +1,5 @@
 #include "grid_internal.hpp"
+#include "item_alignment.hpp"
 
 #include <algorithm>
 #include <array>
@@ -326,15 +327,17 @@ Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId id) {
     return *numeric;
 }
 
-Unit align_offset(Unit free, ItemAlignment alignment, NodeId id) {
+Unit align_offset(Unit free, ItemAlignment alignment, bool horizontal,
+    Direction container_direction, Direction item_direction, NodeId id) {
     if (alignment.safety == AlignmentSafety::Safe && free < 0) return 0;
-    switch (alignment.position) {
-    case ItemPosition::End:
-    case ItemPosition::FlexEnd:
-    case ItemPosition::SelfEnd: return free;
-    case ItemPosition::Center: return checked(static_cast<double>(free) / 2, id);
-    default: return 0;
+    const bool reversed = horizontal && container_direction == Direction::Rtl;
+    switch (item_edge(alignment.position, horizontal, container_direction,
+        item_direction, reversed, reversed)) {
+    case ItemEdge::Start: return 0;
+    case ItemEdge::Center: return checked(static_cast<double>(free) / 2, id);
+    case ItemEdge::End: return free;
     }
+    return 0;
 }
 } // namespace
 
@@ -611,9 +614,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             if (auto_bottom) used_bottom = share;
         }
         Unit x = checked(static_cast<double>(cell_x) + used_left
-            + ((auto_left || auto_right) ? 0 : align_offset(horizontal_free, horizontal, id)), id);
+            + ((auto_left || auto_right) ? 0 : align_offset(horizontal_free,
+                horizontal, true, node.style.box.direction,
+                child.style.box.direction, id)), id);
         Unit y = checked(static_cast<double>(cell_y) + used_top
-            + ((auto_top || auto_bottom) ? 0 : align_offset(vertical_free, vertical, id)), id);
+            + ((auto_top || auto_bottom) ? 0 : align_offset(vertical_free,
+                vertical, false, node.style.box.direction,
+                child.style.box.direction, id)), id);
         child_fragment.nodes.front().margin = {used_left, used_top, used_right, used_bottom};
         if (node.style.box.direction == Direction::Rtl) {
             x = checked(static_cast<double>(*inner_width) - x - child_fragment.size.width, id);

@@ -11,7 +11,7 @@ from test_grid_matrix import TRACK_PAIRS
 
 def make_cases():
     for scenario, columns, rows, mode, rtl in itertools.product(
-        range(3), range(4), range(4), range(2), range(2)
+        range(3), range(len(TRACK_PAIRS)), range(len(TRACK_PAIRS)), range(2), range(2)
     ):
         name = f"grid-span-matrix-{scenario}-{columns}-{rows}-{mode}-{rtl}"
         style = {
@@ -63,7 +63,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_GRID_SPAN_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 192
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 588
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

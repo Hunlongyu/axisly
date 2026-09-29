@@ -147,6 +147,39 @@ double grow_nonflexible_tracks(TrackAxis& axis, std::optional<Unit> available,
     return std::max(0.0, free - distributed);
 }
 
+double size_of_fraction_unit(const TrackAxis& axis, std::int32_t start,
+                             std::int32_t end, double space_to_fill) {
+    if (space_to_fill == 0) return 0;
+    std::vector<bool> frozen(static_cast<std::size_t>(end - start));
+    double unit = 0;
+    for (auto pass = start; pass <= end; ++pass) {
+        double used = 0, factors = 0;
+        for (auto index = start; index < end; ++index) {
+            const auto slot = static_cast<std::size_t>(index - axis.origin);
+            const auto& track = axis.tracks[slot];
+            if (index + 1 < end) used += axis.gutter_after[slot];
+            if (track.style.maximum.kind() == TrackBreadthKind::Fraction
+                && !frozen[static_cast<std::size_t>(index - start)]) {
+                factors += track.flex;
+            } else used += track.size;
+        }
+        unit = (space_to_fill - used) / std::max(1.0, factors);
+        bool changed = false;
+        for (auto index = start; index < end; ++index) {
+            const auto slot = static_cast<std::size_t>(index - axis.origin);
+            const auto& track = axis.tracks[slot];
+            if (track.style.maximum.kind() != TrackBreadthKind::Fraction) continue;
+            const auto frozen_slot = static_cast<std::size_t>(index - start);
+            if (!frozen[frozen_slot] && track.flex * unit < track.size) {
+                frozen[frozen_slot] = true;
+                changed = true;
+            }
+        }
+        if (!changed) break;
+    }
+    return unit;
+}
+
 Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
                        const Placement& placement, const TrackAxis& axis,
                        Unit min_content, bool columns) {
@@ -496,13 +529,26 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
     } else if (!available && query != AvailableKind::MinContent) {
         double fr_unit = 0;
         for (const auto& track : axis.tracks) {
-            if (track.flex > 0) {
-                fr_unit = std::max(fr_unit,
-                    static_cast<double>(track.preferred) / track.flex);
+            if (track.style.maximum.kind() == TrackBreadthKind::Fraction) {
+                fr_unit = std::max(fr_unit, static_cast<double>(track.size)
+                    / std::max(1.0, static_cast<double>(track.flex)));
+            }
+        }
+        for (const auto& item : items) {
+            const auto [start, end] = range(item);
+            const bool crosses_flex = std::any_of(
+                axis.tracks.begin() + (start - axis.origin),
+                axis.tracks.begin() + (end - axis.origin),
+                [](const TrackState& track) {
+                    return track.style.maximum.kind() == TrackBreadthKind::Fraction;
+                });
+            if (crosses_flex) {
+                fr_unit = std::max(fr_unit, size_of_fraction_unit(axis,
+                    start, end, contribution(item, ContributionKind::MaxContent)));
             }
         }
         for (auto& track : axis.tracks) {
-            if (track.flex > 0) {
+            if (track.style.maximum.kind() == TrackBreadthKind::Fraction) {
                 track.size = checked(std::max<double>(track.size,
                     fr_unit * track.flex), id);
             }

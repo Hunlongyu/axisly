@@ -49,7 +49,7 @@
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分；嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze |
-| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；自动重复行的百分比间隙与最小／最大高度组合已差分；容器固有高度确定后重新解析循环百分比轨道；`min-content` 查询下弹性轨道保留基准尺寸，双轴固有查询已加入组合差分；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows、repeat-gap-row-max／min、test_grid_matrix.py |
+| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；自动重复行的百分比间隙与最小／最大高度组合已差分；容器固有高度确定后重新解析循环百分比轨道；`min-content` 查询下弹性轨道保留基准尺寸，`max-content` 按项目跨越轨道求 `fr` 单位，双轴固有查询已加入组合差分；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows、repeat-gap-row-max／min、test_grid_matrix.py、test_grid_span_matrix.py |
 | `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入，百分比间隙及轨道在自动重复计数中按尺寸约束解析；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，跨弹性轨道的单格和跨格项目合批规划基础尺寸，仅向弹性轨道分配该批的固有贡献；固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分，`min-content` 查询不放大弹性轨道；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair、repeat-gap-fixed-percent-track、test_grid_matrix.py、test_grid_span_matrix.py |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持显式网格后的正向循环及前方的逆向序列，含双侧隐式行；复杂放置组合未验收 | P3 | 已建：grid-implicit-positive-rows、grid-implicit-negative-rows、grid-implicit-mixed-rows |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
@@ -214,13 +214,14 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 `test_flex_bounds.py` 另外组合四种主轴方向、三种普通换行、四组项目主轴
 尺寸上下界和 LTR／RTL，共 96 组；覆盖 flex 基础尺寸、假设尺寸、冻结与
 反向换行溢出的交互。
-`test_grid_matrix.py` 生成 864 组 Grid 组合：四类双轨道模板分别用于行列，
+`test_grid_matrix.py` 生成 2,646 组 Grid 组合：七类双轨道模板分别用于行列，
 三种横向对齐、三种纵向对齐、LTR／RTL，以及确定尺寸、`max-content`、
 `min-content` 三种查询。项目尺寸固定，比较范围与 Flex 组合相同。
-`test_grid_span_matrix.py` 增加跨两条行／列轨道的项目；四类双轨道模板
-分别用于行列，在确定尺寸、`max-content`、`min-content` 三种查询及
-LTR／RTL 下组成 192 组。跨弹性轨道项目按同一批规划基础尺寸，且不增加
-非弹性轨道的增长上限；这 192 组已纳入 CTest 差分。
+`test_grid_span_matrix.py` 增加跨两条行／列轨道的项目；七类双轨道模板
+分别用于行列，包含 `0fr`、低系数 `fr`，在确定尺寸、`max-content`、
+`min-content` 三种查询及 LTR／RTL 下组成 588 组。跨弹性轨道项目按
+同一批规划基础尺寸，且不增加非弹性轨道的增长上限；`max-content`
+按每个项目跨越的轨道求 `fr` 单位。这 588 组已纳入 CTest 差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

@@ -11,6 +11,7 @@ from test_flex_matrix import compare
 TRACK_PAIRS = (
     "30px 1fr", "1fr 2fr", "auto auto",
     "minmax(10px, 1fr) fit-content(50px)",
+    "0fr 1fr", "0.2fr 0.2fr", "0.5fr 1fr",
 )
 POSITIONS = ("Start", "End", "Center")
 ITEM_SIZES = ((15, 10), (30, 20), (25, 25), (10, 15))
@@ -52,20 +53,24 @@ def main():
     parser.add_argument("--taffy", required=True)
     args = parser.parse_args()
     cases = list(make_cases())
-    fixture = json.dumps({"protocol": "AXISLY_TREE_V1", "cases": cases})
-    oracle = json.loads(subprocess.run(
-        [args.taffy], input=fixture, text=True, capture_output=True, check=True
-    ).stdout)
+    expected = []
+    for start in range(0, len(cases), 1024):
+        fixture = json.dumps({"protocol": "AXISLY_TREE_V1",
+                              "cases": cases[start:start + 1024]})
+        oracle = json.loads(subprocess.run(
+            [args.taffy], input=fixture, text=True, capture_output=True, check=True
+        ).stdout)
+        assert oracle["taffy"] == "0.14.0"
+        expected.extend(oracle["cases"])
     native = json.loads(subprocess.run(
         [args.axisly], text=True, capture_output=True, check=True
     ).stdout)
-    assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_GRID_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 864
+    assert len(expected) == len(native["cases"]) == len(cases) == 2646
     failures = []
-    for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
+    for actual, expected_case in zip(native["cases"], expected, strict=True):
         try:
-            compare(actual, expected)
+            compare(actual, expected_case)
         except AssertionError as error:
             failures.append(error.args[0])
     groups = sorted({tuple(failure[0].split("-")[2:5]) for failure in failures})

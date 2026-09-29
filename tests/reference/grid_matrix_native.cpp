@@ -27,6 +27,9 @@ std::vector<TemplateTrack> tracks(std::size_t index) {
         TrackSizing::minmax(TrackBreadth::length(10), TrackBreadth::fraction(1)),
         TrackSizing::fit_content_length(50),
     };
+    case 4: return {TrackSizing::fraction(0), TrackSizing::fraction(1)};
+    case 5: return {TrackSizing::fraction(0.2F), TrackSizing::fraction(0.2F)};
+    case 6: return {TrackSizing::fraction(0.5F), TrackSizing::fraction(1)};
     default: throw std::invalid_argument("Unknown Grid track pair");
     }
 }
@@ -137,8 +140,8 @@ int main(int argc, char** argv) {
             << "\",\"cases\":[";
         bool first = true;
         for (std::size_t scenario = 0; scenario < 3; ++scenario)
-        for (std::size_t columns = 0; columns < 4; ++columns)
-        for (std::size_t rows = 0; rows < 4; ++rows)
+        for (std::size_t columns = 0; columns < 7; ++columns)
+        for (std::size_t rows = 0; rows < 7; ++rows)
         for (std::size_t first_axis = 0; first_axis < (spanning ? 2 : positions.size()); ++first_axis)
         for (std::size_t second_axis = 0; second_axis < (spanning ? 1 : positions.size()); ++second_axis)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {

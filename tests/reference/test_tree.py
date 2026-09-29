@@ -102,6 +102,13 @@ class TreeReferenceTests(unittest.TestCase):
                                              271: [0, 0, 100, 52], 272: [0, 23, 100, 10]},
             "block-fixed-height-collapse": {280: [0, 0, 100, 70],
                                             281: [0, 20, 100, 50], 282: [0, 0, 100, 10]},
+            "flex-small-grow-factors": {300: [0, 0, 100, 40],
+                                        301: [0, 0, 32, 10], 302: [32, 0, 32, 10]},
+            "flex-small-shrink-factor": {310: [0, 0, 40, 40], 311: [0, 0, 72, 10]},
+            "flex-grow-max-freeze": {320: [0, 0, 150, 40],
+                                    321: [0, 0, 50, 10], 322: [50, 0, 100, 10]},
+            "flex-shrink-min-freeze": {330: [0, 0, 100, 40],
+                                      331: [0, 0, 60, 10], 332: [60, 0, 40, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

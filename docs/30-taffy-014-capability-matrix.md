@@ -47,8 +47,8 @@
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；复杂组合未验收 | P2 | 已建：flex-balance-lines；待建：wrap-reverse |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines |
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比及固有关键字可探测；嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis |
-| `flex_grow` | 非负弹性增长系数 | 部分：增长与 min/max 冻结；组合覆盖不足 | P2 | 已建：flex-row-grow |
-| `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：按基准缩放并冻结；复杂约束未验收 | P2 | 待建：flex-shrink-freeze |
+| `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze |
+| `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze |
 | `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit |
 | `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；复杂尺寸阶段未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
@@ -91,6 +91,8 @@
 | `block-parent-child-margins`／`block-empty-margin-chain` | 父子边距与空 Block 连锁折叠；断言折叠后的盒边和根相对位置 |
 | `block-negative-margin-chain` | 正负外边距跨空 Block 累积；验证最大正值与最小负值分别保留 |
 | `block-padding-stops-collapse`／`block-fixed-height-collapse` | 垂直 padding 阻断折叠、固定高度仅允许顶部折叠 |
+| `flex-small-grow-factors`／`flex-small-shrink-factor` | 弹性系数总和小于 1 时保留未分配空间 |
+| `flex-grow-max-freeze`／`flex-shrink-min-freeze` | 多轮冻结后按剩余项目重新分配主轴空间 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -113,8 +115,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二十九组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这二十九组的矩形、盒边和滚动条同时经过新原生树差分。
+目前有 44 字段清单、三十三组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这三十三组的矩形、盒边和滚动条同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

@@ -36,6 +36,10 @@ CASES = (
     "block-negative-margin-chain",
     "block-padding-stops-collapse",
     "block-fixed-height-collapse",
+    "flex-small-grow-factors",
+    "flex-small-shrink-factor",
+    "flex-grow-max-freeze",
+    "flex-shrink-min-freeze",
     "mixed-block-flex-grid",
 )
 

@@ -649,6 +649,45 @@ void block_margin_guard(bool fixed_height) {
         {{first_id, root}, {first_id + 1, parent}, {first_id + 2, child}});
 }
 
+void flex_factor_case(std::string_view name) {
+    const bool small_grow = name == "flex-small-grow-factors";
+    const bool small_shrink = name == "flex-small-shrink-factor";
+    const bool grow_freeze = name == "flex-grow-max-freeze";
+    const Unit width = small_shrink ? 40.0f : grow_freeze ? 150.0f : 100.0f;
+    const Unit child_width = small_grow ? 20.0f
+        : grow_freeze ? 40.0f : 80.0f;
+    const int first_id = small_grow ? 300 : small_shrink ? 310
+        : grow_freeze ? 320 : 330;
+    LayoutTree tree;
+    Style root_style;
+    root_style.box.size = {Length::length(width), Length::length(40)};
+    const auto root = tree.create_node(root_style);
+    Style first_style;
+    first_style.box.size = {Length::length(child_width), Length::length(10)};
+    if (small_grow) first_style.flex_grow = 0.2f;
+    if (small_shrink) first_style.flex_shrink = 0.2f;
+    if (grow_freeze) {
+        first_style.flex_grow = 1;
+        first_style.box.max_size.width = Length::length(50);
+    }
+    if (!small_grow && !small_shrink && !grow_freeze) {
+        first_style.box.min_size.width = Length::length(60);
+    }
+    const auto first = tree.create_node(first_style);
+    tree.append_child(root, first);
+    std::vector<IdentifiedNode> nodes{{first_id, root}, {first_id + 1, first}};
+    if (!small_shrink) {
+        Style second_style = first_style;
+        if (grow_freeze) second_style.box.max_size.width = Length::automatic();
+        else if (!small_grow) second_style.box.min_size.width = Length::length(0);
+        const auto second = tree.create_node(second_style);
+        tree.append_child(root, second);
+        nodes.emplace_back(first_id + 2, second);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(width), AvailableSpace::definite(40)}), nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -713,6 +752,10 @@ int main(int argc, char** argv) {
         else if (name == "block-negative-margin-chain") block_negative_margin_chain();
         else if (name == "block-padding-stops-collapse") block_margin_guard(false);
         else if (name == "block-fixed-height-collapse") block_margin_guard(true);
+        else if (name == "flex-small-grow-factors"
+            || name == "flex-small-shrink-factor"
+            || name == "flex-grow-max-freeze"
+            || name == "flex-shrink-min-freeze") flex_factor_case(name);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

@@ -82,6 +82,81 @@ Distribution distribute(Unit free, std::size_t count, ContentAlignment alignment
     return {};
 }
 
+Unit clamped_main_size(const FlexItem& item, double value) {
+    if (item.maximum) value = std::min(value, static_cast<double>(*item.maximum));
+    return checked(std::max(value, static_cast<double>(item.minimum)), item.id);
+}
+
+void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
+                              Unit main_size, Unit gap, bool row) {
+    const double gutters = line.items.empty() ? 0
+        : static_cast<double>(line.items.size() - 1) * gap;
+    double base_occupied = gutters, hypothetical_occupied = gutters;
+    for (const auto index : line.items) {
+        const auto& item = items[index];
+        const double margin = static_cast<double>(axis(item.margin, row, true, true))
+            + axis(item.margin, row, true, false);
+        base_occupied += item.base + margin;
+        hypothetical_occupied += clamped_main_size(item, item.base) + margin;
+    }
+    const bool growing = hypothetical_occupied < main_size;
+    const double initial_free = static_cast<double>(main_size) - base_occupied;
+    std::vector<bool> frozen(line.items.size(), false);
+    for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
+        const auto index = line.items[slot];
+        auto& item = items[index];
+        const Unit hypothetical = clamped_main_size(item, item.base);
+        const bool inflexible = (growing ? item.grow : item.shrink) == 0
+            || (growing && item.base > hypothetical)
+            || (!growing && item.base < hypothetical);
+        item.target = inflexible ? hypothetical : item.base;
+        frozen[slot] = inflexible;
+    }
+    for (std::size_t pass = 0; pass < line.items.size(); ++pass) {
+        double occupied = gutters, raw_factor_sum = 0, scaled_factor_sum = 0;
+        for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
+            const auto index = line.items[slot];
+            const auto& item = items[index];
+            occupied += (frozen[slot] ? item.target : item.base)
+                + axis(item.margin, row, true, true)
+                + axis(item.margin, row, true, false);
+            if (!frozen[slot]) {
+                raw_factor_sum += growing ? item.grow : item.shrink;
+                scaled_factor_sum += growing ? item.grow
+                    : static_cast<double>(item.shrink) * item.base;
+            }
+        }
+        if (raw_factor_sum == 0) break;
+        double free = static_cast<double>(main_size) - occupied;
+        if (raw_factor_sum < 1) {
+            const double scaled_initial = initial_free * raw_factor_sum;
+            if (std::abs(scaled_initial) < std::abs(free)) free = scaled_initial;
+        }
+        double total_violation = 0;
+        std::vector<double> violations(line.items.size());
+        for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
+            if (frozen[slot]) continue;
+            const auto index = line.items[slot];
+            auto& item = items[index];
+            const double factor = growing ? item.grow
+                : static_cast<double>(item.shrink) * item.base;
+            const double ideal = static_cast<double>(item.base)
+                + (scaled_factor_sum > 0 ? free * factor / scaled_factor_sum : 0);
+            item.target = clamped_main_size(item, ideal);
+            violations[slot] = static_cast<double>(item.target) - ideal;
+            total_violation += violations[slot];
+        }
+        if (std::abs(total_violation) < 0.0001) break;
+        for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
+            if (!frozen[slot]
+                && (total_violation > 0 ? violations[slot] > 0
+                                        : violations[slot] < 0)) {
+                frozen[slot] = true;
+            }
+        }
+    }
+}
+
 } // namespace
 
 Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
@@ -285,41 +360,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     }
     const Unit main_size = row ? *inner_width : *inner_height;
     for (auto& line : lines) {
-        // Freeze items against min/max bounds while distributing remaining space.
-        double occupied = line.items.empty() ? 0 : static_cast<double>(line.items.size() - 1) * main_gap;
-        for (const auto index : line.items) {
-            auto& item = items[index];
-            item.target = item.maximum ? std::min(item.base, *item.maximum) : item.base;
-            item.target = std::max(item.target, item.minimum);
-            occupied += item.target + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false);
-        }
-        double free = static_cast<double>(main_size) - occupied;
-        for (std::size_t pass = 0; pass < line.items.size() && std::abs(free) > 0.0001; ++pass) {
-            double factor_sum = 0;
-            for (const auto index : line.items) {
-                const auto& item = items[index];
-                const double factor = free > 0 ? item.grow : item.shrink * item.base;
-                if (factor > 0 && (free > 0 ? (!item.maximum || item.target < *item.maximum)
-                    : item.target > item.minimum)) factor_sum += factor;
-            }
-            if (factor_sum <= 0) break;
-            double used = 0;
-            for (const auto index : line.items) {
-                auto& item = items[index];
-                const double factor = free > 0 ? item.grow : item.shrink * item.base;
-                if (factor <= 0 || (free > 0 ? (item.maximum && item.target >= *item.maximum)
-                    : item.target <= item.minimum)) continue;
-                double target = static_cast<double>(item.target) + free * factor / factor_sum;
-                if (item.maximum) target = std::min(target, static_cast<double>(*item.maximum));
-                target = std::max(target, static_cast<double>(item.minimum));
-                const Unit value = checked(target, item.id);
-                used += static_cast<double>(value) - item.target;
-                item.target = value;
-            }
-            free -= used;
-            if (std::abs(used) < 0.0001) break;
-        }
+        resolve_flexible_lengths(line, items, main_size, main_gap, row);
         for (const auto index : line.items) {
             auto& item = items[index];
             Constraints final_constraints;

@@ -258,6 +258,41 @@
         {"id": 281, "parent": 0, "style": {"display": "Block", "size": {"width": 100, "height": 50}}},
         {"id": 282, "parent": 1, "style": {"display": "Block", "size": {"height": 10}, "margin": {"top": 20, "bottom": 15}}}
       ]
+    },
+    {
+      "name": "flex-small-grow-factors",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 300, "parent": null, "style": {"display": "Flex", "size": {"width": 100, "height": 40}}},
+        {"id": 301, "parent": 0, "style": {"size": {"width": 20, "height": 10}, "flex_grow": 0.2}},
+        {"id": 302, "parent": 0, "style": {"size": {"width": 20, "height": 10}, "flex_grow": 0.2}}
+      ]
+    },
+    {
+      "name": "flex-small-shrink-factor",
+      "available": [40, 40],
+      "nodes": [
+        {"id": 310, "parent": null, "style": {"display": "Flex", "size": {"width": 40, "height": 40}}},
+        {"id": 311, "parent": 0, "style": {"size": {"width": 80, "height": 10}, "flex_shrink": 0.2}}
+      ]
+    },
+    {
+      "name": "flex-grow-max-freeze",
+      "available": [150, 40],
+      "nodes": [
+        {"id": 320, "parent": null, "style": {"display": "Flex", "size": {"width": 150, "height": 40}}},
+        {"id": 321, "parent": 0, "style": {"size": {"width": 40, "height": 10}, "max_size": {"width": 50}, "flex_grow": 1}},
+        {"id": 322, "parent": 0, "style": {"size": {"width": 40, "height": 10}, "flex_grow": 1}}
+      ]
+    },
+    {
+      "name": "flex-shrink-min-freeze",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 330, "parent": null, "style": {"display": "Flex", "size": {"width": 100, "height": 40}}},
+        {"id": 331, "parent": 0, "style": {"size": {"width": 80, "height": 10}, "min_size": {"width": 60}}},
+        {"id": 332, "parent": 0, "style": {"size": {"width": 80, "height": 10}, "min_size": {"width": 0}}}
+      ]
     }
   ]
 }

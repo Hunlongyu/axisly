@@ -54,9 +54,9 @@
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持显式网格后的正向循环及前方的逆向序列，含双侧隐式行；复杂放置组合未验收 | P3 | 已建：grid-implicit-positive-rows、grid-implicit-negative-rows、grid-implicit-mixed-rows |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
 | `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；按“确定双轴、确定次轴、自动游标”阶段排布，原始网格线先估算初始范围，确定位置的项目再扩张占用范围；稀疏／Dense 的行列方向与具名线、负隐式线、第二项目的确定主轴／次轴位置已组合差分，复杂跨格组合未完整 | P3 | 已建：grid-row-dense-holes、placement-row／column-secondary-first、placement-row／column-dense-secondary、placement-negative-column／row-start、placement-row／column-primary-backtrack、test_grid_line_matrix.py |
-| `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
-| `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；缺失名称、超出显式范围的正负序号及带锚点的具名 span 已差分；端点组合矩阵覆盖列轴、LTR／RTL、四种自动流和拉伸项目，其他区域生成线名组合未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences、named-line-missing-positive／negative／forward-span／backward-span、named-line-existing-negative-third／positive-third／backward-span-first、test_grid_line_matrix.py |
-| `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；端点组合矩阵覆盖行轴的重复线名及缺失名称，区域生成线名与重复模板的组合未完整 | P3 | 已建：named-area-placement、test_grid_line_matrix.py |
+| `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，已组合横向／纵向／二维矩形区域、显式轨道不足和重复模板，并在三种尺寸查询下差分；更复杂区域与跨格尺寸组合未完整 | P3 | 已建：named-area-placement、test_grid_area_matrix.py |
+| `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；缺失名称、超出显式范围的正负序号及带锚点的具名 span 已差分；端点组合矩阵覆盖列轴、LTR／RTL、四种自动流和拉伸项目，区域生成线名与重复、自动重复模板已组合差分，其他复杂放置未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences、named-line-missing-positive／negative／forward-span／backward-span、named-line-existing-negative-third／positive-third／backward-span-first、test_grid_line_matrix.py、test_grid_area_matrix.py |
+| `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；端点组合矩阵覆盖行轴的重复线名及缺失名称，区域生成线名与重复、自动重复模板已组合差分，其他复杂放置未完整 | P3 | 已建：named-area-placement、test_grid_line_matrix.py、test_grid_area_matrix.py |
 | `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；起止反向时交换、相同线时形成一条轨道，区域与绝对定位通过固定差分；行轴端点矩阵覆盖自动／数字／负线／具名线／具名 span 及第二项目的确定位置，更多区域和固有尺寸组合未完整 | P3 | 已建：named-area-placement、grid-absolute-area、grid-line-reverse-row、test_grid_line_matrix.py |
 | `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域；双 span 采用起始 span，孤立具名 span 化为一条轨道，起止反向／相同线规则已差分；列轴端点矩阵覆盖四种自动流与固定／拉伸项目，更多固有尺寸组合未完整 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences、grid-line-reverse-column／negative／named、grid-line-equal-column、grid-line-both-spans、grid-line-named-span-start-auto／auto-end、test_grid_line_matrix.py |
 | `dummy` | Rust 泛型编译占位字段 | 内部字段 | — | 无需用例 |
@@ -264,6 +264,11 @@ LTR／RTL、四种自动流、第二项目的自动／确定次轴／确定主�
 第三项目继续验证自动游标。矩阵按 12 个起始线分成独立 CTest，
 每项 3,072 组；参考工具单次最多接受 1,024 组，脚本再分批执行。
 比较全部节点的矩形、盒边、可滚动溢出、轨道起止位置和占用线号。
+`test_grid_area_matrix.py` 组合三种矩形命名区域、五种轨道模板（含显式
+轨道不足、具名线定次重复及具名线自动重复）、八种起止线、行／列轴、
+LTR／RTL、四种自动流、固定或拉伸项目，以及确定／`max-content`／
+`min-content` 查询，共 11,520 组。逐节点和逐轨道比较几何、占用线与
+隐式轨道范围，验证区域生成线名与模板线名共存时的行为。
 初始隐式网格范围
 按原始数字端点估算，之后再解析具名线并扩张占用范围。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。

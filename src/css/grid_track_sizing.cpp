@@ -277,7 +277,8 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         const auto minimum = contribution(item, ContributionKind::MinContent);
         const auto preferred = contribution(item, query == AvailableKind::MinContent
             ? ContributionKind::MinContent : ContributionKind::MaxContent);
-        if (track.intrinsic_min) {
+        if (track.intrinsic_min
+            && track.style.maximum.kind() != TrackBreadthKind::Fraction) {
             const auto kind = track.style.minimum.kind();
             track.size = std::max(track.size,
                 kind == TrackBreadthKind::MaxContent
@@ -305,26 +306,19 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             }
             for (auto item_index = first; item_index < last; ++item_index) {
                 const auto& spanning = spanning_items[item_index];
+                if (spanning.crosses_flexible_track) continue;
                 const auto& item = *spanning.item;
                 const auto [start, end] = range(item);
                 double occupied = 0;
                 double weight_sum = 0;
-                const bool weighted = kind == ContributionKind::Minimum
-                    && intrinsic_query && spanning.crosses_flexible_track
-                    && !(columns ? item.scrolls_x : item.scrolls_y);
                 for (auto index = start; index < end; ++index) {
                     const auto slot = static_cast<std::size_t>(index - axis.origin);
                     const auto& track = axis.tracks[slot];
                     occupied += track.size;
                     if (index + 1 < end) occupied += axis.gutter_after[slot];
-                    if (eligible(track)) {
-                        weight_sum += weighted ? track.flex : 1.0;
-                    }
+                    if (eligible(track)) weight_sum += 1.0;
                 }
-                const double target = weighted
-                    ? scaled_flexible_contribution(spanning,
-                        ContributionKind::MinContent)
-                    : contribution(item, kind);
+                const double target = contribution(item, kind);
                 const double deficit = target - occupied;
                 if (deficit <= 0 || weight_sum <= 0) continue;
                 const double unit = deficit / weight_sum;
@@ -332,8 +326,7 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
                     const auto slot = static_cast<std::size_t>(index - axis.origin);
                     const auto& track = axis.tracks[slot];
                     if (!eligible(track)) continue;
-                    const Unit increase = checked(unit
-                        * (weighted ? track.flex : 1.0), id);
+                    const Unit increase = checked(unit, id);
                     if (increase <= 0) continue;
                     if (planned[slot] == 0) touched.push_back(slot);
                     planned[slot] = std::max(planned[slot], increase);
@@ -360,6 +353,59 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         [](const TrackState& track) {
             return track.style.minimum.kind() == TrackBreadthKind::MaxContent;
         });
+    // Items crossing flexible tracks are sized as one batch, regardless of
+    // their span. Each item sees the same base sizes; competing contributions
+    // are combined by the largest planned increase on each track.
+    {
+        std::vector<Unit> planned(axis.tracks.size());
+        for (const auto& item : items) {
+            const auto [start, end] = range(item);
+            bool crosses_flex = false;
+            double occupied = 0, factor_sum = 0, inflexible = 0;
+            std::size_t affected_count = 0;
+            for (auto index = start; index < end; ++index) {
+                const auto slot = static_cast<std::size_t>(index - axis.origin);
+                const auto& track = axis.tracks[slot];
+                crosses_flex |= track.style.maximum.kind()
+                    == TrackBreadthKind::Fraction;
+                occupied += track.size;
+                if (index + 1 < end) occupied += axis.gutter_after[slot];
+                if (track.style.maximum.kind() == TrackBreadthKind::Fraction
+                    && track.intrinsic_min) {
+                    factor_sum += track.flex;
+                    ++affected_count;
+                } else inflexible += track.size;
+            }
+            if (!crosses_flex) continue;
+            if (affected_count == 0) continue;
+            const double minimum = contribution(item, ContributionKind::Minimum);
+            double target = minimum;
+            if (intrinsic_query && !(columns ? item.scrolls_x : item.scrolls_y)) {
+                const double min_content = contribution(item, ContributionKind::MinContent);
+                target = std::max(minimum, inflexible
+                    + std::max(0.0, min_content - inflexible)
+                        * std::min(factor_sum, 1.0));
+            }
+            const double deficit = target - occupied;
+            if (deficit <= 0) continue;
+            for (auto index = start; index < end; ++index) {
+                const auto slot = static_cast<std::size_t>(index - axis.origin);
+                const auto& track = axis.tracks[slot];
+                if (track.style.maximum.kind() != TrackBreadthKind::Fraction
+                    || !track.intrinsic_min) continue;
+                const double weight = factor_sum > 0 ? track.flex : 1.0;
+                const double total = factor_sum > 0 ? factor_sum : affected_count;
+                planned[slot] = std::max(planned[slot], checked(
+                    deficit * weight / total, id));
+            }
+        }
+        for (std::size_t slot = 0; slot < axis.tracks.size(); ++slot) {
+            if (planned[slot] > 0) {
+                axis.tracks[slot].size = checked(
+                    static_cast<double>(axis.tracks[slot].size) + planned[slot], id);
+            }
+        }
+    }
     for (const auto& spanning_item : spanning_items) {
         const auto& item = *spanning_item.item;
         const auto [start, end] = range(item);
@@ -374,7 +420,9 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         for (auto index = start; index < end; ++index) {
             const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
             preferred_occupied += std::max(track.size, track.preferred);
-            if (track.intrinsic_max || track.flex > 0) {
+            if (spanning_item.crosses_flexible_track
+                ? track.style.maximum.kind() == TrackBreadthKind::Fraction
+                : track.intrinsic_max || track.flex > 0) {
                 weight_sum += weighted ? track.flex : 1.0;
             }
         }
@@ -388,7 +436,9 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             const double unit = preferred_deficit / weight_sum;
             for (auto index = start; index < end; ++index) {
                 auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-                if (track.intrinsic_max || track.flex > 0) {
+                if (spanning_item.crosses_flexible_track
+                    ? track.style.maximum.kind() == TrackBreadthKind::Fraction
+                    : track.intrinsic_max || track.flex > 0) {
                     track.preferred = checked(std::max(track.size, track.preferred)
                         + unit * (weighted ? track.flex : 1.0), id);
                 }

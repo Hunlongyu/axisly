@@ -104,6 +104,12 @@ add_test(NAME axisly.reference.grid_matrix COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.grid_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
+add_test(NAME axisly.reference.grid_span_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_grid_span_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_grid_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.grid_span_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
 add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_calc.py"
     --axisly "$<TARGET_FILE:axisly_css_reference_native>"

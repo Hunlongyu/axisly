@@ -17,7 +17,7 @@ CROSS_SIZES = (18, 24, 16, 20)
 
 def make_cases(scenario="definite"):
     for direction, wrap, variant, rtl in itertools.product(
-        range(4), range(len(WRAPS)), range(6), range(2)
+        range(4), range(len(WRAPS)), range(8), range(2)
     ):
         row = direction < 2
         width, height = (72, 68) if row else (68, 72)
@@ -52,6 +52,17 @@ def make_cases(scenario="definite"):
                 style["flex_basis"] = (10, 20, 15, 5)[index]
             elif variant == 5 and index in (0, 1, 3):
                 style["flex_basis"] = ("25%", "40%", None, "10%")[index]
+            elif variant in (6, 7):
+                leading, trailing = ("left", "right") if row else ("top", "bottom")
+                style["flex_basis"] = ((5, 9, 14, 7) if variant == 6
+                                       else (7, 11, 3, 9))[index]
+                style["padding"] = {leading: 3, trailing: 3}
+                style["border"] = {leading: 1, trailing: 1}
+                style["flex_shrink"] = 1
+                if variant == 7:
+                    style["box_sizing"] = "ContentBox"
+                    if index == 3:
+                        style["margin"] = {leading: -5, trailing: -5}
             nodes.append({"id": index + 2, "parent": 0, "style": style})
         prefix = {"definite": "flex-factors", "max-content": "flex-factors-max",
                   "min-content": "flex-factors-min",
@@ -81,7 +92,7 @@ def main():
     assert native["protocol"] == ("AXISLY_FLEX_FACTORS_INTRINSIC_V1"
                                   if args.scenario in ("max-content", "min-content")
                                   else "AXISLY_FLEX_FACTORS_MATRIX_V1")
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 240
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 320
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

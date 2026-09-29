@@ -51,6 +51,26 @@ void configure_item(Style& style, std::size_t variant,
         case 3: style.flex_basis = Length::percent(0.10F); break;
         default: break;
         }
+    } else if (variant == 6 || variant == 7) {
+        constexpr std::array border_box_bases{5.0F, 9.0F, 14.0F, 7.0F};
+        constexpr std::array content_box_bases{7.0F, 11.0F, 3.0F, 9.0F};
+        style.flex_basis = Length::length(variant == 6
+            ? border_box_bases[index] : content_box_bases[index]);
+        style.flex_shrink = 1;
+        auto& padding_start = row ? style.box.padding.left : style.box.padding.top;
+        auto& padding_end = row ? style.box.padding.right : style.box.padding.bottom;
+        auto& border_start = row ? style.box.border.left : style.box.border.top;
+        auto& border_end = row ? style.box.border.right : style.box.border.bottom;
+        padding_start = padding_end = Length::length(3);
+        border_start = border_end = Length::length(1);
+        if (variant == 7) {
+            style.box.box_sizing = BoxSizing::ContentBox;
+            if (index == 3) {
+                auto& margin_start = row ? style.box.margin.left : style.box.margin.top;
+                auto& margin_end = row ? style.box.margin.right : style.box.margin.bottom;
+                margin_start = margin_end = Length::length(-5);
+            }
+        }
     }
 }
 
@@ -112,7 +132,7 @@ int main(int argc, char** argv) {
         bool first = true;
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
-        for (std::size_t variant = 0; variant < 6; ++variant)
+        for (std::size_t variant = 0; variant < 8; ++variant)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;

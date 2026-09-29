@@ -183,6 +183,8 @@ Unit clamped_main_size(const FlexItem& item, double value) {
 }
 
 Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
+    const double margin = static_cast<double>(axis(item.margin, row, true, true))
+        + axis(item.margin, row, true, false);
     const auto preferred = axis(item.box.preferred, row, true);
     const double clamping_basis = preferred
         ? std::max<double>(item.base, *preferred) : item.base;
@@ -191,15 +193,17 @@ Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
     const double maximum = std::min<double>(item.maximum.value_or(
         std::numeric_limits<Unit>::infinity()),
         item.grow == 0 ? clamping_basis : std::numeric_limits<Unit>::infinity());
-    if (maximum <= minimum) return checked(minimum, item.id);
+    if (maximum <= minimum) return checked(minimum + margin, item.id);
     if (preferred && maximum <= *preferred) {
-        return checked(std::max(minimum, maximum), item.id);
+        return checked(std::max(minimum, maximum) + margin, item.id);
     }
-    if (item.scroll_container) return item.base;
+    if (item.scroll_container) return checked(static_cast<double>(item.base) + margin, item.id);
     double content = preferred.value_or(item.content_main);
+    content += margin;
     if (!row) content = std::max(content, static_cast<double>(item.base));
-    content = std::max(content, static_cast<double>(
-        axis(item.box.minimum, row, true).value_or(Unit{0})));
+    if (const auto minimum_style = axis(item.box.minimum, row, true)) {
+        content = std::max(content, static_cast<double>(*minimum_style));
+    }
     if (item.maximum) content = std::min(content,
         static_cast<double>(*item.maximum));
     return checked(content, item.id);
@@ -524,16 +528,17 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         std::vector<Unit> outer_sizes;
         outer_sizes.reserve(items.size());
         for (const auto& item : items) {
-            const Unit contribution = intrinsic_contribution
-                ? intrinsic_item_main_size(item, row)
-                : std::max(item.base,
+            if (intrinsic_contribution) {
+                outer_sizes.push_back(intrinsic_item_main_size(item, row));
+            } else {
+                const Unit contribution = std::max(item.base,
                     axis(item.box.minimum, row, true).value_or(Unit{0}));
-            double outer = static_cast<double>(contribution)
-                + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false);
-            if (!intrinsic_contribution) outer = std::max(outer,
-                static_cast<double>(item.main_decoration));
-            outer_sizes.push_back(checked(outer, item.id));
+                const double outer = static_cast<double>(contribution)
+                    + axis(item.margin, row, true, true)
+                    + axis(item.margin, row, true, false);
+                outer_sizes.push_back(checked(std::max(outer,
+                    static_cast<double>(item.main_decoration)), item.id));
+            }
         }
         const auto widest_line = [&](const std::vector<std::size_t>& counts) {
             std::size_t next = 0;

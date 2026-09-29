@@ -214,6 +214,14 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
     }
     if (constraints.ignore_preferred_width) box.preferred.width.reset();
     if (constraints.ignore_preferred_height) box.preferred.height.reset();
+    if (constraints.ignore_min_max_width) {
+        box.minimum.width.reset();
+        box.maximum.width.reset();
+    }
+    if (constraints.ignore_min_max_height) {
+        box.minimum.height.reset();
+        box.maximum.height.reset();
+    }
     if (node.children.empty()) {
         fragment = leaf(node, constraints, box);
         if (suppresses_baseline(node.style.contain)) {

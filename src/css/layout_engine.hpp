@@ -21,6 +21,7 @@ struct Constraints {
     AvailableSize available;
     std::optional<Unit> containing_width, containing_height;
     bool ignore_preferred_width{}, ignore_preferred_height{};
+    bool ignore_min_max_width{}, ignore_min_max_height{};
     bool content_based_width{};
     bool operator==(const Constraints&) const = default;
 };

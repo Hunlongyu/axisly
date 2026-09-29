@@ -59,6 +59,8 @@ struct FlexLine {
     bool has_baseline{};
 };
 
+Unit clamped_main_size(const FlexItem& item, double value);
+
 std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
     bool row, std::optional<Unit> available, Unit gap, FlexWrap wrap,
     std::uint16_t requested_lines) {
@@ -69,9 +71,7 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         std::vector<Unit> outer_sizes;
         outer_sizes.reserve(items.size());
         for (const auto& item : items) {
-            Unit hypothetical = item.maximum ? std::min(item.base, *item.maximum)
-                : item.base;
-            hypothetical = std::max(hypothetical, item.minimum);
+            const Unit hypothetical = clamped_main_size(item, item.base);
             outer_sizes.push_back(checked(static_cast<double>(hypothetical)
                 + axis(item.margin, row, true, true)
                 + axis(item.margin, row, true, false), item.id));
@@ -90,7 +90,7 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         double estimated_main = 0;
         for (std::size_t i = 0; i < items.size(); ++i) {
             const auto& item = items[i];
-            const auto outer = static_cast<double>(item.base)
+            const auto outer = static_cast<double>(clamped_main_size(item, item.base))
                 + axis(item.margin, row, true, true)
                 + axis(item.margin, row, true, false);
             if (wrap != FlexWrap::NoWrap && available
@@ -141,6 +141,30 @@ Distribution distribute(Unit free, std::size_t count, ContentAlignment alignment
     case ContentPosition::Stretch: return {};
     }
     return {};
+}
+
+ContentAlignment alignment_fallback(ContentAlignment alignment,
+                                    double free, std::size_t count) {
+    if (count <= 1 || free <= 0) {
+        switch (alignment.position) {
+        case ContentPosition::Stretch:
+        case ContentPosition::SpaceBetween:
+            alignment.position = ContentPosition::FlexStart;
+            alignment.safety = AlignmentSafety::Safe;
+            break;
+        case ContentPosition::SpaceAround:
+        case ContentPosition::SpaceEvenly:
+            alignment.position = ContentPosition::Center;
+            alignment.safety = AlignmentSafety::Safe;
+            break;
+        default: break;
+        }
+    }
+    if (free <= 0 && alignment.safety == AlignmentSafety::Safe) {
+        alignment.position = ContentPosition::Start;
+    }
+    alignment.safety = AlignmentSafety::Unsafe;
+    return alignment;
 }
 
 Unit clamped_main_size(const FlexItem& item, double value) {
@@ -289,6 +313,10 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             ? AvailableSpace::definite(*inner_height) : AvailableSpace::indefinite();
         if (row) child_constraints.available.width = AvailableSpace::max_content();
         else child_constraints.available.height = AvailableSpace::max_content();
+        // The flex base size is measured before applying min/max main sizes.
+        // Those bounds produce the hypothetical size used for line breaking.
+        if (row) child_constraints.ignore_min_max_width = true;
+        else child_constraints.ignore_min_max_height = true;
         const auto base_layout = layout(id, child_constraints, depth + 1);
         const auto margin = edges(child_box.margin, id);
         Unit basis = axis(base_layout.size, row, true);
@@ -372,6 +400,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 minimum = Unit{0};
             } else {
                 auto min_constraints = child_constraints;
+                min_constraints.ignore_min_max_width = false;
+                min_constraints.ignore_min_max_height = false;
                 if (row) {
                     min_constraints.available.width = AvailableSpace::min_content();
                     min_constraints.ignore_preferred_width = true;
@@ -510,7 +540,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     const Unit cross_size = row ? *inner_height : *inner_width;
     if (lines.size() == 1) lines.front().cross = cross_size;
     double cross_free = lines.size() == 1 ? 0 : static_cast<double>(cross_size) - used_cross;
-    auto align_lines = node.style.align_content.value_or(ContentAlignment{});
+    auto align_lines = alignment_fallback(
+        node.style.align_content.value_or(ContentAlignment{}),
+        cross_free, lines.size());
     const bool wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
         || node.style.flex_wrap == FlexWrap::BalanceReverse;
     // Start/End follow the cross axis of the writing mode. FlexStart/FlexEnd

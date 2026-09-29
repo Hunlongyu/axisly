@@ -286,6 +286,14 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         if (!block_context) stage(id, constraints, fragment);
         return fragment;
     }
+    if (node.parent) {
+        if (const auto intrinsic = intrinsic_container_size(node, constraints, box, depth, true)) {
+            box.preferred.width = *intrinsic;
+        }
+        if (const auto intrinsic = intrinsic_container_size(node, constraints, box, depth, false)) {
+            box.preferred.height = *intrinsic;
+        }
+    }
     switch (node.style.display) {
     case Display::Block:
     case Display::FlowRoot:
@@ -303,6 +311,86 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
     }
     if (!block_context) stage(id, constraints, fragment);
     return fragment;
+}
+
+std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
+    const Constraints& constraints, const ResolvedBox& box,
+    std::size_t depth, bool horizontal) {
+    const auto& value = horizontal ? node.style.box.size.width : node.style.box.size.height;
+    const auto kind = value.kind();
+    if (kind != LengthKind::MinContent && kind != LengthKind::MaxContent
+        && kind != LengthKind::FitContent && kind != LengthKind::FitContentLength
+        && kind != LengthKind::FitContentPercent) return std::nullopt;
+    if (!horizontal && node.parent) {
+        const auto parent_display = get(*node.parent).style.display;
+        if (parent_display == Display::Block || parent_display == Display::FlowRoot) {
+            return std::nullopt;
+        }
+    }
+    if (horizontal ? constraints.known_width || constraints.ignore_preferred_width
+                   : constraints.known_height || constraints.ignore_preferred_height) {
+        return std::nullopt;
+    }
+    const auto probe = [&](AvailableSpace available) {
+        Constraints measured = constraints;
+        if (horizontal) {
+            measured.known_width.reset();
+            measured.available.width = available;
+            measured.ignore_preferred_width = true;
+            measured.ignore_min_max_width = true;
+            const auto other = node.style.box.size.height.kind();
+            if (other == LengthKind::MinContent || other == LengthKind::MaxContent
+                || other == LengthKind::FitContent
+                || other == LengthKind::FitContentLength
+                || other == LengthKind::FitContentPercent) {
+                measured.ignore_preferred_height = true;
+            }
+        } else {
+            measured.known_height.reset();
+            measured.available.height = available;
+            measured.ignore_preferred_height = true;
+            measured.ignore_min_max_height = true;
+            const auto other = node.style.box.size.width.kind();
+            if (other == LengthKind::MinContent || other == LengthKind::MaxContent
+                || other == LengthKind::FitContent
+                || other == LengthKind::FitContentLength
+                || other == LengthKind::FitContentPercent) {
+                measured.ignore_preferred_width = true;
+            }
+        }
+        const auto fragment = layout(node.id, measured, depth);
+        return horizontal ? fragment.size.width : fragment.size.height;
+    };
+    if (kind == LengthKind::MinContent) return probe(AvailableSpace::min_content());
+    if (kind == LengthKind::MaxContent) return probe(AvailableSpace::max_content());
+    // Taffy 0.14 measures a fit-content(<length-percentage>) Block/Flex
+    // container at max-content, while Grid resolves its supplied limit.
+    if ((kind == LengthKind::FitContentLength
+            || kind == LengthKind::FitContentPercent)
+        && node.style.display != Display::Grid) {
+        return probe(AvailableSpace::max_content());
+    }
+    const Unit minimum = probe(AvailableSpace::min_content());
+    const Unit maximum = probe(AvailableSpace::max_content());
+    const auto available = horizontal ? constraints.available.width
+        : constraints.available.height;
+    std::optional<Unit> limit = kind == LengthKind::FitContent
+        ? available.definite_value()
+        : value.resolve_fit_content_limit(horizontal
+            ? constraints.containing_width : constraints.containing_height);
+    if (!limit) return maximum;
+    if (kind != LengthKind::FitContent) {
+        const auto decoration = horizontal
+            ? box.horizontal_decoration() : box.vertical_decoration();
+        if (!decoration) {
+            throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
+                "Intrinsic container decoration has no definite containing inline size");
+        }
+        *limit = box.box_sizing == BoxSizing::ContentBox
+            ? checked(static_cast<double>(std::max(*limit, Unit{0})) + *decoration, node.id)
+            : std::max(*limit, *decoration);
+    }
+    return std::max(minimum, std::min(maximum, *limit));
 }
 
 Measurement Engine::measure(const LayoutNode& node, const MeasureRequest& request) {

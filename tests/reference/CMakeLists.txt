@@ -87,6 +87,11 @@ target_link_libraries(axisly_grid_triple_span_native PRIVATE axisly::axisly)
 set_target_properties(axisly_grid_triple_span_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_grid_triple_span_native)
 
+add_executable(axisly_intrinsic_size_native intrinsic_size_native.cpp)
+target_link_libraries(axisly_intrinsic_size_native PRIVATE axisly::axisly)
+set_target_properties(axisly_intrinsic_size_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_intrinsic_size_native)
+
 add_test(NAME axisly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
     --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/failures")
@@ -219,6 +224,13 @@ add_test(NAME axisly.reference.grid_triple_span COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}"
     --details)
 set_tests_properties(axisly.reference.grid_triple_span PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.intrinsic_size COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_intrinsic_size.py"
+    --axisly "$<TARGET_FILE:axisly_intrinsic_size_native>"
+    --taffy "${taffy_tree_output}"
+    --details)
+set_tests_properties(axisly.reference.intrinsic_size PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_calc.py"

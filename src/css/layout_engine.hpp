@@ -110,6 +110,9 @@ private:
                                   BlockContext* block_context = nullptr);
     [[nodiscard]] Fragment leaf(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box);
+    [[nodiscard]] std::optional<Unit> intrinsic_container_size(const LayoutNode& node,
+        const Constraints& constraints, const ResolvedBox& box,
+        std::size_t depth, bool horizontal);
     [[nodiscard]] Fragment block(const LayoutNode& node, const Constraints& constraints,
                                  const ResolvedBox& box, std::size_t depth,
                                  BlockContext* block_context);

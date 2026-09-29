@@ -108,6 +108,59 @@ void intrinsic_queries() {
         "min-content keyword must use the host's min-content query");
 }
 
+void intrinsic_container_invalidation() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Flex;
+    root_style.box.size = {Length::length(160), Length::length(80)};
+    root_style.align_items = {ItemPosition::Start};
+    const auto root = tree.create_node(root_style);
+    Style grid_style;
+    grid_style.display = Display::Grid;
+    grid_style.box.size.width = Length::min_content();
+    grid_style.box.size.height = Length::length(60);
+    grid_style.grid.template_columns = {
+        TrackSizing::automatic(), TrackSizing::automatic()};
+    grid_style.grid.template_rows = {TrackSizing::automatic()};
+    grid_style.box.padding.left = Length::length(4);
+    grid_style.box.padding.right = Length::length(4);
+    grid_style.gap.width = Length::length(4);
+    grid_style.justify_items = {ItemPosition::Start};
+    const auto grid = tree.create_node(grid_style);
+    tree.append_child(root, grid);
+    Unit first_minimum = 20;
+    const auto first = tree.create_node({}, [&](const MeasureRequest& request) {
+        const Unit width = request.available_width.kind == AvailableKind::MinContent
+            ? first_minimum : Unit{60};
+        return Measurement{{request.known_content_width.value_or(width), 12}, {}, {}};
+    });
+    const auto second = tree.create_node({}, [](const MeasureRequest& request) {
+        const Unit width = request.available_width.kind == AvailableKind::MinContent
+            ? Unit{30} : Unit{40};
+        return Measurement{{request.known_content_width.value_or(width), 12}, {}, {}};
+    });
+    tree.append_child(grid, first);
+    tree.append_child(grid, second);
+    const AvailableSize space{AvailableSpace::definite(160), AvailableSpace::definite(80)};
+    const auto initial = tree.compute(root, space);
+    require(initial.succeeded() && initial.find(grid)->border_box.width == 62,
+        "Nested min-content Grid width must use the measured child contributions");
+    const auto reused = tree.compute(root, space);
+    require(reused.cache_hit && reused.layout_count == 0 && reused.measurement_count == 0,
+        "Unchanged intrinsic container must reuse its complete result");
+    first_minimum = 35;
+    tree.mark_dirty(first);
+    const auto updated = tree.compute(root, space);
+    require(updated.succeeded() && !updated.cache_hit
+        && updated.find(grid)->border_box.width == 77,
+        "Dirty measured content must invalidate the intrinsic container size");
+    grid_style.box.size.width = Length::max_content();
+    tree.set_style(grid, grid_style);
+    const auto maximum = tree.compute(root, space);
+    require(maximum.succeeded() && maximum.find(grid)->border_box.width == 112,
+        "Switching the intrinsic keyword must recompute the container width");
+}
+
 void errors_and_exception_atomicity() {
     LayoutTree tree;
     Style indefinite_style;
@@ -255,6 +308,7 @@ int main(int argc, char** argv) {
         if (name == "leaf_and_block") leaf_and_block();
         else if (name == "topology_and_hidden") topology_and_hidden();
         else if (name == "intrinsic_queries") intrinsic_queries();
+        else if (name == "intrinsic_container_invalidation") intrinsic_container_invalidation();
         else if (name == "errors_and_exception_atomicity") errors_and_exception_atomicity();
         else if (name == "cache_and_dirty") cache_and_dirty();
         else if (name == "inherited_float_invalidation") inherited_float_invalidation();

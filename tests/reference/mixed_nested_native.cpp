@@ -22,6 +22,9 @@ constexpr std::array flows{
     GridAutoFlow::Row, GridAutoFlow::Column,
     GridAutoFlow::RowDense, GridAutoFlow::ColumnDense,
 };
+constexpr std::array item_positions{
+    ItemPosition::Start, ItemPosition::Center, ItemPosition::End,
+};
 
 MeasureFunction measured(Size minimum, Size preferred) {
     return [=](const MeasureRequest& request) {
@@ -35,6 +38,7 @@ MeasureFunction measured(Size minimum, Size preferred) {
 }
 
 void run_case(std::size_t scenario, std::size_t root_kind,
+              std::size_t root_alignment,
               std::size_t direction, std::size_t wrap,
               std::size_t nested_kind, std::size_t nested_direction,
               std::size_t variant, std::size_t rtl) {
@@ -43,11 +47,11 @@ void run_case(std::size_t scenario, std::size_t root_kind,
     Style root_style;
     root_style.flex_direction = directions[direction];
     root_style.flex_wrap = wraps[wrap];
-    root_style.align_items = {ItemPosition::Start};
+    root_style.align_items = {item_positions[root_alignment]};
     if (root_kind == 1) {
         root_style.display = Display::Grid;
         root_style.grid.auto_flow = flows[direction];
-        root_style.justify_items = {ItemPosition::Start};
+        root_style.justify_items = {item_positions[root_alignment]};
         const auto auto_track = TrackSizing::automatic();
         const auto fr_track = TrackSizing::fraction(1);
         const auto mixed_track = TrackSizing::minmax(
@@ -106,6 +110,7 @@ void run_case(std::size_t scenario, std::size_t root_kind,
     const auto prefix = scenario == 0 ? "mixed-nested-"
         : scenario == 1 ? "mixed-nested-max-" : "mixed-nested-min-";
     const auto name = prefix + std::to_string(root_kind) + '-'
+        + std::to_string(root_alignment) + '-'
         + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(nested_kind)
         + '-' + std::to_string(nested_direction)
@@ -131,9 +136,10 @@ int main(int argc, char** argv) {
         }
         const std::size_t scenario = mode == "--max-content" ? 1
             : mode == "--min-content" ? 2 : 0;
-        std::cout << "{\"protocol\":\"AXISLY_FLEX_NESTED_V1\",\"cases\":[";
+        std::cout << "{\"protocol\":\"AXISLY_MIXED_NESTED_V1\",\"cases\":[";
         bool first = true;
         for (std::size_t root_kind = 0; root_kind < 2; ++root_kind)
+        for (std::size_t root_alignment = 0; root_alignment < item_positions.size(); ++root_alignment)
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
         for (std::size_t nested_kind = 0; nested_kind < 2; ++nested_kind)
@@ -142,7 +148,7 @@ int main(int argc, char** argv) {
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, root_kind, direction, wrap, nested_kind,
+            run_case(scenario, root_kind, root_alignment, direction, wrap, nested_kind,
                 nested_direction, variant, rtl);
         }
         std::cout << "]}\n";

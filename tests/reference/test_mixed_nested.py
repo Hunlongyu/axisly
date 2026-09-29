@@ -11,17 +11,18 @@ from test_flex_matrix import compare
 DIRECTIONS = ("Row", "RowReverse", "Column", "ColumnReverse")
 WRAPS = ("NoWrap", "Wrap", "WrapReverse")
 FLOWS = ("Row", "Column", "RowDense", "ColumnDense")
+ITEM_POSITIONS = ("Start", "Center", "End")
 
 
 def make_cases(scenario):
-    for root_kind, direction, wrap, nested_kind, nested_direction, variant, rtl in itertools.product(
-        range(2), range(4), range(3), range(2), range(2), range(2), range(2)
+    for root_kind, root_alignment, direction, wrap, nested_kind, nested_direction, variant, rtl in itertools.product(
+        range(2), range(3), range(4), range(3), range(2), range(2), range(2), range(2)
     ):
         row = direction < 2
         width, height = (90, 80) if row else (80, 90)
         root = {
             "display": "Flex" if root_kind == 0 else "Grid",
-            "flex_wrap": WRAPS[wrap], "align_items": "Start",
+            "flex_wrap": WRAPS[wrap], "align_items": ITEM_POSITIONS[root_alignment],
             "direction": "Rtl" if rtl else "Ltr",
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
@@ -30,7 +31,7 @@ def make_cases(scenario):
             root["flex_direction"] = DIRECTIONS[direction]
         else:
             root["grid_auto_flow"] = FLOWS[direction]
-            root["justify_items"] = "Start"
+            root["justify_items"] = ITEM_POSITIONS[root_alignment]
             root["grid_template_columns"] = (
                 "auto auto" if wrap == 0 else "1fr 1fr" if wrap == 1
                 else "minmax(min-content, 1fr) max-content"
@@ -67,7 +68,7 @@ def make_cases(scenario):
         prefix = {"definite": "mixed-nested", "max-content": "mixed-nested-max",
                   "min-content": "mixed-nested-min"}[scenario]
         available = [width, height] if scenario == "definite" else [scenario, scenario]
-        yield {"name": f"{prefix}-{root_kind}-{direction}-{wrap}-{nested_kind}-"
+        yield {"name": f"{prefix}-{root_kind}-{root_alignment}-{direction}-{wrap}-{nested_kind}-"
                        f"{nested_direction}-{variant}-{rtl}",
                "available": available, "nodes": nodes}
 
@@ -80,19 +81,23 @@ def main():
                         default="definite")
     args = parser.parse_args()
     cases = list(make_cases(args.scenario))
-    oracle = json.loads(subprocess.run(
-        [args.taffy], input=json.dumps({"protocol": "AXISLY_TREE_V1", "cases": cases}),
-        text=True, capture_output=True, check=True,
-    ).stdout)
+    oracle_cases = []
+    for start in range(0, len(cases), 512):
+        oracle = json.loads(subprocess.run(
+            [args.taffy], input=json.dumps({"protocol": "AXISLY_TREE_V1",
+                                      "cases": cases[start:start + 512]}),
+            text=True, capture_output=True, check=True,
+        ).stdout)
+        assert oracle["taffy"] == "0.14.0"
+        oracle_cases.extend(oracle["cases"])
     native = json.loads(subprocess.run(
         [args.axisly] + ([] if args.scenario == "definite" else ["--" + args.scenario]),
         text=True, capture_output=True, check=True,
     ).stdout)
-    assert oracle["taffy"] == "0.14.0"
-    assert native["protocol"] == "AXISLY_FLEX_NESTED_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 384
+    assert native["protocol"] == "AXISLY_MIXED_NESTED_V1"
+    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1152
     failures = []
-    for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
+    for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:
             compare(actual, expected)
         except AssertionError as error:

@@ -350,6 +350,20 @@ class TreeReferenceTests(unittest.TestCase):
             "grid-percent-indefinite-rows": {1740: [0, 0, 10, 90],
                                              1741: [0, 0, 10, 45],
                                              1742: [0, 45, 10, 45]},
+            "grid-fit-percent-indefinite": {1750: [0, 0, 70, 10],
+                                            1751: [0, 0, 35, 10]},
+            "grid-minmax-percent-min-indefinite": {1760: [0, 0, 70, 10],
+                                                   1761: [0, 0, 70, 10]},
+            "grid-minmax-percent-max-indefinite": {1770: [0, 0, 70, 10],
+                                                   1771: [0, 0, 35, 10]},
+            "grid-fixed-max-single": {1780: [0, 0, 100, 10],
+                                      1781: [0, 0, 40, 10]},
+            "grid-fixed-max-auto": {1790: [0, 0, 100, 10],
+                                    1791: [0, 0, 40, 10],
+                                    1792: [40, 0, 60, 10]},
+            "grid-fixed-max-pair": {1800: [0, 0, 100, 10],
+                                    1801: [0, 0, 40, 10],
+                                    1802: [40, 0, 40, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

@@ -96,8 +96,8 @@ void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
     }
 }
 
-double grow_intrinsic_tracks(TrackAxis& axis, std::optional<Unit> available,
-                             AvailableKind query, double free, NodeId id) {
+double grow_nonflexible_tracks(TrackAxis& axis, std::optional<Unit> available,
+                               AvailableKind query, double free, NodeId id) {
     if (!available) {
         if (query == AvailableKind::MinContent) return free;
         for (auto& track : axis.tracks) {
@@ -106,11 +106,17 @@ double grow_intrinsic_tracks(TrackAxis& axis, std::optional<Unit> available,
         return free;
     }
     if (free <= 0) return free;
+    const auto growth_limit = [](const TrackState& track) -> std::optional<Unit> {
+        if (track.flex > 0) return std::nullopt;
+        if (track.intrinsic_max) return track.preferred;
+        return track.maximum;
+    };
     std::vector<double> capacities;
     capacities.reserve(axis.tracks.size());
     for (const auto& track : axis.tracks) {
-        if (track.intrinsic_max && track.preferred > track.size) {
-            capacities.push_back(static_cast<double>(track.preferred) - track.size);
+        const auto limit = growth_limit(track);
+        if (limit && *limit > track.size) {
+            capacities.push_back(static_cast<double>(*limit) - track.size);
         }
     }
     if (capacities.empty()) return free;
@@ -130,9 +136,10 @@ double grow_intrinsic_tracks(TrackAxis& axis, std::optional<Unit> available,
     }
     double distributed = 0;
     for (auto& track : axis.tracks) {
-        if (!track.intrinsic_max) continue;
+        const auto limit = growth_limit(track);
+        if (!limit || *limit <= track.size) continue;
         const Unit previous = track.size;
-        const double capacity = static_cast<double>(track.preferred) - previous;
+        const double capacity = static_cast<double>(*limit) - previous;
         track.size = checked(static_cast<double>(previous)
             + std::min(capacity, level), id);
         distributed += static_cast<double>(track.size) - previous;
@@ -376,7 +383,7 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         occupied += track.size;
     }
     double free = available ? static_cast<double>(*available) - occupied : 0;
-    free = grow_intrinsic_tracks(axis, available, query, free, id);
+    free = grow_nonflexible_tracks(axis, available, query, free, id);
     if (available && free > 0) {
         std::vector<bool> frozen(axis.tracks.size());
         double nonflex = 0;

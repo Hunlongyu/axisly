@@ -1620,6 +1620,71 @@ void grid_cyclic_percentage_rows() {
         {AvailableSpace::definite(10), AvailableSpace::max_content()}), nodes);
 }
 
+void grid_percent_function_case(std::string_view name) {
+    const bool fit = name == "grid-fit-percent-indefinite";
+    const bool min = name == "grid-minmax-percent-min-indefinite";
+    const int id = fit ? 1750 : min ? 1760 : 1770;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size.height = Length::length(10);
+    root_style.grid.template_rows = {TrackSizing::fixed(10)};
+    root_style.grid.template_columns = {fit
+        ? TrackSizing::fit_content_percent(0.5f)
+        : min ? TrackSizing::minmax(TrackBreadth::percent(0.5f),
+            TrackBreadth::automatic())
+        : TrackSizing::minmax(TrackBreadth::automatic(),
+            TrackBreadth::percent(0.5f))};
+    const auto root = tree.create_node(root_style);
+    const auto child = tree.create_node({}, [](const MeasureRequest& request) {
+        const Unit width = request.known_content_width.value_or(
+            request.available_width.kind == AvailableKind::MinContent
+                ? 20.0f : 70.0f);
+        return Measurement{{width, request.known_content_height.value_or(10.0f)},
+            {}, {}, Size{70, 10}};
+    });
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::max_content(), AvailableSpace::definite(10)}),
+        {{id, root}, {id + 1, child}});
+}
+
+void grid_fixed_growth_case(std::string_view name) {
+    const bool single = name == "grid-fixed-max-single";
+    const bool auto_second = name == "grid-fixed-max-auto";
+    const int id = single ? 1780 : auto_second ? 1790 : 1800;
+    const auto capped = TrackSizing::minmax(TrackBreadth::automatic(),
+        TrackBreadth::length(40));
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(10)};
+    root_style.grid.template_rows = {TrackSizing::fixed(10)};
+    root_style.grid.template_columns = {capped};
+    if (!single) root_style.grid.template_columns.push_back(
+        auto_second ? TrackSizing::automatic() : capped);
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (int index = 0; index < (single ? 1 : 2); ++index) {
+        Style child_style;
+        child_style.grid.column = {GridLine::index(
+            static_cast<std::int16_t>(index + 1)), GridLine::span(1)};
+        const auto child = tree.create_node(child_style,
+            [](const MeasureRequest& request) {
+                const Unit width = request.known_content_width.value_or(
+                    request.available_width.kind == AvailableKind::MinContent
+                        ? 10.0f : 20.0f);
+                return Measurement{{width,
+                    request.known_content_height.value_or(10.0f)},
+                    {}, {}, Size{20, 10}};
+            });
+        tree.append_child(root, child);
+        nodes.emplace_back(id + index + 1, child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(10)}), nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1713,6 +1778,14 @@ int main(int argc, char** argv) {
         else if (name == "grid-percent-indefinite-rows") {
             grid_cyclic_percentage_rows();
         }
+        else if (name == "grid-fit-percent-indefinite"
+            || name == "grid-minmax-percent-min-indefinite"
+            || name == "grid-minmax-percent-max-indefinite") {
+            grid_percent_function_case(name);
+        }
+        else if (name == "grid-fixed-max-single"
+            || name == "grid-fixed-max-auto"
+            || name == "grid-fixed-max-pair") grid_fixed_growth_case(name);
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

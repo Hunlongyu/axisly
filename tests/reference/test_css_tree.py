@@ -136,6 +136,12 @@ CASES = (
     "grid-percent-indefinite-tracks",
     "grid-fit-pair-tracks",
     "grid-percent-indefinite-rows",
+    "grid-fit-percent-indefinite",
+    "grid-minmax-percent-min-indefinite",
+    "grid-minmax-percent-max-indefinite",
+    "grid-fixed-max-single",
+    "grid-fixed-max-auto",
+    "grid-fixed-max-pair",
     "mixed-block-flex-grid",
 )
 

@@ -1,4 +1,5 @@
 #include "layout_engine.hpp"
+#include "block_float_context.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -6,47 +7,17 @@
 
 namespace axisly::css::detail {
 namespace {
-struct FloatRegion {
-    FloatSide side{};
-    Unit left{}, right{}, top{}, bottom{};
-};
-
-Unit clear_bottom(const std::vector<FloatRegion>& floats, ClearSide clear) {
-    Unit bottom = 0;
-    for (const auto& region : floats) {
-        if (clear == ClearSide::Both
-            || (clear == ClearSide::Left && region.side == FloatSide::Left)
-            || (clear == ClearSide::Right && region.side == FloatSide::Right)) {
-            bottom = std::max(bottom, region.bottom);
-        }
-    }
-    return bottom;
+bool scroll_container(Overflow overflow) {
+    return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
 }
 
-std::pair<Unit, Unit> float_position(const std::vector<FloatRegion>& floats,
-    FloatSide side, Unit content_width, Unit outer_width, Unit outer_height,
-    Unit initial_y, NodeId node) {
-    Unit y = initial_y;
-    for (std::size_t attempt = 0; attempt <= floats.size(); ++attempt) {
-        Unit left = 0, right = content_width;
-        std::optional<Unit> next_bottom;
-        for (const auto& region : floats) {
-            if (region.top >= y + outer_height || region.bottom <= y) continue;
-            if (region.side == FloatSide::Left) left = std::max(left, region.right);
-            else right = std::min(right, region.left);
-            if (region.bottom > y) {
-                next_bottom = std::min(next_bottom.value_or(region.bottom), region.bottom);
-            }
-        }
-        if (right - left >= outer_width || !next_bottom) {
-            const Unit x = side == FloatSide::Left ? left
-                : checked(static_cast<double>(right) - outer_width, node);
-            return {x, y};
-        }
-        y = *next_bottom;
-    }
-    throw LayoutFailure(LayoutErrorCode::LimitExceeded, node,
-        "Block float placement did not converge");
+bool establishes_formatting_context(const LayoutNode& node) {
+    return node.style.display == Display::FlowRoot
+        || node.style.display == Display::Flex
+        || node.style.display == Display::Grid
+        || node.style.contain != Contain::None
+        || scroll_container(node.style.overflow_x)
+        || scroll_container(node.style.overflow_y);
 }
 } // namespace
 
@@ -78,7 +49,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
     std::vector<Fragment> fragments(node.children.size());
     std::vector<std::optional<Unit>> static_block_y(node.children.size());
-    std::vector<FloatRegion> floats;
+    FloatContext floats(content_width);
     Unit cursor = 0;
     MarginStrut pending_margin, leading_margin;
     bool has_flow = false, has_nonempty_flow = false;
@@ -118,23 +89,45 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 static_cast<double>(content_width) - margin.left - margin.right,
                 child_id));
         }
+        std::optional<FloatSlot> formatting_slot;
+        if (child.style.float_side == FloatSide::None
+            && establishes_formatting_context(child) && !floats.empty()) {
+            const Unit separation = pending_margin.merged(
+                MarginStrut::from(margin.top)).resolve(child_id);
+            Unit estimated_y = checked(static_cast<double>(cursor) + separation,
+                child_id);
+            if (child.style.clear != ClearSide::None) {
+                estimated_y = std::max(estimated_y,
+                    floats.clear_bottom(child.style.clear));
+            }
+            const auto preferred = child_box.preferred.width;
+            const auto required = preferred
+                ? std::optional<Unit>(constrain_axis(*preferred,
+                    child_box.minimum.width, child_box.maximum.width))
+                : child_box.minimum.width;
+            formatting_slot = floats.place_formatting_context(estimated_y,
+                margin.left, margin.right, required, child_id);
+            if (child.style.box.size.width.kind() == LengthKind::Auto
+                && !intrinsic_width) {
+                child_constraints.known_width = formatting_slot->width;
+            }
+        }
         auto nested = layout(child_id, child_constraints, depth + 1);
         if (child.style.float_side != FloatSide::None) {
             const Unit outer_float_width = checked(static_cast<double>(nested.size.width)
                 + margin.left + margin.right, child_id);
             const Unit outer_float_height = checked(static_cast<double>(nested.size.height)
                 + margin.top + margin.bottom, child_id);
-            const auto [float_x, float_y] = float_position(floats,
-                child.style.float_side, content_width, outer_float_width,
+            const auto [float_x, float_y] = floats.place_float(
+                child.style.float_side, outer_float_width,
                 outer_float_height, cursor, child_id);
             const Unit left = checked(static_cast<double>(float_x) + margin.left, child_id);
             const Unit top = checked(static_cast<double>(float_y) + margin.top, child_id);
             translate(nested,
                 checked(static_cast<double>(x_origin) + left, child_id),
                 checked(static_cast<double>(y_origin) + top, child_id), child_id);
-            floats.push_back({child.style.float_side, float_x,
-                checked(static_cast<double>(float_x) + outer_float_width, child_id),
-                float_y, checked(static_cast<double>(float_y) + outer_float_height, child_id)});
+            floats.add(child.style.float_side, float_x, float_y,
+                outer_float_width, outer_float_height, child_id);
         } else {
             const MarginStrut child_top = nested.block_margins
                 ? nested.block_margins->top : MarginStrut::from(margin.top);
@@ -158,8 +151,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             const Unit separation = separation_margin.resolve(child_id);
             Unit y = checked(static_cast<double>(cursor) + separation, child_id);
             if (child.style.clear != ClearSide::None) {
-                y = std::max(y, clear_bottom(floats, child.style.clear));
+                y = std::max(y, floats.clear_bottom(child.style.clear));
             }
+            if (formatting_slot) y = std::max(y, formatting_slot->y);
             const bool auto_left = child_box.margin.left.kind == EdgeKind::Auto;
             const bool auto_right = child_box.margin.right.kind == EdgeKind::Auto;
             Unit used_left = margin.left, used_right = margin.right;
@@ -193,6 +187,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                             : static_cast<double>(free_align) / 2), child_id);
                 }
             }
+            if (formatting_slot) x = formatting_slot->x;
             translate(nested,
                 checked(static_cast<double>(x_origin) + x, child_id),
                 checked(static_cast<double>(y_origin) + y, child_id), child_id);
@@ -210,9 +205,6 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         translate(nested, relative_x, relative_y, child_id);
         fragments[source] = std::move(nested);
     }
-    const auto scroll_container = [](Overflow overflow) {
-        return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
-    };
     const auto own_margin = edges(box.margin, node.id);
     BlockMargins margins{MarginStrut::from(own_margin.top),
                          MarginStrut::from(own_margin.bottom), false};
@@ -261,11 +253,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             }
         }
     }
-    if (node.style.display == Display::FlowRoot
+    if (!node.parent || node.style.display == Display::FlowRoot
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y)) {
-        for (const auto& region : floats) content_height = std::max(content_height, region.bottom);
+        content_height = std::max(content_height, floats.maximum_bottom());
     }
     Size candidate{
         checked(static_cast<double>(content_width) + *decoration_width, node.id),

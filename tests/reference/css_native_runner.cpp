@@ -1217,6 +1217,55 @@ void grid_max_track_min_query() {
         {{1220, root}, {1221, child}});
 }
 
+void block_float_context_case(std::string_view name) {
+    const bool ordinary = name == "block-float-ordinary-overlap";
+    const bool fixed = name == "block-float-fixed-wrap";
+    const bool both = name == "block-float-both-sides";
+    const bool margin = name == "block-float-margin-context";
+    const bool overflow = name == "block-float-overflow-context";
+    const bool flex = name == "block-float-flex-context";
+    const bool grid = name == "block-float-grid-context";
+    const int id = ordinary ? 1230 : fixed ? 1250 : both ? 1260
+        : margin ? 1270 : overflow ? 1280 : flex ? 1290 : grid ? 1300 : 1240;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style float_style;
+    float_style.display = Display::Block;
+    float_style.float_side = FloatSide::Left;
+    float_style.box.size = {Length::length(30), Length::length(30)};
+    const auto left = tree.create_node(float_style);
+    tree.append_child(root, left);
+    std::vector<IdentifiedNode> nodes{{id, root}, {id + 1, left}};
+    if (both) {
+        float_style.float_side = FloatSide::Right;
+        const auto right = tree.create_node(float_style);
+        tree.append_child(root, right);
+        nodes.emplace_back(id + 2, right);
+    }
+    Style child_style;
+    child_style.display = ordinary || overflow ? Display::Block
+        : flex ? Display::Flex : grid ? Display::Grid : Display::FlowRoot;
+    child_style.box.size.height = Length::length(10);
+    if (fixed) child_style.box.size.width = Length::length(80);
+    if (margin) {
+        child_style.box.margin.left = Length::length(5);
+        child_style.box.margin.right = Length::length(5);
+        child_style.box.margin.top = Length::length(5);
+    }
+    if (overflow) {
+        child_style.overflow_x = Overflow::Hidden;
+        child_style.overflow_y = Overflow::Hidden;
+    }
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    nodes.emplace_back(id + (both ? 3 : 2), child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}), nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1335,6 +1384,14 @@ int main(int argc, char** argv) {
             || name == "grid-auto-min-query"
             || name == "grid-auto-max-query") grid_intrinsic_query(name);
         else if (name == "grid-max-track-min-query") grid_max_track_min_query();
+        else if (name == "block-float-ordinary-overlap"
+            || name == "block-float-flow-root"
+            || name == "block-float-fixed-wrap"
+            || name == "block-float-both-sides"
+            || name == "block-float-margin-context"
+            || name == "block-float-overflow-context"
+            || name == "block-float-flex-context"
+            || name == "block-float-grid-context") block_float_context_case(name);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

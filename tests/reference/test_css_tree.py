@@ -84,6 +84,14 @@ CASES = (
     "grid-auto-min-query",
     "grid-auto-max-query",
     "grid-max-track-min-query",
+    "block-float-ordinary-overlap",
+    "block-float-flow-root",
+    "block-float-fixed-wrap",
+    "block-float-both-sides",
+    "block-float-margin-context",
+    "block-float-overflow-context",
+    "block-float-flex-context",
+    "block-float-grid-context",
     "mixed-block-flex-grid",
 )
 

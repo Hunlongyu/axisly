@@ -24,7 +24,7 @@
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 与 Grid 单轨道自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding、grid-scroll-automatic-minimum |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出范围与子项组合仍需差分 | P4 | 已建：flex-scrollbar-reservation、overflow-scroll-padding |
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；溢出与基线规则未完整 | P4 | 已建：block-contain-float |
-| `float` | None／Left／Right，Block 子项 | 部分：Block 浮动排布与 FlowRoot 包含；复杂环绕未验收 | P4 | 已建：block-float-clear |
+| `float` | None／Left／Right，Block 子项 | 部分：独立浮动区域模块计算左右浮动、clear、FlowRoot／Flex／Grid／滚动容器旁的剩余宽度及宽度不足时的下移；复杂纵向环绕未验收 | P4 | 已建：block-float-clear、block-float-flow-root、block-float-fixed-wrap、block-float-both-sides |
 | `clear` | None／Left／Right／Both | 部分：按左右浮动底部清除，复杂折叠未验收 | P4 | 已建：block-float-clear |
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-flex-static-center、absolute-grid-static-center |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；复杂百分比未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint；待建：percent-inset |
@@ -114,6 +114,9 @@
 | `grid-spanning-flex-minimum`／`grid-spanning-auto-minimum`／`grid-spanning-scroll-minimum` | 跨弹性、普通 auto 轨道与滚动项目的最小贡献；按最小贡献和 min-content 阶段分别分配 |
 | `grid-fr-small-min-query`／`grid-fr-small-max-query`／`grid-fr-weighted-min-query`／`grid-fr-weighted-max-query` | 不同 `fr` 系数下跨格项目的 min-content／max-content 固有查询；系数和小于 1 时按比例缩放贡献 |
 | `grid-auto-min-query`／`grid-auto-max-query`／`grid-max-track-min-query` | `auto` 轨道在两种固有查询下采用不同增长阶段，`max-content` 最小轨道在 min-content 查询下仍保持最大内容尺寸 |
+| `block-float-ordinary-overlap`／`block-float-flow-root`／`block-float-fixed-wrap` | 普通 Block 与浮动盒重叠；FlowRoot 使用旁侧空间，固定宽度放不下时下移 |
+| `block-float-both-sides`／`block-float-margin-context`／`block-float-overflow-context` | 双侧浮动、外边距与滚动容器建立独立格式化上下文后的旁侧排布 |
+| `block-float-flex-context`／`block-float-grid-context` | Flex 与 Grid 作为 Block 流中的独立格式化上下文避让浮动盒 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -136,8 +139,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、七十七组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这七十七组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、八十五组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这八十五组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

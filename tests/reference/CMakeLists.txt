@@ -134,6 +134,15 @@ add_test(NAME axisly.reference.flex_bounds_matrix COMMAND "${Python3_EXECUTABLE}
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.flex_bounds_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
+foreach(space IN ITEMS max-content min-content)
+    add_test(NAME axisly.reference.flex_bounds_${space} COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_bounds.py"
+        --query "${space}"
+        --axisly "$<TARGET_FILE:axisly_flex_bounds_native>"
+        --taffy "${taffy_tree_output}")
+    set_tests_properties(axisly.reference.flex_bounds_${space} PROPERTIES LABELS reference TIMEOUT 120)
+endforeach()
+
 add_test(NAME axisly.reference.flex_factors_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_factors.py"
     --axisly "$<TARGET_FILE:axisly_flex_factors_native>"

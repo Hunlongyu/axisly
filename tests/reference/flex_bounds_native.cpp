@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -33,7 +34,7 @@ void set_bounds(Style& style, std::size_t variant, std::size_t item, bool row) {
     if (variant == 3 && item == 3) minimum = Length::length(26);
 }
 
-void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
+void run_case(std::size_t query, std::size_t scenario, std::size_t direction, std::size_t wrap,
               std::size_t variant, std::size_t rtl) {
     const bool row = direction < 2;
     LayoutTree tree;
@@ -52,6 +53,11 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     } else if (scenario == 3) {
         (row ? root_style.box.min_size.width : root_style.box.min_size.height)
             = Length::length(80);
+    } else if (scenario == 4) {
+        (row ? root_style.box.min_size.width : root_style.box.min_size.height)
+            = Length::length(80);
+        (row ? root_style.box.max_size.width : root_style.box.max_size.height)
+            = Length::length(40);
     }
     root_style.box.padding = {Length::length(3), Length::length(3),
         Length::length(3), Length::length(3)};
@@ -78,28 +84,41 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
         tree.append_child(root, child);
         nodes.emplace_back(static_cast<int>(index) + 2, child);
     }
-    const auto name = "flex-bounds-" + std::to_string(scenario) + '-'
+    const auto prefix = query == 0 ? "flex-bounds-"
+        : query == 1 ? "flex-bounds-max-" : "flex-bounds-min-";
+    const auto name = prefix + std::to_string(scenario) + '-'
         + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(variant) + '-'
         + std::to_string(rtl);
     reference::write_case(std::cout, name,
-        tree.compute(root, {AvailableSpace::definite(row ? 72.0F : 68.0F),
-            AvailableSpace::definite(row ? 68.0F : 72.0F)}), nodes);
+        tree.compute(root, query == 0
+            ? AvailableSize{AvailableSpace::definite(row ? 72.0F : 68.0F),
+                AvailableSpace::definite(row ? 68.0F : 72.0F)}
+            : query == 1
+                ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
+                : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()}), nodes);
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     try {
+        const std::string_view mode = argc == 2 ? argv[1] : "";
+        if (argc > 2 || (argc == 2 && mode != "--max-content"
+            && mode != "--min-content")) {
+            throw std::invalid_argument("Expected an intrinsic query or no argument");
+        }
+        const std::size_t query = mode == "--max-content" ? 1
+            : mode == "--min-content" ? 2 : 0;
         std::cout << "{\"protocol\":\"AXISLY_FLEX_BOUNDS_MATRIX_V1\",\"cases\":[";
         bool first = true;
-        for (std::size_t scenario = 0; scenario < 4; ++scenario)
+        for (std::size_t scenario = 0; scenario < 5; ++scenario)
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
         for (std::size_t variant = 0; variant < 5; ++variant)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, direction, wrap, variant, rtl);
+            run_case(query, scenario, direction, wrap, variant, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

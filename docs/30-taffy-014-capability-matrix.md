@@ -29,8 +29,8 @@
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；绝对定位自动宽度 Block 查询内容并包含内部浮动；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-block-auto-static、absolute-block-auto-floats、absolute-flex-static-center、absolute-grid-static-center |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；百分比偏移已覆盖 Block／Flex／Grid、边框内包含块和 Grid 指定区域；复杂百分比循环未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint、absolute-percent-basic、absolute-percent-border、absolute-percent-grid-area |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；独立 calc 参考树验证叶子双轴及嵌套 Block／Flex／Grid 的确定基准计算；复杂容器固有尺寸与循环百分比未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width、calc-leaf-size／indefinite／partial-basis、calc-block-child、calc-flex-gap-basis、calc-grid-gap-item；待建：intrinsic-size |
-| `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；叶子 calc 最小尺寸已对照；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height、calc-leaf-min-max、test_flex_bounds.py |
-| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max、test_flex_bounds.py；待建：max-size-reflow |
+| `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；Flex 容器同时存在最小与最大主轴约束时按最小值确定初次分行上限；叶子 calc 最小尺寸已对照；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height、calc-leaf-min-max、test_flex_bounds.py |
+| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限限制初次分行，`min-content`／`max-content` 查询保留该分行，不在最终尺寸确定后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max、test_flex_bounds.py；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限、Flex 拉伸交叉轴基准和 Grid 自动轨道比例贡献已差分；未定交叉轴及复杂 min/max 组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width；待建：ratio-indefinite-cross-axis |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Flex 主轴正剩余空间分配与交叉轴正负剩余空间分配均输出已使用边距；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分；RTL Block 自动边距在正剩余空间与溢出时按物理右边定位，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：flex-auto-main-pair／cross-pair／overflow、flex-column-reverse-auto-margin、content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、rtl-block-auto-overflow-both／left／right、rtl-block-auto-positive／left／right、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，带 calc 内边距的确定宽度 Block 嵌套树已差分；自动宽度 Block/Flex 子项的百分比内边距保持未定，Grid 按网格区域宽度解析；嵌套 Block 的后续子项排布与叶子局部可滚动范围分别验收；更多百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis、calc-block-child、nested-percent-block／flex／grid、nested-percent-depth-block／flex／grid |
@@ -216,10 +216,13 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 平衡策略分别设置最少一、二、三行。该测试比较每个
 节点的矩形、盒边、滚动条与溢出，项目尺寸固定。自动尺寸的平衡换行
 额外核对按最少行数重算最大内容宽度后的容器尺寸。
-`test_flex_bounds.py` 另外组合四种主轴方向、五种换行、五组项目主轴
-尺寸与盒边配置、LTR／RTL，以及明确尺寸、自动尺寸配确定父级空间、自动尺寸
-受最大／最小主轴尺寸约束，共 800 组；覆盖 flex 基础尺寸、假设尺寸、
-冻结、负主轴外边距、padding／border 与反向换行溢出的交互。
+`test_flex_bounds.py` 在确定父级空间、`max-content`、`min-content` 三种
+查询下，分别组合四种主轴方向、五种换行、五组项目主轴尺寸与盒边配置、
+LTR／RTL，以及明确尺寸、自动尺寸、自动尺寸受最大／最小主轴尺寸约束、
+最小尺寸大于最大尺寸，共各 1,000 组。比较 flex 基础尺寸、假设尺寸、
+冻结、负主轴外边距、padding／border、固有贡献和反向换行溢出的交互。
+`min-content` 且无确定的换行上限时，每个项目各占一行；已形成的行分组
+在容器尺寸确定后保持不变。
 `test_flex_factors.py` 在确定尺寸、自动尺寸配确定父级空间、`max-content`、
 `min-content` 四种查询下各组合四种主轴方向、五种换行／平衡策略、
 六组 grow／shrink／flex-basis 输入和 LTR／RTL，共 960 组；特别覆盖系数和

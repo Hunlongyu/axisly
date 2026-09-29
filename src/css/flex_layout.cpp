@@ -338,9 +338,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     }
     if (!main_available) {
         // A max-size limits collection before the content-sized container
-        // computes its used size. A min-size clamps the used size afterwards.
+        // computes its used size. When both bounds exist, the minimum wins.
         if (const auto maximum = axis(box.maximum, row, true)) {
             line_available = std::min(line_available.value_or(*maximum), *maximum);
+            if (const auto minimum = axis(box.minimum, row, true)) {
+                line_available = std::max(*line_available, *minimum);
+            }
         }
     }
     Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
@@ -502,21 +505,18 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             scroll_container});
     }
 
-    auto line_break_limit = line_available;
-    if (!line_break_limit && main_query == AvailableKind::MinContent
-        && node.style.flex_wrap != FlexWrap::NoWrap) {
-        double largest_item = 0;
-        for (const auto& item : items) {
-            largest_item = std::max(largest_item,
-                static_cast<double>(clamped_main_size(item, item.base))
-                    + axis(item.margin, row, true, true)
-                    + axis(item.margin, row, true, false));
+    std::vector<FlexLine> lines;
+    if (!main_available && main_query == AvailableKind::MinContent
+        && !line_available && node.style.flex_wrap != FlexWrap::NoWrap
+        && !items.empty()) {
+        lines.reserve(items.size());
+        for (std::size_t index = 0; index < items.size(); ++index) {
+            lines.push_back(FlexLine{{index}});
         }
-        line_break_limit = checked(std::max(0.0, largest_item), node.id);
+    } else {
+        lines = collect_flex_lines(items, row, line_available, main_gap,
+            node.style.flex_wrap, node.style.flex_line_count);
     }
-    auto lines = collect_flex_lines(items, row, line_break_limit, main_gap,
-        node.style.flex_wrap, node.style.flex_line_count);
-    bool reflow_after_intrinsic = main_query == AvailableKind::MinContent;
     if (!main_available) {
         const bool intrinsic_contribution = main_query == AvailableKind::MaxContent
             || (main_query == AvailableKind::MinContent
@@ -526,9 +526,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         for (const auto& item : items) {
             const Unit contribution = intrinsic_contribution
                 ? intrinsic_item_main_size(item, row)
-                : main_query == AvailableKind::Definite
-                    ? std::max(item.base, axis(item.box.minimum, row, true).value_or(Unit{0}))
-                    : item.base;
+                : std::max(item.base,
+                    axis(item.box.minimum, row, true).value_or(Unit{0}));
             double outer = static_cast<double>(contribution)
                 + axis(item.margin, row, true, true)
                 + axis(item.margin, row, true, false);
@@ -563,7 +562,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 widest_line(unconstrained_counts)) + decoration, node.id);
             candidate_outer = std::max(candidate_outer,
                 std::min(max_content, *line_available));
-        } else if (line_available && lines.size() > 1) {
+        } else if (main_query == AvailableKind::Definite
+            && line_available && lines.size() > 1) {
             candidate_outer = std::max(candidate_outer, *line_available);
         }
         if (row) {
@@ -575,24 +575,11 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 box.minimum.height, box.maximum.height);
             inner_height = std::max(Unit{0}, *border_height - *deco_height);
         }
-        const Unit constrained_main = row ? *inner_width : *inner_height;
-        if (main_query != AvailableKind::Definite && constrained_main < inner
-            && node.style.flex_wrap != FlexWrap::NoWrap) {
-            reflow_after_intrinsic = true;
-            lines = collect_flex_lines(items, row, constrained_main, main_gap,
-                node.style.flex_wrap, node.style.flex_line_count);
-        }
     }
     const Unit main_size = row ? *inner_width : *inner_height;
     if (!main_available) {
-        const Unit final_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
+        main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
             main_size, node.id);
-        reflow_after_intrinsic |= final_gap != main_gap;
-        main_gap = final_gap;
-        if (reflow_after_intrinsic) {
-            lines = collect_flex_lines(items, row, main_size, main_gap,
-                node.style.flex_wrap, node.style.flex_line_count);
-        }
     }
     for (auto& line : lines) {
         resolve_flexible_lengths(line, items, main_size, main_gap, row);

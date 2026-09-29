@@ -21,8 +21,8 @@
 | `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；纵横比与跨算法组合未完整 | P1 | 已建：block-replaced-intrinsic |
 | `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸与 Flex 差分已覆盖 | P1 | 已建：content-box-and-negative-margin |
 | `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入基本方向规则，混合树未验收 | P1/P4 | 已建：rtl-block-child；待建：rtl-mixed |
-| `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 自动最小尺寸依赖 overflow；裁剪与溢出结果未实现 | P4 | 待建：overflow-min-size |
-| `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出区域未实现 | P4 | 已建：flex-scrollbar-reservation |
+| `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding |
+| `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出范围与子项组合仍需差分 | P4 | 已建：flex-scrollbar-reservation、overflow-scroll-padding |
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；溢出与基线规则未完整 | P4 | 已建：block-contain-float |
 | `float` | None／Left／Right，Block 子项 | 部分：Block 浮动排布与 FlowRoot 包含；复杂环绕未验收 | P4 | 已建：block-float-clear |
 | `clear` | None／Left／Right／Both | 部分：按左右浮动底部清除，复杂折叠未验收 | P4 | 已建：block-float-clear |
@@ -104,6 +104,10 @@
 | `grid-negative-implicit-sequence` | 显式网格前的隐式列按 `grid-auto-columns` 序列逆向取值 |
 | `block-table-intrinsic`／`block-replaced-intrinsic` | Table 标记及替换元素的 Block 测量叶子采用固有宽度 |
 | `block-table-margin-boundary` | Table 标记建立独立格式化边界，不与内部子块折叠外边距 |
+| `overflow-scroll-padding`／`overflow-rtl-origin` | 滚动容器的末端 padding 与 RTL 节点的溢出原点；断言节点局部溢出边界 |
+| `overflow-hidden-boundary`／`overflow-unreachable` | 子项裁剪边界及滚动容器中完全不可达的负方向子项；断言溢出传播 |
+| `overflow-absolute-padding` | 普通流与绝对定位内容分别汇总，滚动容器末端 padding 不延伸绝对定位溢出 |
+| `overflow-border-origin` | 子项溢出相对于父盒 padding 边缘计量，剔除 border 坐标偏移 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -126,8 +130,9 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、五十四组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这五十四组的矩形、盒边和滚动条同时经过新原生树差分。
+目前有 44 字段清单、六十组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这六十组的矩形、盒边、滚动条及节点局部可滚动溢出
+同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、
 复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。

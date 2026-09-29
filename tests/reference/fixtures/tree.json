@@ -465,6 +465,56 @@
         {"id": 921, "parent": 0, "style": {"display": "Block", "item_is_table": true}},
         {"id": 922, "parent": 1, "style": {"display": "Block", "size": {"height": 10}, "margin": {"top": 20, "bottom": 15}}}
       ]
+    },
+    {
+      "name": "overflow-scroll-padding",
+      "available": [100, 50],
+      "nodes": [
+        {"id": 1000, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 50}, "padding": {"left": 10, "right": 5, "top": 3, "bottom": 4}, "overflow": {"x": "Visible", "y": "Scroll"}}},
+        {"id": 1001, "parent": 0, "style": {"display": "Block", "size": {"width": 20, "height": 10}}}
+      ]
+    },
+    {
+      "name": "overflow-rtl-origin",
+      "available": [100, 40],
+      "nodes": [
+        {"id": 1010, "parent": null, "style": {"display": "Block", "direction": "Rtl", "size": {"width": 100, "height": 40}}},
+        {"id": 1011, "parent": 0, "style": {"display": "Block", "size": {"width": 20, "height": 10}}}
+      ]
+    },
+    {
+      "name": "overflow-hidden-boundary",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 1020, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 100}}},
+        {"id": 1021, "parent": 0, "style": {"display": "Block", "size": {"width": 20, "height": 20}, "overflow": {"x": "Hidden", "y": "Visible"}}},
+        {"id": 1022, "parent": 1, "style": {"display": "Block", "position": "Absolute", "size": {"width": 100, "height": 100}}}
+      ]
+    },
+    {
+      "name": "overflow-unreachable",
+      "available": [100, 50],
+      "nodes": [
+        {"id": 1030, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 50}, "overflow": {"x": "Visible", "y": "Scroll"}}},
+        {"id": 1031, "parent": 0, "style": {"display": "Block", "size": {"width": 20, "height": 10}, "inset": {"left": -30}}}
+      ]
+    },
+    {
+      "name": "overflow-absolute-padding",
+      "available": [100, 50],
+      "nodes": [
+        {"id": 1040, "parent": null, "style": {"display": "Block", "position": "Relative", "size": {"width": 100, "height": 50}, "padding": {"right": 5, "bottom": 4}, "overflow": {"x": "Visible", "y": "Scroll"}}},
+        {"id": 1041, "parent": 0, "style": {"display": "Block", "size": {"width": 10, "height": 10}}},
+        {"id": 1042, "parent": 0, "style": {"display": "Block", "position": "Absolute", "size": {"width": 20, "height": 20}, "inset": {"left": 40, "top": 10}}}
+      ]
+    },
+    {
+      "name": "overflow-border-origin",
+      "available": [100, 50],
+      "nodes": [
+        {"id": 1050, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 50}, "border": {"left": 3, "top": 2}}},
+        {"id": 1051, "parent": 0, "style": {"display": "Block", "size": {"width": 20, "height": 10}}}
+      ]
     }
   ]
 }

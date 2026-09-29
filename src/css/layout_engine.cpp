@@ -141,6 +141,7 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
         result.size = fragment.size;
         result.nodes = std::move(fragment.nodes);
         result.grid_tracks = std::move(fragment.grid_tracks);
+        compute_scrollable_overflow(result.nodes, nodes_);
     } catch (const LayoutFailure& error) {
         result.error = {error.code, error.node, error.what()};
     } catch (const std::overflow_error& error) {
@@ -335,6 +336,23 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
     fragment.size = candidate;
     fragment.nodes.push_back(make_layout(node, candidate, box,
         measured.first_baseline, measured.last_baseline));
+    const auto padding = edges(box.padding, node.id);
+    const bool scroll_container = node.style.overflow_x == Overflow::Hidden
+        || node.style.overflow_x == Overflow::Scroll
+        || node.style.overflow_y == Overflow::Hidden
+        || node.style.overflow_y == Overflow::Scroll;
+    const Unit inline_start = node.style.box.direction == Direction::Rtl
+        ? padding.right : padding.left;
+    const Unit inline_end = node.style.box.direction == Direction::Rtl
+        ? padding.left : padding.right;
+    const Size scrollable_content = measured.scrollable_content_size
+        .value_or(measured.content_size);
+    fragment.nodes.front().scrollable_overflow_rect = {
+        0, 0,
+        checked(static_cast<double>(inline_start) + scrollable_content.width
+            + (scroll_container ? inline_end : 0), node.id),
+        checked(static_cast<double>(padding.top) + scrollable_content.height
+            + (scroll_container ? padding.bottom : 0), node.id)};
     return fragment;
 }
 

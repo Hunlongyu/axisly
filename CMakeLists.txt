@@ -39,6 +39,7 @@ add_library(axisly STATIC
     src/css/flex_layout.cpp
     src/css/grid_layout.cpp
     src/css/positioned_layout.cpp
+    src/css/overflow_layout.cpp
     src/css/balanced_lines.cpp
     src/css_values.cpp
     src/track.cpp

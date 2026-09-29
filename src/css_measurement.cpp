@@ -37,6 +37,13 @@ void validate_measurement(const Measurement& measurement) {
         || measurement.content_size.width < 0 || measurement.content_size.height < 0) {
         throw std::invalid_argument("Measured content size must be finite and nonnegative");
     }
+    if (measurement.scrollable_content_size
+        && (!std::isfinite(measurement.scrollable_content_size->width)
+            || !std::isfinite(measurement.scrollable_content_size->height)
+            || measurement.scrollable_content_size->width < 0
+            || measurement.scrollable_content_size->height < 0)) {
+        throw std::invalid_argument("Scrollable content size must be finite and nonnegative");
+    }
     validate_baseline(measurement.first_baseline, measurement.content_size.height);
     validate_baseline(measurement.last_baseline, measurement.content_size.height);
 }

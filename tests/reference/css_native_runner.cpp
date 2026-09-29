@@ -27,6 +27,7 @@ void print(const char* name, const LayoutResult& result,
         const auto& margin = layout->margin;
         const auto& border = layout->border;
         const auto& padding = layout->padding;
+        const auto& overflow = layout->scrollable_overflow_rect;
         std::cout << "{\"id\":" << id << ",\"rect\":[" << rect.x << ',' << rect.y
             << ',' << rect.width << ',' << rect.height << "],\"margin\":["
             << margin.left << ',' << margin.top << ',' << margin.right << ','
@@ -35,7 +36,10 @@ void print(const char* name, const LayoutResult& result,
             << "],\"border\":[" << border.left << ',' << border.top << ','
             << border.right << ',' << border.bottom
             << "],\"scrollbar\":[" << layout->scrollbar.width
-            << ',' << layout->scrollbar.height << "]}";
+            << ',' << layout->scrollbar.height << "],\"overflow\":["
+            << overflow.x << ',' << overflow.y << ','
+            << overflow.x + overflow.width << ','
+            << overflow.y + overflow.height << "]}";
     }
     std::cout << "]}\n";
 }
@@ -916,6 +920,93 @@ void block_table_margin_boundary() {
         {{920, root}, {921, table}, {922, child}});
 }
 
+void overflow_case(std::string_view name) {
+    const bool padding = name == "overflow-scroll-padding";
+    const bool rtl = name == "overflow-rtl-origin";
+    const bool hidden = name == "overflow-hidden-boundary";
+    const int first_id = padding ? 1000 : rtl ? 1010 : hidden ? 1020 : 1030;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    const Unit height = hidden ? 100.0f : rtl ? 40.0f : 50.0f;
+    root_style.box.size = {Length::length(100), Length::length(height)};
+    if (padding) {
+        root_style.box.padding.left = Length::length(10);
+        root_style.box.padding.right = Length::length(5);
+        root_style.box.padding.top = Length::length(3);
+        root_style.box.padding.bottom = Length::length(4);
+    }
+    if (padding || first_id == 1030) root_style.overflow_y = Overflow::Scroll;
+    if (rtl) root_style.box.direction = Direction::Rtl;
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size = {Length::length(20),
+        Length::length(hidden ? 20.0f : 10.0f)};
+    if (hidden) child_style.overflow_x = Overflow::Hidden;
+    if (first_id == 1030) child_style.inset.left = Length::length(-30);
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    std::vector<IdentifiedNode> nodes{{first_id, root}, {first_id + 1, child}};
+    if (hidden) {
+        Style grandchild_style;
+        grandchild_style.display = Display::Block;
+        grandchild_style.position = Position::Absolute;
+        grandchild_style.box.size = {Length::length(100), Length::length(100)};
+        const auto grandchild = tree.create_node(grandchild_style);
+        tree.append_child(child, grandchild);
+        nodes.emplace_back(first_id + 2, grandchild);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(height)}), nodes);
+}
+
+void overflow_absolute_padding() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.position = Position::Relative;
+    root_style.box.size = {Length::length(100), Length::length(50)};
+    root_style.box.padding.right = Length::length(5);
+    root_style.box.padding.bottom = Length::length(4);
+    root_style.overflow_y = Overflow::Scroll;
+    const auto root = tree.create_node(root_style);
+    Style inflow_style;
+    inflow_style.display = Display::Block;
+    inflow_style.box.size = {Length::length(10), Length::length(10)};
+    const auto inflow = tree.create_node(inflow_style);
+    Style absolute_style;
+    absolute_style.display = Display::Block;
+    absolute_style.position = Position::Absolute;
+    absolute_style.box.size = {Length::length(20), Length::length(20)};
+    absolute_style.inset.left = Length::length(40);
+    absolute_style.inset.top = Length::length(10);
+    const auto absolute = tree.create_node(absolute_style);
+    tree.append_child(root, inflow);
+    tree.append_child(root, absolute);
+    print("overflow-absolute-padding", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(50)}),
+        {{1040, root}, {1041, inflow}, {1042, absolute}});
+}
+
+void overflow_border_origin() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size = {Length::length(100), Length::length(50)};
+    root_style.box.border.left = Length::length(3);
+    root_style.box.border.top = Length::length(2);
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print("overflow-border-origin", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(50)}),
+        {{1050, root}, {1051, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -932,7 +1023,7 @@ void mixed_tree() {
     const auto leaf = tree.create_node({}, [](const MeasureRequest& request) {
         const auto width = request.known_content_width.value_or(30.0f);
         const auto height = request.known_content_height.value_or(15.0f);
-        return Measurement{{width, height}, {}, {}};
+        return Measurement{{width, height}, {}, {}, Size{30, 15}};
     });
     Style other_style;
     other_style.display = Display::FlowRoot;
@@ -1005,6 +1096,12 @@ int main(int argc, char** argv) {
         else if (name == "block-table-intrinsic") block_intrinsic_flag(true);
         else if (name == "block-replaced-intrinsic") block_intrinsic_flag(false);
         else if (name == "block-table-margin-boundary") block_table_margin_boundary();
+        else if (name == "overflow-scroll-padding"
+            || name == "overflow-rtl-origin"
+            || name == "overflow-hidden-boundary"
+            || name == "overflow-unreachable") overflow_case(name);
+        else if (name == "overflow-absolute-padding") overflow_absolute_padding();
+        else if (name == "overflow-border-origin") overflow_border_origin();
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

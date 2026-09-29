@@ -99,6 +99,11 @@ void measurement() {
     validate_measurement(result);
     result.last_baseline = 31.0f;
     expect_invalid([&] { validate_measurement(result); });
+    result.last_baseline = 25.0f;
+    result.scrollable_content_size = Size{0, 50};
+    validate_measurement(result);
+    result.scrollable_content_size = Size{-1, 50};
+    expect_invalid([&] { validate_measurement(result); });
     min_query.known_content_height = -1.0f;
     expect_invalid([&] { validate_measure_request(min_query); });
 }

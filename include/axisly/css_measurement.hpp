@@ -21,6 +21,9 @@ struct Measurement {
     // Offsets from the content box's top. Both are optional because a host may
     // have no text baseline; layout algorithms may synthesize one from the box.
     std::optional<Unit> first_baseline, last_baseline;
+    // The painted content extent can differ from a constrained layout size.
+    // When omitted, content_size is also used for scrollable overflow.
+    std::optional<Size> scrollable_content_size;
 };
 
 using MeasureFunction = std::function<Measurement(const MeasureRequest&)>;

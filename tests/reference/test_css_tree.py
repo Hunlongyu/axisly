@@ -61,6 +61,12 @@ CASES = (
     "block-table-intrinsic",
     "block-replaced-intrinsic",
     "block-table-margin-boundary",
+    "overflow-scroll-padding",
+    "overflow-rtl-origin",
+    "overflow-hidden-boundary",
+    "overflow-unreachable",
+    "overflow-absolute-padding",
+    "overflow-border-origin",
     "mixed-block-flex-grid",
 )
 
@@ -104,7 +110,7 @@ def main() -> None:
             ), (name, node_id, rect, expected[node_id])
         for node in native["nodes"]:
             target = next(item for item in reference["nodes"] if item["id"] == node["id"])
-            for field in ("margin", "padding", "border", "scrollbar"):
+            for field in ("margin", "padding", "border", "scrollbar", "overflow"):
                 assert all(math.isclose(a, b, rel_tol=0, abs_tol=0.01)
                            for a, b in zip(node[field], target[field], strict=True)), (
                     name, node["id"], field, node[field], target[field])

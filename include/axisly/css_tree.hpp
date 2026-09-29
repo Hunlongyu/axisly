@@ -50,6 +50,8 @@ struct NodeLayout {
     Insets margin{}, padding{}, border{};
     Size scrollbar{};
     std::optional<Unit> first_baseline, last_baseline;
+    // Node-local scrollable region; unlike border_box, it is not root-relative.
+    Rect scrollable_overflow_rect{};
 };
 
 struct GridTracks {

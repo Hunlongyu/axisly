@@ -152,6 +152,20 @@ class TreeReferenceTests(unittest.TestCase):
                                          911: [0, 0, 30, 10]},
             "block-table-margin-boundary": {920: [0, 0, 100, 45],
                                             921: [0, 0, 0, 45], 922: [0, 20, 0, 10]},
+            "overflow-scroll-padding": {1000: [0, 0, 100, 50],
+                                        1001: [10, 3, 20, 10]},
+            "overflow-rtl-origin": {1010: [0, 0, 100, 40],
+                                    1011: [80, 0, 20, 10]},
+            "overflow-hidden-boundary": {1020: [0, 0, 100, 100],
+                                         1021: [0, 0, 20, 20],
+                                         1022: [0, 0, 100, 100]},
+            "overflow-unreachable": {1030: [0, 0, 100, 50],
+                                     1031: [-30, 0, 20, 10]},
+            "overflow-absolute-padding": {1040: [0, 0, 100, 50],
+                                          1041: [0, 0, 10, 10],
+                                          1042: [40, 10, 20, 20]},
+            "overflow-border-origin": {1050: [0, 0, 100, 50],
+                                       1051: [3, 2, 20, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

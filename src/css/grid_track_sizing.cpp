@@ -443,7 +443,7 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         free = static_cast<double>(*available);
         for (const auto gap : axis.gutter_after) free -= gap;
         for (const auto& track : axis.tracks) free -= track.size;
-    } else if (!available) {
+    } else if (!available && query != AvailableKind::MinContent) {
         double fr_unit = 0;
         for (const auto& track : axis.tracks) {
             if (track.flex > 0) {

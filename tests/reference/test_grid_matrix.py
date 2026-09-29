@@ -1,0 +1,76 @@
+"""Deterministic Grid track, item alignment and direction differential."""
+
+import argparse
+import itertools
+import json
+import subprocess
+
+from test_flex_matrix import compare
+
+
+TRACK_PAIRS = (
+    "30px 1fr", "1fr 2fr", "auto auto",
+    "minmax(10px, 1fr) fit-content(50px)",
+)
+POSITIONS = ("Start", "End", "Center")
+ITEM_SIZES = ((15, 10), (30, 20), (25, 25), (10, 15))
+
+
+def make_cases():
+    for scenario, columns, rows, justify, align, rtl in itertools.product(
+        range(3),
+        range(len(TRACK_PAIRS)), range(len(TRACK_PAIRS)),
+        range(len(POSITIONS)), range(len(POSITIONS)), range(2)
+    ):
+        name = f"grid-matrix-{scenario}-{columns}-{rows}-{justify}-{align}-{rtl}"
+        style = {
+            "display": "Grid", "direction": "Rtl" if rtl else "Ltr",
+            "padding": {"left": 5, "top": 5, "right": 5, "bottom": 5},
+            "gap": {"width": 4, "height": 6},
+            "grid_template_columns": TRACK_PAIRS[columns],
+            "grid_template_rows": TRACK_PAIRS[rows],
+            "justify_items": POSITIONS[justify],
+            "align_items": POSITIONS[align],
+        }
+        if scenario == 0:
+            style["size"] = {"width": 120, "height": 90}
+        nodes = [{"id": 1, "parent": None, "style": style}]
+        nodes.extend({
+            "id": index + 2, "parent": 0,
+            "style": {"size": {"width": width, "height": height}},
+        } for index, (width, height) in enumerate(ITEM_SIZES))
+        available = [120, 90] if scenario == 0 else (
+            ["max-content", "max-content"] if scenario == 1
+            else ["min-content", "min-content"]
+        )
+        yield {"name": name, "available": available, "nodes": nodes}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--axisly", required=True)
+    parser.add_argument("--taffy", required=True)
+    args = parser.parse_args()
+    cases = list(make_cases())
+    fixture = json.dumps({"protocol": "AXISLY_TREE_V1", "cases": cases})
+    oracle = json.loads(subprocess.run(
+        [args.taffy], input=fixture, text=True, capture_output=True, check=True
+    ).stdout)
+    native = json.loads(subprocess.run(
+        [args.axisly], text=True, capture_output=True, check=True
+    ).stdout)
+    assert oracle["taffy"] == "0.14.0"
+    assert native["protocol"] == "AXISLY_GRID_MATRIX_V1"
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 864
+    failures = []
+    for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
+        try:
+            compare(actual, expected)
+        except AssertionError as error:
+            failures.append(error.args[0])
+    groups = sorted({tuple(failure[0].split("-")[2:5]) for failure in failures})
+    assert not failures, (len(failures), groups, failures[:4])
+
+
+if __name__ == "__main__":
+    main()

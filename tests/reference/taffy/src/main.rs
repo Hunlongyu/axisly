@@ -79,6 +79,9 @@ fn alignment(value: u16) -> AlignItems {
 
 fn placement(column: u16, row: u16, columns: u16, rows: u16) -> Style {
     Style {
+        // With Flex enabled, Taffy's default Display changes from Grid to Flex.
+        // Freeze the V1/V2 oracle's original leaf style while enabling V3 trees.
+        display: Display::Grid,
         grid_column: Line {
             start: line((column + 1) as i16),
             end: span(columns),

@@ -1007,6 +1007,36 @@ void overflow_border_origin() {
         {{1050, root}, {1051, child}});
 }
 
+void grid_span_order(bool long_first) {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size.height = Length::length(20);
+    root_style.grid.template_columns = {TrackSizing::automatic(),
+        TrackSizing::automatic(), TrackSizing::automatic()};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    const auto add_child = [&](int span, Unit intrinsic_width) {
+        Style style;
+        style.grid.column = {GridLine::index(1),
+            GridLine::span(static_cast<std::uint16_t>(span))};
+        style.grid.row = {GridLine::index(1), GridLine::span(1)};
+        return tree.create_node(style, [intrinsic_width](const MeasureRequest& request) {
+            return Measurement{{request.known_content_width.value_or(intrinsic_width),
+                request.known_content_height.value_or(10.0f)}, {}, {},
+                Size{intrinsic_width, 10}};
+        });
+    };
+    const auto first = long_first ? add_child(3, 150) : add_child(2, 70);
+    const auto second = long_first ? add_child(2, 70) : add_child(3, 150);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    const int id = long_first ? 1070 : 1060;
+    print(long_first ? "grid-span-order-long-first" : "grid-span-order-short-first",
+        tree.compute(root, {AvailableSpace::max_content(), AvailableSpace::definite(20)}),
+        {{id, root}, {id + 1, first}, {id + 2, second}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1102,6 +1132,8 @@ int main(int argc, char** argv) {
             || name == "overflow-unreachable") overflow_case(name);
         else if (name == "overflow-absolute-padding") overflow_absolute_padding();
         else if (name == "overflow-border-origin") overflow_border_origin();
+        else if (name == "grid-span-order-short-first") grid_span_order(false);
+        else if (name == "grid-span-order-long-first") grid_span_order(true);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

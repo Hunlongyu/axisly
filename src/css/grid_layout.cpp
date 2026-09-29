@@ -460,6 +460,34 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             : static_cast<double>(item.margin.top) + item.margin.bottom;
         return checked(std::max(0.0, static_cast<double>(content) + margin), id);
     };
+    struct SpanningItem {
+        const ItemContribution* item;
+        std::int32_t start, span;
+        bool crosses_flexible_track;
+    };
+    std::vector<SpanningItem> spanning_items;
+    spanning_items.reserve(items.size());
+    for (const auto& item : items) {
+        const auto [start, end] = range(item);
+        if (end - start <= 1) continue;
+        bool crosses_flexible_track = false;
+        for (auto index = start; index < end; ++index) {
+            if (axis.tracks[static_cast<std::size_t>(index - axis.origin)].flex > 0) {
+                crosses_flexible_track = true;
+                break;
+            }
+        }
+        spanning_items.push_back({&item, start, end - start,
+            crosses_flexible_track});
+    }
+    std::stable_sort(spanning_items.begin(), spanning_items.end(),
+        [](const SpanningItem& a, const SpanningItem& b) {
+            if (a.crosses_flexible_track != b.crosses_flexible_track) {
+                return !a.crosses_flexible_track;
+            }
+            if (a.span != b.span) return a.span < b.span;
+            return a.start < b.start;
+        });
     for (const auto& item : items) {
         const auto [start, end] = range(item);
         const auto count = end - start;
@@ -479,9 +507,9 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         }
         if (track.flex > 0) track.preferred = std::max(track.preferred, preferred);
     }
-    for (const auto& item : items) {
+    for (const auto& spanning_item : spanning_items) {
+        const auto& item = *spanning_item.item;
         const auto [start, end] = range(item);
-        if (end - start <= 1) continue;
         double occupied = 0;
         for (auto index = start; index + 1 < end; ++index) {
             occupied += axis.gutter_after[static_cast<std::size_t>(index - axis.origin)];

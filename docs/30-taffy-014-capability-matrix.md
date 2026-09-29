@@ -50,7 +50,7 @@
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze |
 | `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit |
-| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；复杂尺寸阶段未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
+| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；跨格项目先按跨度分批，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
 | `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；RowDense 补洞通过差分 | P3 | 已建：grid-row-dense-holes |
@@ -108,6 +108,7 @@
 | `overflow-hidden-boundary`／`overflow-unreachable` | 子项裁剪边界及滚动容器中完全不可达的负方向子项；断言溢出传播 |
 | `overflow-absolute-padding` | 普通流与绝对定位内容分别汇总，滚动容器末端 padding 不延伸绝对定位溢出 |
 | `overflow-border-origin` | 子项溢出相对于父盒 padding 边缘计量，剔除 border 坐标偏移 |
+| `grid-span-order-short-first`／`grid-span-order-long-first` | 2 跨格与 3 跨格项目交换源码顺序；断言固有轨道分配和项目矩形不变 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -130,8 +131,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、六十组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这六十组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、六十二组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这六十二组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

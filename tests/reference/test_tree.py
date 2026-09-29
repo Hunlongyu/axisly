@@ -166,6 +166,12 @@ class TreeReferenceTests(unittest.TestCase):
                                           1042: [40, 10, 20, 20]},
             "overflow-border-origin": {1050: [0, 0, 100, 50],
                                        1051: [3, 2, 20, 10]},
+            "grid-span-order-short-first": {1060: [0, 0, 150, 20],
+                                            1061: [0, 0, 123.33332824707031, 20],
+                                            1062: [0, 0, 150, 20]},
+            "grid-span-order-long-first": {1070: [0, 0, 150, 20],
+                                           1071: [0, 0, 150, 20],
+                                           1072: [0, 0, 123.33332824707031, 20]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

@@ -67,6 +67,8 @@ CASES = (
     "overflow-unreachable",
     "overflow-absolute-padding",
     "overflow-border-origin",
+    "grid-span-order-short-first",
+    "grid-span-order-long-first",
     "mixed-block-flex-grid",
 )
 

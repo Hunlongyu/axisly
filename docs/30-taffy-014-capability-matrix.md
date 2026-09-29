@@ -9,56 +9,56 @@
 可从实际编译的
 `Style` 导出字段名；`test_tree.py` 会检查本表没有漏项或重复项。
 
-**状态**：`部分`表示旧 Grid 入口存在有界的相近能力，绝不表示 CSS 语义等效；
-`未支持`表示公开 API 无对应行为；`内部字段`不构成布局能力。
-本表仅记录 2026-09-29 的现状。测试列中 `已建` 是 Taffy 参考输入，
-不是 Axisly 通过差分；`待建` 是后续阶段必须落地的用例。
+**状态**：`部分`表示新 CSS 树或旧 Grid 入口已覆盖部分取值和组合，
+绝不表示 CSS 语义等效；`未支持`表示缺少对应行为；`内部字段`不构成布局能力。
+本表记录 2026-09-29 的工作树现状。测试列中 `已建` 是 Taffy 参考输入；
+其中列于末尾“原生树差分”的用例同时通过 Axisly 矩形对照。
 
 | Style 字段 | Taffy 0.14 输入与关键取值 | Axisly 现状 | 阶段 | 参考用例 |
 | --- | --- | --- | --- | --- |
-| `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：GridTree 仅 Grid／叶子 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned |
+| `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：新树均可调度；各算法尚未完整 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned |
 | `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 未支持 | P4 | 待建：block-table-item |
-| `item_is_replaced` | 替换元素的固有尺寸规则 | 未支持 | P1 | 待建：replaced-intrinsic |
-| `box_sizing` | BorderBox／ContentBox | 未支持 | P1 | 已建：content-box-and-negative-margin |
-| `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 未支持 | P1/P4 | 待建：rtl-mixed |
-| `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 未支持 | P4 | 待建：overflow-min-size |
+| `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：输入可表达，尺寸传递未验收 | P1 | 待建：replaced-intrinsic |
+| `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸与 Flex 差分已覆盖 | P1 | 已建：content-box-and-negative-margin |
+| `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Flex/Grid 主轴映射已接入，Block 未验收 | P1/P4 | 待建：rtl-mixed |
+| `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 自动最小尺寸依赖 overflow；裁剪与溢出结果未实现 | P4 | 待建：overflow-min-size |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 未支持 | P4 | 待建：scrollbar-reservation |
 | `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 未支持 | P4 | 待建：contain-layout-paint |
-| `float` | None／Left／Right，Block 子项 | 未支持 | P4 | 已建：block-float-clear |
-| `clear` | None／Left／Right／Both | 未支持 | P4 | 已建：block-float-clear |
-| `position` | Relative／Absolute | 未支持 | P4 | 已建：hidden-and-positioned |
-| `inset` | 四边 Length／Percent／Auto／Calc | 未支持 | P4 | 已建：hidden-and-positioned；待建：percent-inset |
-| `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：GridItem 的 preferred_size 仅作回退 | P1 | 已建：flex-row-grow；待建：intrinsic-size |
-| `min_size` | 双轴 Length／Percent／Auto／Calc | 未支持：轨道下界不是节点最小尺寸 | P1 | 待建：min-max-node |
-| `max_size` | 双轴 Length／Percent／Auto／Calc | 未支持：轨道上界不是节点最大尺寸 | P1 | 待建：min-max-node |
-| `aspect_ratio` | 可选宽高比 | 未支持 | P1 | 待建：aspect-ratio |
-| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：GridItem 仅非负数值 | P1 | 已建：content-box-and-negative-margin；待建：auto-margin |
-| `padding` | 四边 Length／Percent／Calc | 部分：GridSpec 仅固定数值 | P1 | 已建：flex-row-grow；待建：percent-padding |
-| `border` | 四边 Length／Percent／Calc | 未支持 | P1 | 已建：content-box-and-negative-margin |
-| `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 未支持：旧 API 仅逐条目对齐 | P2/P3 | 待建：align-items |
-| `align_self` | 单项目交叉／块轴覆盖值 | 部分：GridItem 纵向对齐及首基线 | P2/P3 | 待建：align-self-full |
-| `justify_items` | Grid 子项内联轴默认对齐 | 未支持：旧 API 仅逐条目对齐 | P3 | 待建：justify-items |
-| `justify_self` | Grid 单项目内联轴覆盖值 | 部分：GridItem 水平四向对齐 | P3 | 待建：justify-self-full |
-| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 未支持 | P2/P3 | 待建：align-content |
-| `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 未支持 | P2/P3 | 待建：justify-content |
-| `gap` | 双轴 Length／Percent／Calc | 部分：GridSpec 仅固定数值间隙 | P2/P3 | 已建：flex-row-grow；待建：percent-gap |
-| `text_align` | Block 行内内容对齐 | 未支持 | P4 | 待建：block-text-align |
-| `flex_direction` | Row／RowReverse／Column／ColumnReverse | 未支持 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
-| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 未支持 | P2 | 已建：flex-balance-lines；待建：wrap-reverse |
-| `flex_line_count` | balance 等多行算法的最少行数 | 未支持 | P2 | 已建：flex-balance-lines |
-| `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 未支持 | P2 | 待建：flex-basis-intrinsic |
-| `flex_grow` | 非负弹性增长系数 | 未支持 | P2 | 已建：flex-row-grow |
-| `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 未支持 | P2 | 待建：flex-shrink-freeze |
-| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：原生 Fixed／Weighted／Content／Range／Percentage 语义不同 | P3 | 已建：css-grid-tracks-placement；待建：css-grid-track-matrix |
-| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：原生轨道类型较少且语义不同 | P3 | 已建：css-grid-tracks-placement；待建：css-grid-track-matrix |
-| `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：GridSpec 只有一个循环轨道值 | P3 | 待建：implicit-track-sequence |
-| `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：GridSpec 只有一个循环轨道值 | P3 | 待建：implicit-track-sequence |
-| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四个流向存在，完整 CSS 放置规则未验收 | P3 | 待建：css-auto-placement |
-| `grid_template_areas` | 命名矩形区域 | 未支持 | P3 | 待建：named-areas |
-| `grid_template_column_names` | 显式列网格线名 | 未支持 | P3 | 已建：css-grid-tracks-placement；待建：named-lines |
-| `grid_template_row_names` | 显式行网格线名 | 未支持 | P3 | 待建：named-lines |
-| `grid_row` | 起止线、负索引、span、名称 | 部分：非负起点＋正跨度 | P3 | 已建：css-grid-tracks-placement；待建：negative-named-lines |
-| `grid_column` | 起止线、负索引、span、名称 | 部分：非负起点＋正跨度 | P3 | 已建：css-grid-tracks-placement；待建：negative-named-lines |
+| `float` | None／Left／Right，Block 子项 | 部分：Block 浮动排布与 FlowRoot 包含；复杂环绕未验收 | P4 | 已建：block-float-clear |
+| `clear` | None／Left／Right／Both | 部分：按左右浮动底部清除，复杂折叠未验收 | P4 | 已建：block-float-clear |
+| `position` | Relative／Absolute | 部分：共享相对偏移与绝对定位；静态位置及祖先包含块未完整 | P4 | 已建：hidden-and-positioned |
+| `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移和双边拉伸；自动 margin 未完整 | P4 | 已建：hidden-and-positioned；待建：percent-inset |
+| `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束已接入，容器固有尺寸未完整 | P1 | 已建：flex-row-grow；待建：intrinsic-size |
+| `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束与 Flex 自动最小尺寸；跨算法边界未验收 | P1 | 待建：min-max-node |
+| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：节点约束可解析，重新排版规则未完整 | P1 | 待建：min-max-node |
+| `aspect_ratio` | 可选宽高比 | 部分：单轴已知的叶子尺寸推导；替换元素规则未完整 | P1 | 待建：aspect-ratio |
+| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid 自动 margin 与 Block 相邻折叠；父子折叠未完整 | P1 | 已建：content-box-and-negative-margin、block-adjacent-margins |
+| `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
+| `border` | 四边 Length／Percent／Calc | 部分：共享盒模型解析，差分覆盖固定数值 | P1 | 已建：content-box-and-negative-margin |
+| `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置与 stretch；基线未完整 | P2/P3 | 待建：align-items |
+| `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置与 stretch；基线未完整 | P2/P3 | 待建：align-self-full |
+| `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 常用位置与 stretch；安全值未完整 | P3 | 待建：justify-items |
+| `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch；基线未完整 | P3 | 待建：justify-self-full |
+| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行分布；Grid 轨道分布未实现 | P2/P3 | 待建：align-content |
+| `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 分布；Grid 轨道分布未实现 | P2/P3 | 待建：justify-content |
+| `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；循环百分比未完整 | P2/P3 | 已建：flex-row-grow；待建：percent-gap |
+| `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 未支持 | P4 | 待建：block-text-align |
+| `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
+| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；复杂组合未验收 | P2 | 已建：flex-balance-lines；待建：wrap-reverse |
+| `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines |
+| `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值／百分比／auto；固有关键字未实现 | P2 | 待建：flex-basis-intrinsic |
+| `flex_grow` | 非负弹性增长系数 | 部分：增长与 min/max 冻结；组合覆盖不足 | P2 | 已建：flex-row-grow |
+| `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：按基准缩放并冻结；复杂约束未验收 | P2 | 待建：flex-shrink-freeze |
+| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit |
+| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；复杂尺寸阶段未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
+| `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
+| `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持循环序列；复杂起点未验收 | P3 | 待建：implicit-track-sequence |
+| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；组合规则未完整 | P3 | 待建：css-auto-placement |
+| `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
+| `grid_template_column_names` | 显式列网格线名 | 部分：显式与重复线名可解析；多次出现未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement |
+| `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；多次出现未完整 | P3 | 已建：named-area-placement |
+| `grid_row` | 起止线、负索引、span、名称 | 部分：各输入可表达；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement；待建：negative-named-lines |
+| `grid_column` | 起止线、负索引、span、名称 | 部分：各输入可表达；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement；待建：negative-named-lines |
 | `dummy` | Rust 泛型编译占位字段 | 内部字段 | — | 无需用例 |
 
 ## 跨字段验收轴
@@ -78,6 +78,9 @@
 | `content-box-and-negative-margin` | ContentBox、padding、border 和负 margin；断言外盒尺寸及位置 |
 | `flex-balance-lines` | Balance 与 flex_line_count；断言分成两行后项目位置 |
 | `css-grid-tracks-placement` | Taffy 的 CSS 值解析器构造 `minmax`、`fr`、具名线和起止线；断言 Grid 子项位置 |
+| `named-area-placement` | 区域边界采用 Taffy 的一基线号；断言显式线和区域隐式线的坐标 |
+| `grid-auto-fill`／`grid-auto-fit` | 自动重复和空轨道折叠；断言根与项目矩形，本地测试另检查轨道尺寸 |
+| `block-adjacent-margins` | 相邻垂直 margin 的折叠；断言第二个块的位置 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -100,9 +103,9 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-当前 P0 已完成 44 字段清单、七组可重放参考输入、独立树形工具及旧
-Grid 差分回归。全部字段的取值组合、规范／WPT 精确用例索引，以及
-新原生树参与的差分仍待完成，因此 P0 尚未宣布验收完成。
+目前有 44 字段清单、十一组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这十一组的矩形同时经过新原生树差分。轨道尺寸、放置范围、
+复杂取值组合和规范／WPT 精确用例索引仍未完成，不能据此验收 P0–P5。
 
 Taffy 0.14 的 `TaffyTree` 对自定义 `calc` 句柄的解析回调固定返回 `0`，
 而其 `CompactLength` 的 serde 反序列化明确拒绝 `calc`。因此树形参考工具

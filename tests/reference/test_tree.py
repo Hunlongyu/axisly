@@ -65,6 +65,12 @@ class TreeReferenceTests(unittest.TestCase):
                                    52: [45, 0, 40, 10], 53: [0, 42.5, 40, 10]},
             "css-grid-tracks-placement": {60: [0, 0, 200, 100], 61: [55, 0, 20, 10],
                                           62: [0, 30, 10, 15]},
+            "named-area-placement": {70: [0, 0, 200, 100], 71: [50, 0, 20, 10],
+                                     72: [50, 30, 20, 10]},
+            "grid-auto-fill": {80: [0, 0, 100, 30], 81: [0, 0, 10, 10]},
+            "grid-auto-fit": {90: [0, 0, 100, 30], 91: [0, 0, 10, 10]},
+            "block-adjacent-margins": {100: [0, 0, 200, 100], 101: [0, 0, 200, 10],
+                                       102: [0, 30, 200, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

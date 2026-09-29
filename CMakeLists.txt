@@ -30,7 +30,16 @@ endif()
 
 add_library(axisly STATIC
     src/css_box.cpp
+    src/css_grid.cpp
     src/css_measurement.cpp
+    src/css_style.cpp
+    src/css_tree.cpp
+    src/css/layout_engine.cpp
+    src/css/block_layout.cpp
+    src/css/flex_layout.cpp
+    src/css/grid_layout.cpp
+    src/css/positioned_layout.cpp
+    src/css/balanced_lines.cpp
     src/css_values.cpp
     src/track.cpp
     src/compute_grid.cpp

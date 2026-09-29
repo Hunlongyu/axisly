@@ -30,6 +30,11 @@ target_link_libraries(axisly_reference_native PRIVATE axisly::axisly)
 set_target_properties(axisly_reference_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_reference_native)
 
+add_executable(axisly_css_reference_native css_native_runner.cpp)
+target_link_libraries(axisly_css_reference_native PRIVATE axisly::axisly)
+set_target_properties(axisly_css_reference_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_reference_native)
+
 add_test(NAME axisly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
     --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/failures")
@@ -47,3 +52,10 @@ set_tests_properties(axisly.reference.advanced axisly.reference.advanced_harness
 add_test(NAME axisly.reference.tree COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_tree.py"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.tree PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.css_tree COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_css_tree.py"
+    --axisly "$<TARGET_FILE:axisly_css_reference_native>"
+    --taffy "${taffy_tree_output}"
+    --fixture "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/tree.json")
+set_tests_properties(axisly.reference.css_tree PROPERTIES LABELS reference TIMEOUT 120)

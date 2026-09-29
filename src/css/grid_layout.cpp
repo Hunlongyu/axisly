@@ -179,22 +179,24 @@ std::int32_t named_index(const ExpandedTemplate& axis, const GridLine& line, boo
             return static_cast<std::int32_t>(i);
         }
     }
-    return occurrence - found;
+    return -occurrence + found;
 }
 
 std::int32_t named_span(const ExpandedTemplate& axis, std::int32_t anchor,
                         const GridLine& span, bool forward) {
-    std::int32_t remaining = span.span_count();
-    auto index = anchor;
-    while (remaining && index >= 0 && index <= static_cast<std::int32_t>(axis.tracks.size())) {
-        index += forward ? 1 : -1;
-        if (index >= 0 && index < static_cast<std::int32_t>(axis.line_names.size())
-            && has_name(axis.line_names[static_cast<std::size_t>(index)], span.name())) {
-            --remaining;
-        }
+    auto name = span.name();
+    const bool exact_exists = std::any_of(axis.line_names.begin(), axis.line_names.end(),
+        [&](const auto& names) { return has_name(names, name); });
+    if (!exact_exists) name += forward ? "-end" : "-start";
+    std::int32_t found = 0;
+    for (std::size_t i = 0; i < axis.line_names.size(); ++i) {
+        const auto index = static_cast<std::int32_t>(i);
+        if ((forward ? index > anchor : index < anchor)
+            && has_name(axis.line_names[i], name)
+            && ++found == span.span_count()) return index;
     }
-    if (!remaining) return index;
-    return index + (forward ? remaining - 1 : 1 - remaining);
+    return static_cast<std::int32_t>(axis.tracks.size())
+        + span.span_count() - found;
 }
 
 AxisPlacement axis_placement(const GridPlacement& value, const ExpandedTemplate& axis) {
@@ -225,11 +227,13 @@ AxisPlacement axis_placement(const GridPlacement& value, const ExpandedTemplate&
         std::max<std::int32_t>(1, std::abs(*end - *start))};
     if (start && value.end.kind() == GridLineKind::NamedSpan) {
         const auto target = named_span(axis, *start, value.end, true);
-        return {*start, std::max<std::int32_t>(1, target - *start)};
+        return {std::min(*start, target),
+            std::max<std::int32_t>(1, std::abs(target - *start))};
     }
     if (end && value.start.kind() == GridLineKind::NamedSpan) {
         const auto target = named_span(axis, *end, value.start, false);
-        return {target, std::max<std::int32_t>(1, *end - target)};
+        return {std::min(target, *end),
+            std::max<std::int32_t>(1, std::abs(*end - target))};
     }
     if (start) return {*start, span};
     if (end) return {*end - span, span};

@@ -711,6 +711,52 @@ void grid_line_conflict_case(std::string_view name) {
         {{base, root}, {base + 1, child}});
 }
 
+void named_line_implicit_case(std::string_view name) {
+    constexpr std::array<std::string_view, 8> names{
+        "named-line-missing-positive", "named-line-missing-negative",
+        "named-line-existing-negative-third", "named-line-existing-positive-third",
+        "named-line-missing-end-negative", "named-line-missing-forward-span",
+        "named-line-missing-backward-span", "named-line-existing-backward-span-first"};
+    const auto found = std::find(names.begin(), names.end(), name);
+    if (found == names.end()) throw std::invalid_argument("Unknown named line fixture");
+    const auto variant = static_cast<int>(found - names.begin());
+    const int base = 6600 + variant * 10;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(160), Length::length(40)};
+    root_style.grid.template_columns.assign(4, TrackSizing::fixed(20));
+    root_style.grid.column_line_names = {{"a"}, {"b"}, {"b"}, {"d"}, {"e"}};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    root_style.grid.auto_columns = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size.height = Length::length(10);
+    auto& column = child_style.grid.column;
+    switch (variant) {
+    case 0: column.start = GridLine::named("missing"); break;
+    case 1: column.start = GridLine::named("missing", -1); break;
+    case 2: column.start = GridLine::named("b", -3); break;
+    case 3: column.start = GridLine::named("b", 3); break;
+    case 4: column.end = GridLine::named("missing", -1); break;
+    case 5:
+        column = {GridLine::index(2), GridLine::named_span("missing", 2)};
+        break;
+    case 6:
+        column = {GridLine::named_span("missing", 2), GridLine::index(4)};
+        break;
+    case 7:
+        column = {GridLine::named_span("b", 1), GridLine::index(4)};
+        break;
+    default: break;
+    }
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(160), AvailableSpace::definite(40)}),
+        {{base, root}, {base + 1, child}});
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2458,6 +2504,8 @@ int main(int argc, char** argv) {
             grid_auto_placement_case(name);
         else if (name.starts_with("grid-line-"))
             grid_line_conflict_case(name);
+        else if (name.starts_with("named-line-"))
+            named_line_implicit_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

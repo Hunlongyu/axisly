@@ -616,6 +616,22 @@ class TreeReferenceTests(unittest.TestCase):
                 6491: [35, 0, 10, 10]},
             "grid-line-absolute-reverse-row": {6500: [0, 0, 120, 80],
                 6501: [0, 15, 10, 10]},
+            "named-line-missing-positive": {6600: [0, 0, 160, 40],
+                6601: [100, 0, 20, 10]},
+            "named-line-missing-negative": {6610: [0, 0, 160, 40],
+                6611: [20, 0, 20, 10]},
+            "named-line-existing-negative-third": {6620: [0, 0, 160, 40],
+                6621: [20, 0, 20, 10]},
+            "named-line-existing-positive-third": {6630: [0, 0, 160, 40],
+                6631: [100, 0, 20, 10]},
+            "named-line-missing-end-negative": {6640: [0, 0, 160, 40],
+                6641: [0, 0, 20, 10]},
+            "named-line-missing-forward-span": {6650: [0, 0, 160, 40],
+                6651: [20, 0, 100, 10]},
+            "named-line-missing-backward-span": {6660: [0, 0, 160, 40],
+                6661: [60, 0, 60, 10]},
+            "named-line-existing-backward-span-first": {6670: [0, 0, 160, 40],
+                6671: [20, 0, 40, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

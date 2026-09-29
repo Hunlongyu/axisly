@@ -13,6 +13,7 @@ TRACK_PAIRS = (
     "30px 1fr", "1fr 2fr", "auto auto",
     "minmax(10px, 1fr) fit-content(50px)",
     "0fr 1fr", "0.2fr 0.2fr", "0.5fr 1fr",
+    "20% 30%", "minmax(10%, 40%) minmax(5px, max-content)",
 )
 POSITIONS = ("Start", "End", "Center")
 ITEM_SIZES = ((15, 10), (30, 20), (25, 25), (10, 15))
@@ -20,7 +21,7 @@ ITEM_SIZES = ((15, 10), (30, 20), (25, 25), (10, 15))
 
 def make_cases():
     for scenario, columns, rows, justify, align, rtl in itertools.product(
-        range(3),
+        range(4),
         range(len(TRACK_PAIRS)), range(len(TRACK_PAIRS)),
         range(len(POSITIONS)), range(len(POSITIONS)), range(2)
     ):
@@ -41,7 +42,7 @@ def make_cases():
             "id": index + 2, "parent": 0,
             "style": {"size": {"width": width, "height": height}},
         } for index, (width, height) in enumerate(ITEM_SIZES))
-        available = [120, 90] if scenario == 0 else (
+        available = [120, 90] if scenario in (0, 3) else (
             ["max-content", "max-content"] if scenario == 1
             else ["min-content", "min-content"]
         )
@@ -70,7 +71,7 @@ def main():
         text=True, capture_output=True, check=True
     ).stdout)
     assert native["protocol"] == "AXISLY_GRID_MATRIX_V1"
-    assert len(expected) == len(native["cases"]) == len(cases) == 2646
+    assert len(expected) == len(native["cases"]) == len(cases) == 5832
     failures = []
     for actual, expected_case in zip(native["cases"], expected, strict=True):
         try:

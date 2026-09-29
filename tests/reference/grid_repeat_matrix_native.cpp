@@ -2,6 +2,7 @@
 
 #include <array>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -12,6 +13,24 @@ using namespace axisly;
 using namespace axisly::css;
 
 constexpr std::array item_counts{0, 1, 2, 4};
+struct SizeScenario {
+    AvailableSpace available;
+    std::optional<Unit> preferred;
+    std::optional<Unit> minimum;
+    std::optional<Unit> maximum;
+};
+const std::array size_scenarios{
+    SizeScenario{AvailableSpace::definite(95), 95.0F, std::nullopt, std::nullopt},
+    SizeScenario{AvailableSpace::definite(35), 35.0F, std::nullopt, std::nullopt},
+    SizeScenario{AvailableSpace::max_content(), std::nullopt, std::nullopt, 95.0F},
+    SizeScenario{AvailableSpace::max_content(), std::nullopt, 95.0F, std::nullopt},
+    SizeScenario{AvailableSpace::max_content(), std::nullopt, std::nullopt, std::nullopt},
+    SizeScenario{AvailableSpace::definite(95), std::nullopt, std::nullopt, std::nullopt},
+    SizeScenario{AvailableSpace::definite(35), std::nullopt, std::nullopt, std::nullopt},
+    SizeScenario{AvailableSpace::definite(35), std::nullopt, std::nullopt, 95.0F},
+    SizeScenario{AvailableSpace::definite(35), std::nullopt, 95.0F, std::nullopt},
+    SizeScenario{AvailableSpace::definite(95), std::nullopt, std::nullopt, 35.0F},
+};
 
 std::vector<TrackSizing> pattern(std::size_t kind) {
     switch (kind) {
@@ -32,6 +51,7 @@ void run_case(std::size_t axis, std::size_t repeat_kind, std::size_t track,
               std::size_t constraint, std::size_t gap, std::size_t children,
               std::size_t rtl, bool details) {
     const bool columns = axis == 0;
+    const auto& scenario = size_scenarios[constraint];
     LayoutTree tree;
     Style root_style;
     root_style.display = Display::Grid;
@@ -64,9 +84,9 @@ void run_case(std::size_t axis, std::size_t repeat_kind, std::size_t track,
         : root_style.box.min_size.height;
     auto& maximum = columns ? root_style.box.max_size.width
         : root_style.box.max_size.height;
-    if (constraint < 2) preferred = Length::length(constraint == 0 ? 95.0F : 35.0F);
-    else if (constraint == 2) maximum = Length::length(95);
-    else if (constraint == 3) minimum = Length::length(95);
+    if (scenario.preferred) preferred = Length::length(*scenario.preferred);
+    if (scenario.minimum) minimum = Length::length(*scenario.minimum);
+    if (scenario.maximum) maximum = Length::length(*scenario.maximum);
     const auto root = tree.create_node(root_style);
     std::vector<reference::IdentifiedNode> nodes{{1, root}};
     for (int index = 0; index < item_counts[children]; ++index) {
@@ -76,12 +96,9 @@ void run_case(std::size_t axis, std::size_t repeat_kind, std::size_t track,
         tree.append_child(root, child);
         nodes.emplace_back(index + 2, child);
     }
-    const AvailableSpace repeated_available = constraint < 2
-        ? AvailableSpace::definite(constraint == 0 ? 95.0F : 35.0F)
-        : AvailableSpace::max_content();
     const auto available = columns
-        ? AvailableSize{repeated_available, AvailableSpace::definite(60)}
-        : AvailableSize{AvailableSpace::definite(60), repeated_available};
+        ? AvailableSize{scenario.available, AvailableSpace::definite(60)}
+        : AvailableSize{AvailableSpace::definite(60), scenario.available};
     const auto name = "grid-repeat-matrix-" + std::to_string(axis) + '-'
         + std::to_string(repeat_kind) + '-' + std::to_string(track) + '-'
         + std::to_string(constraint) + '-' + std::to_string(gap) + '-'
@@ -102,7 +119,7 @@ int main(int argc, char** argv) {
         for (std::size_t axis = 0; axis < 2; ++axis)
         for (std::size_t repeat_kind = 0; repeat_kind < 2; ++repeat_kind)
         for (std::size_t track = 0; track < 6; ++track)
-        for (std::size_t constraint = 0; constraint < 5; ++constraint)
+        for (std::size_t constraint = 0; constraint < size_scenarios.size(); ++constraint)
         for (std::size_t gap = 0; gap < 3; ++gap)
         for (std::size_t children = 0; children < item_counts.size(); ++children)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {

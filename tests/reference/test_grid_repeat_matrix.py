@@ -5,6 +5,7 @@ import itertools
 import json
 import subprocess
 from collections import Counter
+from dataclasses import dataclass
 
 from grid_detail_compare import compare_grid_details
 from test_flex_matrix import compare
@@ -22,11 +23,31 @@ GAPS = (0, 5, "10%")
 ITEM_COUNTS = (0, 1, 2, 4)
 
 
+@dataclass(frozen=True)
+class SizeScenario:
+    available: int | str
+    preferred: int | None = None
+    minimum: int | None = None
+    maximum: int | None = None
+
+
+SIZE_SCENARIOS = (
+    SizeScenario(95, preferred=95), SizeScenario(35, preferred=35),
+    SizeScenario("max-content", maximum=95),
+    SizeScenario("max-content", minimum=95),
+    SizeScenario("max-content"),
+    SizeScenario(95), SizeScenario(35),
+    SizeScenario(35, maximum=95), SizeScenario(35, minimum=95),
+    SizeScenario(95, maximum=35),
+)
+
+
 def make_cases():
     for axis, repeat_kind, track, constraint, gap, children, rtl in itertools.product(
-        range(2), range(2), range(len(PATTERNS)), range(5), range(len(GAPS)),
+        range(2), range(2), range(len(PATTERNS)), range(len(SIZE_SCENARIOS)), range(len(GAPS)),
         range(len(ITEM_COUNTS)), range(2)
     ):
+        scenario = SIZE_SCENARIOS[constraint]
         columns = axis == 0
         dimension = "width" if columns else "height"
         other = "height" if columns else "width"
@@ -48,18 +69,17 @@ def make_cases():
             ),
             "size": {other: 60},
         }
-        if constraint < 2:
-            root["size"][dimension] = 95 if constraint == 0 else 35
-        elif constraint == 2:
-            root["max_size"] = {dimension: 95}
-        elif constraint == 3:
-            root["min_size"] = {dimension: 95}
+        if scenario.preferred is not None:
+            root["size"][dimension] = scenario.preferred
+        if scenario.maximum is not None:
+            root["max_size"] = {dimension: scenario.maximum}
+        if scenario.minimum is not None:
+            root["min_size"] = {dimension: scenario.minimum}
         nodes = [{"id": 1, "parent": None, "style": root}]
         nodes.extend({"id": index + 2, "parent": 0,
                       "style": {"size": {"width": 10, "height": 10}}}
                      for index in range(ITEM_COUNTS[children]))
-        repeated_available = (95 if constraint == 0 else 35) if constraint < 2 else "max-content"
-        available = ([repeated_available, 60] if columns else [60, repeated_available])
+        available = ([scenario.available, 60] if columns else [60, scenario.available])
         yield {
             "name": f"grid-repeat-matrix-{axis}-{repeat_kind}-{track}-{constraint}-"
                     f"{gap}-{children}-{rtl}",
@@ -89,7 +109,9 @@ def main():
         text=True, capture_output=True, check=True,
     ).stdout)
     assert native["protocol"] == "AXISLY_GRID_REPEAT_MATRIX_V1"
-    assert len(cases) == len(oracle_cases) == len(native["cases"]) == 2880
+    assert len(cases) == len(oracle_cases) == len(native["cases"]) == (
+        2 * 2 * len(PATTERNS) * len(SIZE_SCENARIOS) * len(GAPS) * len(ITEM_COUNTS) * 2
+    )
     failures = []
     for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:

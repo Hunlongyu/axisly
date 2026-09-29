@@ -325,23 +325,31 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         const ItemContribution* item;
         std::int32_t start, span;
         bool crosses_flexible_track;
+        bool crosses_intrinsic_track;
     };
     std::vector<SpanningItem> spanning_items;
     spanning_items.reserve(items.size());
     std::vector<bool> has_single_growth_limit(axis.tracks.size());
+    const auto intrinsic_breadth = [](TrackBreadthKind kind) {
+        return kind == TrackBreadthKind::Auto
+            || kind == TrackBreadthKind::MinContent
+            || kind == TrackBreadthKind::MaxContent
+            || kind == TrackBreadthKind::FitContentLength
+            || kind == TrackBreadthKind::FitContentPercent;
+    };
     for (const auto& item : items) {
         const auto [start, end] = range(item);
         if (end - start <= 1) continue;
         bool crosses_flexible_track = false;
+        bool crosses_intrinsic_track = false;
         for (auto index = start; index < end; ++index) {
-            if (axis.tracks[static_cast<std::size_t>(index - axis.origin)]
-                    .style.maximum.kind() == TrackBreadthKind::Fraction) {
-                crosses_flexible_track = true;
-                break;
-            }
+            const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+            crosses_flexible_track |= track.style.maximum.kind() == TrackBreadthKind::Fraction;
+            crosses_intrinsic_track |= intrinsic_breadth(track.style.minimum.kind())
+                || intrinsic_breadth(track.style.maximum.kind());
         }
         spanning_items.push_back({&item, start, end - start,
-            crosses_flexible_track});
+            crosses_flexible_track, crosses_intrinsic_track});
     }
     std::stable_sort(spanning_items.begin(), spanning_items.end(),
         [](const SpanningItem& a, const SpanningItem& b) {
@@ -416,6 +424,8 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             for (auto item_index = first; item_index < last; ++item_index) {
                 const auto& spanning = spanning_items[item_index];
                 if (spanning.crosses_flexible_track) continue;
+                if (kind == ContributionKind::Minimum
+                    && !spanning.crosses_intrinsic_track) continue;
                 const auto& item = *spanning.item;
                 const auto [start, end] = range(item);
                 double occupied = 0;
@@ -528,7 +538,9 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         double weight_sum = 0;
         for (auto index = start; index < end; ++index) {
             const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-            preferred_occupied += std::max(track.size, track.preferred);
+            preferred_occupied += track.intrinsic_max || track.flex > 0
+                ? std::max(track.size, track.preferred)
+                : track.maximum.value_or(track.size);
             if (spanning_item.crosses_flexible_track
                 ? track.style.maximum.kind() == TrackBreadthKind::Fraction
                 : track.intrinsic_max || track.flex > 0) {

@@ -30,6 +30,11 @@ std::vector<TemplateTrack> tracks(std::size_t index) {
     case 4: return {TrackSizing::fraction(0), TrackSizing::fraction(1)};
     case 5: return {TrackSizing::fraction(0.2F), TrackSizing::fraction(0.2F)};
     case 6: return {TrackSizing::fraction(0.5F), TrackSizing::fraction(1)};
+    case 7: return {TrackSizing::percent(0.2F), TrackSizing::percent(0.3F)};
+    case 8: return {
+        TrackSizing::minmax(TrackBreadth::percent(0.1F), TrackBreadth::percent(0.4F)),
+        TrackSizing::minmax(TrackBreadth::length(5), TrackBreadth::max_content()),
+    };
     default: throw std::invalid_argument("Unknown Grid track pair");
     }
 }
@@ -59,7 +64,7 @@ Style container_style(std::size_t scenario, std::size_t columns,
 }
 
 AvailableSize available_size(std::size_t scenario) {
-    if (scenario == 0) return {
+    if (scenario == 0 || scenario == 3) return {
         AvailableSpace::definite(120), AvailableSpace::definite(90)};
     if (scenario == 1) return {
         AvailableSpace::max_content(), AvailableSpace::max_content()};
@@ -147,9 +152,9 @@ int main(int argc, char** argv) {
             << (spanning ? "AXISLY_GRID_SPAN_MATRIX_V1" : "AXISLY_GRID_MATRIX_V1")
             << "\",\"cases\":[";
         bool first = true;
-        for (std::size_t scenario = 0; scenario < 3; ++scenario)
-        for (std::size_t columns = 0; columns < 7; ++columns)
-        for (std::size_t rows = 0; rows < 7; ++rows)
+        for (std::size_t scenario = 0; scenario < 4; ++scenario)
+        for (std::size_t columns = 0; columns < 9; ++columns)
+        for (std::size_t rows = 0; rows < 9; ++rows)
         for (std::size_t first_axis = 0; first_axis < (spanning ? 2 : positions.size()); ++first_axis)
         for (std::size_t second_axis = 0; second_axis < (spanning ? 1 : positions.size()); ++second_axis)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {

@@ -12,7 +12,7 @@ from grid_detail_compare import compare_grid_details
 
 def make_cases():
     for scenario, columns, rows, mode, rtl in itertools.product(
-        range(3), range(len(TRACK_PAIRS)), range(len(TRACK_PAIRS)), range(2), range(2)
+        range(4), range(len(TRACK_PAIRS)), range(len(TRACK_PAIRS)), range(2), range(2)
     ):
         name = f"grid-span-matrix-{scenario}-{columns}-{rows}-{mode}-{rtl}"
         style = {
@@ -42,7 +42,7 @@ def make_cases():
                 "grid_column": {"start": str(column[0]), "end": str(column[1])},
                 "grid_row": {"start": str(row[0]), "end": str(row[1])},
             }})
-        available = [120, 90] if scenario == 0 else (
+        available = [120, 90] if scenario in (0, 3) else (
             ["max-content", "max-content"] if scenario == 1
             else ["min-content", "min-content"]
         )
@@ -57,19 +57,23 @@ def main():
     args = parser.parse_args()
     cases = list(make_cases())
     protocol = "AXISLY_TREE_GRID_DETAILS_V1" if args.details else "AXISLY_TREE_V1"
-    oracle = json.loads(subprocess.run(
-        [args.taffy], input=json.dumps({"protocol": protocol, "cases": cases}),
-        text=True, capture_output=True, check=True
-    ).stdout)
+    oracle_cases = []
+    for start in range(0, len(cases), 512):
+        oracle = json.loads(subprocess.run(
+            [args.taffy], input=json.dumps({"protocol": protocol,
+                                           "cases": cases[start:start + 512]}),
+            text=True, capture_output=True, check=True
+        ).stdout)
+        assert oracle["taffy"] == "0.14.0"
+        oracle_cases.extend(oracle["cases"])
     native = json.loads(subprocess.run(
         [args.axisly, "--span"] + (["--details"] if args.details else []),
         text=True, capture_output=True, check=True
     ).stdout)
-    assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_GRID_SPAN_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 588
+    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1296
     failures = []
-    for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
+    for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:
             compare(actual, expected)
             if args.details:

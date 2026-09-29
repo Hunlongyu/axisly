@@ -16,6 +16,7 @@ constexpr std::array directions{
 };
 constexpr std::array wraps{
     FlexWrap::NoWrap, FlexWrap::Wrap, FlexWrap::WrapReverse,
+    FlexWrap::Balance, FlexWrap::BalanceReverse,
 };
 constexpr std::array main_sizes{42.0F, 30.0F, 25.0F, 18.0F};
 constexpr std::array cross_sizes{18.0F, 24.0F, 16.0F, 20.0F};
@@ -39,6 +40,7 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     Style root_style;
     root_style.flex_direction = directions[direction];
     root_style.flex_wrap = wraps[wrap];
+    if (wrap >= 3) root_style.flex_line_count = 2;
     root_style.align_items = {ItemPosition::Start};
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
     if (scenario == 0) {
@@ -61,6 +63,17 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
         child_style.box.size = {Length::length(row ? main_sizes[index] : cross_sizes[index]),
             Length::length(row ? cross_sizes[index] : main_sizes[index])};
         set_bounds(child_style, variant, index, row);
+        if (variant == 4 && index == 3) {
+            auto& margin_start = row ? child_style.box.margin.left : child_style.box.margin.top;
+            auto& margin_end = row ? child_style.box.margin.right : child_style.box.margin.bottom;
+            auto& padding_start = row ? child_style.box.padding.left : child_style.box.padding.top;
+            auto& padding_end = row ? child_style.box.padding.right : child_style.box.padding.bottom;
+            auto& border_start = row ? child_style.box.border.left : child_style.box.border.top;
+            auto& border_end = row ? child_style.box.border.right : child_style.box.border.bottom;
+            margin_start = margin_end = Length::length(-9);
+            padding_start = padding_end = Length::length(5);
+            border_start = border_end = Length::length(1);
+        }
         const auto child = tree.create_node(child_style);
         tree.append_child(root, child);
         nodes.emplace_back(static_cast<int>(index) + 2, child);
@@ -82,7 +95,7 @@ int main() {
         for (std::size_t scenario = 0; scenario < 4; ++scenario)
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
-        for (std::size_t variant = 0; variant < 4; ++variant)
+        for (std::size_t variant = 0; variant < 5; ++variant)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;

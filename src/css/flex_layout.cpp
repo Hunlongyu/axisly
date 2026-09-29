@@ -42,7 +42,10 @@ struct FlexItem {
     std::size_t source_index{};
     ResolvedBox box;
     Insets margin;
+    // Flex base size includes padding and border; shrink weights use its content size.
     Unit base{};
+    Unit inner_base{};
+    Unit main_decoration{};
     Unit content_main{};
     Unit target{};
     Unit minimum{};
@@ -238,7 +241,7 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
             if (!frozen[slot]) {
                 raw_factor_sum += growing ? item.grow : item.shrink;
                 scaled_factor_sum += growing ? item.grow
-                    : static_cast<double>(item.shrink) * item.base;
+                    : static_cast<double>(item.shrink) * item.inner_base;
             }
         }
         if (raw_factor_sum == 0) break;
@@ -257,7 +260,7 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
             const auto index = line.items[slot];
             auto& item = items[index];
             const double factor = growing ? item.grow
-                : static_cast<double>(item.shrink) * item.base;
+                : static_cast<double>(item.shrink) * item.inner_base;
             const double ideal = static_cast<double>(item.base)
                 + (scaled_factor_sum > 0 ? free * factor / scaled_factor_sum : 0);
             const double bounded = bounded_main_size(item, ideal);
@@ -363,6 +366,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
         }
+        const auto main_decoration = row
+            ? child_box.horizontal_decoration() : child_box.vertical_decoration();
+        if (!main_decoration) {
+            throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, id,
+                "Flex item decoration requires a definite containing inline size");
+        }
         Constraints child_constraints;
         child_constraints.containing_width = inner_width;
         child_constraints.containing_height = inner_height;
@@ -386,15 +395,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             || flex_basis == LengthKind::Calc) {
             const auto resolved = child.style.flex_basis.resolve_numeric(main_available);
             if (resolved) {
-                const auto decoration = row
-                    ? child_box.horizontal_decoration() : child_box.vertical_decoration();
-                if (!decoration) {
-                    throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, id,
-                        "Flex basis decoration is unresolved");
-                }
                 basis = child.style.box.box_sizing == BoxSizing::ContentBox
-                    ? checked(static_cast<double>(std::max(*resolved, Unit{0})) + *decoration, id)
-                    : std::max(*resolved, *decoration);
+                    ? checked(static_cast<double>(std::max(*resolved, Unit{0})) + *main_decoration, id)
+                    : std::max(*resolved, *main_decoration);
             }
         } else if (flex_basis != LengthKind::Auto) {
             const auto probe = [&](AvailableSpace main_space) {
@@ -486,7 +489,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             || child.style.overflow_x == Overflow::Scroll
             || child.style.overflow_y == Overflow::Hidden
             || child.style.overflow_y == Overflow::Scroll;
+        basis = std::max(basis, *main_decoration);
         items.push_back({id, source, child_box, margin, basis,
+            checked(static_cast<double>(basis) - *main_decoration, id), *main_decoration,
             axis(base_layout.size, row, true), basis,
             minimum.value_or(Unit{0}), maximum, child.style.flex_grow, child.style.flex_shrink,
             axis(base_layout.size, row, false),
@@ -524,9 +529,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 : main_query == AvailableKind::Definite
                     ? std::max(item.base, axis(item.box.minimum, row, true).value_or(Unit{0}))
                     : item.base;
-            outer_sizes.push_back(checked(static_cast<double>(contribution)
+            double outer = static_cast<double>(contribution)
                 + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false), item.id));
+                + axis(item.margin, row, true, false);
+            if (!intrinsic_contribution) outer = std::max(outer,
+                static_cast<double>(item.main_decoration));
+            outer_sizes.push_back(checked(outer, item.id));
         }
         const auto widest_line = [&](const std::vector<std::size_t>& counts) {
             std::size_t next = 0;

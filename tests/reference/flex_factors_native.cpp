@@ -81,12 +81,13 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
         nodes.emplace_back(static_cast<int>(index) + 2, child);
     }
     const auto prefix = scenario == 0 ? "flex-factors-"
-        : scenario == 1 ? "flex-factors-max-" : "flex-factors-min-";
+        : scenario == 1 ? "flex-factors-max-"
+        : scenario == 2 ? "flex-factors-min-" : "flex-factors-auto-";
     const auto name = prefix + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(variant) + '-'
         + std::to_string(rtl);
     reference::write_case(std::cout, name,
-        tree.compute(root, scenario == 0
+        tree.compute(root, scenario == 0 || scenario == 3
             ? AvailableSize{AvailableSpace::definite(row ? 72.0F : 68.0F),
                 AvailableSpace::definite(row ? 68.0F : 72.0F)}
             : scenario == 1
@@ -99,14 +100,14 @@ int main(int argc, char** argv) {
     try {
         const std::string_view mode = argc == 2 ? argv[1] : "";
         if (argc > 2 || (argc == 2 && mode != "--max-content"
-            && mode != "--min-content")) {
-            throw std::invalid_argument("Expected an intrinsic query or no argument");
+            && mode != "--min-content" && mode != "--auto-definite")) {
+            throw std::invalid_argument("Expected a supported query or no argument");
         }
         const std::size_t scenario = mode == "--max-content" ? 1
-            : mode == "--min-content" ? 2 : 0;
+            : mode == "--min-content" ? 2 : mode == "--auto-definite" ? 3 : 0;
         std::cout << "{\"protocol\":\""
-            << (scenario == 0 ? "AXISLY_FLEX_FACTORS_MATRIX_V1"
-                : "AXISLY_FLEX_FACTORS_INTRINSIC_V1")
+            << (scenario == 1 || scenario == 2
+                ? "AXISLY_FLEX_FACTORS_INTRINSIC_V1" : "AXISLY_FLEX_FACTORS_MATRIX_V1")
             << "\",\"cases\":[";
         bool first = true;
         for (std::size_t direction = 0; direction < directions.size(); ++direction)

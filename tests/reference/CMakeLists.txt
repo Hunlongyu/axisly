@@ -140,7 +140,7 @@ add_test(NAME axisly.reference.flex_factors_matrix COMMAND "${Python3_EXECUTABLE
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.flex_factors_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
-foreach(space IN ITEMS max-content min-content)
+foreach(space IN ITEMS max-content min-content auto-definite)
     add_test(NAME axisly.reference.flex_factors_${space} COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_factors.py"
         --scenario "${space}"

@@ -9,14 +9,14 @@ from test_flex_matrix import compare
 
 
 DIRECTIONS = ("Row", "RowReverse", "Column", "ColumnReverse")
-WRAPS = ("NoWrap", "Wrap", "WrapReverse")
+WRAPS = ("NoWrap", "Wrap", "WrapReverse", "Balance", "BalanceReverse")
 MAIN_SIZES = (42, 30, 25, 18)
 CROSS_SIZES = (18, 24, 16, 20)
 
 
 def make_cases():
     for scenario, direction, wrap, variant, rtl in itertools.product(
-        range(4), range(4), range(3), range(4), range(2)
+        range(4), range(4), range(len(WRAPS)), range(5), range(2)
     ):
         row = direction < 2
         width, height = (72, 68) if row else (68, 72)
@@ -27,6 +27,8 @@ def make_cases():
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
         }
+        if wrap >= 3:
+            root["flex_line_count"] = 2
         axis = "width" if row else "height"
         if scenario == 0:
             root["size"] = {"width": width, "height": height}
@@ -48,6 +50,11 @@ def make_cases():
                 style["max_size"] = {axis: 12}
             if variant == 3 and index == 3:
                 style["min_size"] = {axis: 26}
+            if variant == 4 and index == 3:
+                leading, trailing = ("left", "right") if row else ("top", "bottom")
+                style["margin"] = {leading: -9, trailing: -9}
+                style["padding"] = {leading: 5, trailing: 5}
+                style["border"] = {leading: 1, trailing: 1}
             nodes.append({"id": index + 2, "parent": 0, "style": style})
         yield {
             "name": f"flex-bounds-{scenario}-{direction}-{wrap}-{variant}-{rtl}",
@@ -70,7 +77,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_FLEX_BOUNDS_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 384
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 800
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

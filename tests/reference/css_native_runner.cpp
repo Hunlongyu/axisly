@@ -539,6 +539,58 @@ void root_percentage_edges_case(std::string_view name) {
         {{base, root}, {base + 1, child}});
 }
 
+void grid_repeat_percentage_gap_case(std::string_view name) {
+    const bool row_axis = name.starts_with("repeat-gap-row-");
+    const bool fit = name == "repeat-gap-fixed-fit";
+    const bool maximum = name == "repeat-gap-max-fill"
+        || name == "repeat-gap-row-max";
+    const bool minimum = name == "repeat-gap-min-fill"
+        || name == "repeat-gap-row-min";
+    const bool automatic = name == "repeat-gap-auto-fill";
+    const bool percent_track = name == "repeat-gap-fixed-percent-track";
+    const int variant = row_axis ? (maximum ? 6 : 7) : fit ? 1
+        : maximum ? 2 : minimum ? 3 : automatic ? 4 : percent_track ? 5 : 0;
+    const int base = 6200 + variant * 10;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    const GridRepeat repeated{
+        fit ? RepeatKind::AutoFit : RepeatKind::AutoFill,
+        1, {percent_track ? TrackSizing::percent(0.2f)
+            : TrackSizing::fixed(20)}, {}};
+    root_style.grid.template_columns = row_axis
+        ? std::vector<TemplateTrack>{TrackSizing::fixed(10)}
+        : std::vector<TemplateTrack>{repeated};
+    root_style.grid.template_rows = row_axis
+        ? std::vector<TemplateTrack>{repeated}
+        : std::vector<TemplateTrack>{TrackSizing::fixed(10)};
+    if (row_axis) root_style.gap.height = Length::percent(0.1f);
+    else root_style.gap.width = Length::percent(0.1f);
+    if (!automatic) {
+        auto& dimension = row_axis ? root_style.box.size.height
+            : root_style.box.size.width;
+        auto& min_dimension = row_axis ? root_style.box.min_size.height
+            : root_style.box.min_size.width;
+        auto& max_dimension = row_axis ? root_style.box.max_size.height
+            : root_style.box.max_size.width;
+        if (maximum) max_dimension = Length::length(100);
+        else if (minimum) min_dimension = Length::length(100);
+        else dimension = Length::length(100);
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{base, root}};
+    const int count = fit ? 2 : 4;
+    for (int i = 0; i < count; ++i) {
+        Style child_style;
+        child_style.box.size = {Length::length(10), Length::length(10)};
+        const auto child = tree.create_node(child_style);
+        tree.append_child(root, child);
+        nodes.emplace_back(base + i + 1, child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::max_content(), AvailableSpace::max_content()}), nodes);
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2280,6 +2332,8 @@ int main(int argc, char** argv) {
         else if (name.starts_with("root-block-")
             || name.starts_with("root-flex-")
             || name.starts_with("root-grid-")) root_percentage_edges_case(name);
+        else if (name.starts_with("repeat-gap-"))
+            grid_repeat_percentage_gap_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

@@ -364,8 +364,18 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *decoration_width)) : std::nullopt;
     auto inner_height = border_height
         ? std::optional<Unit>(std::max(Unit{0}, *border_height - *decoration_height)) : std::nullopt;
-    Unit column_gap = resolved_gap(node.style.gap.width, inner_width, node.id);
-    Unit row_gap = resolved_gap(node.style.gap.height, inner_height, node.id);
+    const auto initial_track_width = inner_width ? inner_width
+        : box.minimum.width ? std::optional<Unit>(std::max(Unit{0},
+            *box.minimum.width - *decoration_width)) : std::nullopt;
+    const auto initial_track_height = inner_height ? inner_height
+        : box.minimum.height ? std::optional<Unit>(std::max(Unit{0},
+            *box.minimum.height - *decoration_height)) : std::nullopt;
+    const auto column_query = !inner_width && initial_track_width
+        ? AvailableKind::Definite : constraints.available.width.kind;
+    const auto row_query = !inner_height && initial_track_height
+        ? AvailableKind::Definite : constraints.available.height.kind;
+    Unit column_gap = resolved_gap(node.style.gap.width, initial_track_width, node.id);
+    Unit row_gap = resolved_gap(node.style.gap.height, initial_track_height, node.id);
     const auto repeat_basis = [](std::optional<Unit> preferred,
         std::optional<Unit> minimum, std::optional<Unit> maximum, Unit decoration) {
         auto value = preferred ? preferred : maximum ? maximum : minimum;
@@ -379,10 +389,12 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     const auto repeat_height = repeat_basis(border_height, box.minimum.height,
         box.maximum.height, *decoration_height);
     auto columns = expand(node.style.grid.template_columns,
-        node.style.grid.column_line_names, repeat_width, column_gap,
+        node.style.grid.column_line_names, repeat_width,
+        resolved_gap(node.style.gap.width, repeat_width, node.id),
         !border_width && !box.maximum.width, node.id);
     auto rows = expand(node.style.grid.template_rows,
-        node.style.grid.row_line_names, repeat_height, row_gap,
+        node.style.grid.row_line_names, repeat_height,
+        resolved_gap(node.style.gap.height, repeat_height, node.id),
         !border_height && !box.maximum.height, node.id);
     apply_areas(node.style.grid, rows, columns);
     std::vector<Placement> placements(node.children.size());
@@ -412,9 +424,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         max_column = std::max(max_column, placement.column_end);
     }
     auto track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
-        min_column, max_column, inner_width, column_gap, node.id);
+        min_column, max_column, initial_track_width, column_gap, node.id);
     auto track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
-        min_row, max_row, inner_height, row_gap, node.id);
+        min_row, max_row, initial_track_height, row_gap, node.id);
     collapse_auto_fit(track_columns, columns, placements, true);
     collapse_auto_fit(track_rows, rows, placements, false);
     std::vector<ItemContribution> contributions;
@@ -456,14 +468,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     if (inner_height && std::any_of(contributions.begin(), contributions.end(),
         [](const ItemContribution& item) { return item.stretched_ratio_box.has_value(); })) {
         auto measured_rows = track_rows;
-        size_axis(measured_rows, contributions, false, inner_height,
-            constraints.available.height.kind, node.id);
+        size_axis(measured_rows, contributions, false, initial_track_height,
+            row_query, node.id);
         apply_cross_axis_ratio_contributions(measured_rows, contributions, node.id);
     }
-    size_axis(track_columns, contributions, true, inner_width,
-        constraints.available.width.kind, node.id);
-    size_axis(track_rows, contributions, false, inner_height,
-        constraints.available.height.kind, node.id);
+    size_axis(track_columns, contributions, true, initial_track_width,
+        column_query, node.id);
+    size_axis(track_rows, contributions, false, initial_track_height,
+        row_query, node.id);
     const Unit measured_width = track_columns.offsets.empty() ? 0
         : track_columns.offsets.back();
     const Unit measured_height = track_rows.offsets.empty() ? 0
@@ -496,7 +508,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             min_column, max_column, inner_width, column_gap, node.id);
         collapse_auto_fit(track_columns, columns, placements, true);
         size_axis(track_columns, contributions, true, inner_width,
-            constraints.available.width.kind, node.id);
+            column_query, node.id);
     }
     if (intrinsic_height && (*inner_height != measured_height || cyclic_rows
         || changed_row_gap)) {
@@ -504,7 +516,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             min_row, max_row, inner_height, row_gap, node.id);
         collapse_auto_fit(track_rows, rows, placements, false);
         size_axis(track_rows, contributions, false, inner_height,
-            constraints.available.height.kind, node.id);
+            row_query, node.id);
     }
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);

@@ -191,6 +191,39 @@ void automatic_repetition() {
     require(fitted.succeeded() && fitted.grid_tracks[0].columns == std::vector<Unit>{30, 0, 0}
         && fitted.find(child)->border_box == Rect{0, 0, 10, 10},
         "auto-fit must collapse unoccupied tracks and surrounding gutters");
+
+    LayoutTree bounded;
+    Style bounded_style;
+    bounded_style.display = Display::Grid;
+    bounded_style.box.max_size.width = Length::length(100);
+    bounded_style.gap.width = Length::percent(0.1f);
+    bounded_style.grid.template_columns = {GridRepeat{
+        RepeatKind::AutoFill, 1, {TrackSizing::fixed(20)}, {}}};
+    bounded_style.grid.template_rows = {TrackSizing::fixed(10)};
+    const auto bounded_root = bounded.create_node(bounded_style);
+    std::vector<NodeId> children;
+    for (int i = 0; i < 4; ++i) {
+        Style item_style;
+        item_style.box.size = {Length::length(10), Length::length(10)};
+        const auto new_item = bounded.create_node(item_style);
+        bounded.append_child(bounded_root, new_item);
+        children.push_back(new_item);
+    }
+    const AvailableSize indefinite{AvailableSpace::max_content(),
+                                   AvailableSpace::max_content()};
+    const auto& maximum = bounded.compute(bounded_root, indefinite);
+    require(maximum.succeeded() && maximum.size.width == 60
+        && maximum.grid_tracks[0].columns == std::vector<Unit>{20, 20, 20}
+        && maximum.find(children.back())->border_box.y == 10,
+        "Maximum width and percentage gap must limit automatic repetitions");
+    bounded_style.box.max_size.width = Length::automatic();
+    bounded_style.box.min_size.width = Length::length(100);
+    bounded.set_style(bounded_root, bounded_style);
+    const auto& minimum = bounded.compute(bounded_root, indefinite);
+    require(minimum.succeeded() && minimum.size.width == 110
+        && minimum.grid_tracks[0].columns == std::vector<Unit>{20, 20, 20, 20}
+        && minimum.find(children.back())->border_box.x == 93,
+        "Minimum width and percentage gap must produce four tracks and expand the container");
 }
 } // namespace
 

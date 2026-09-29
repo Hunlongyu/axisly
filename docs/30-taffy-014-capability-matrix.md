@@ -41,7 +41,7 @@
 | `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch，self-start／self-end 按项目自身方向解析；基线未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr；待建：justify-self-full |
 | `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
-| `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；自动容器固有尺寸阶段以零参与百分比间隙计算，尺寸确定后重算 Flex 主轴分配与 Grid 双轴轨道偏移；Flex 未定交叉轴百分比行距保持为零；自动重复及嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap；待建：percent-gap-repeat |
+| `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；自动容器固有尺寸阶段以零参与百分比间隙计算，尺寸确定后重算 Flex 主轴分配与 Grid 双轴轨道偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐已接入；RTL 组合未验收 | P4 | 已建：block-legacy-text-align |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；复杂组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse |
@@ -49,8 +49,8 @@
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比及固有关键字可探测；嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze |
-| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；容器固有高度确定后重新解析循环百分比轨道；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows |
-| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair |
+| `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；自动重复行的百分比间隙与最小／最大高度组合已差分；容器固有高度确定后重新解析循环百分比轨道；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows、repeat-gap-row-max／min |
+| `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入，百分比间隙及轨道在自动重复计数中按尺寸约束解析；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair、repeat-gap-fixed-percent-track |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持显式网格后的正向循环及前方的逆向序列，含双侧隐式行；复杂放置组合未验收 | P3 | 已建：grid-implicit-positive-rows、grid-implicit-negative-rows、grid-implicit-mixed-rows |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
 | `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；RowDense 补洞通过差分 | P3 | 已建：grid-row-dense-holes |
@@ -162,6 +162,8 @@
 | `flex-scroll-baseline`／`grid-scroll-baseline` | 滚动项目即使报告超过盒高的内容基线，参与基线对齐时也按边框盒高度钳制 |
 | `root-block-padding-percent`／`root-block-border-percent`／`root-block-margin-percent` | Block 根的未定包含块宽度使报告的百分比边值为零；自身宽度确定后重新解析内边距和边框用于子项排布及溢出坐标 |
 | `root-flex-padding-percent`／`root-flex-border-percent`／`root-flex-margin-percent`／`root-grid-padding-percent`／`root-grid-border-percent`／`root-grid-margin-percent` | Flex/Grid 根在未定包含块宽度下的百分比边值按零参与布局与报告，不把自身内容宽度误作包含块基准 |
+| `repeat-gap-fixed-fill`／`repeat-gap-fixed-fit`／`repeat-gap-max-fill`／`repeat-gap-min-fill`／`repeat-gap-auto-fill`／`repeat-gap-fixed-percent-track` | 自动重复按固定、最大、最小或未定容器宽度选择次数；百分比间隙和百分比轨道参与计数，最小宽度约束参与初次轨道尺寸和最终容器尺寸；本地断言实际轨道条数 |
+| `repeat-gap-row-max`／`repeat-gap-row-min` | 行自动重复按最大／最小高度及百分比行距计数，超出显式行的项目进入隐式行 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -184,8 +186,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、一百九十八组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这一百九十八组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、二百零六组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这二百零六组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

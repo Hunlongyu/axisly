@@ -989,9 +989,11 @@ void rtl_block_auto_margin_case(std::string_view name) {
 }
 
 void nested_percentage_case(std::string_view name) {
-    const bool block = name == "nested-percent-block";
-    const bool flex = name == "nested-percent-flex";
-    const int id = block ? 6870 : flex ? 6880 : 6890;
+    const bool deep = name.starts_with("nested-percent-depth-");
+    const bool block = name.ends_with("block");
+    const bool flex = name.ends_with("flex");
+    const int id = deep ? (block ? 6900 : flex ? 6910 : 6920)
+        : block ? 6870 : flex ? 6880 : 6890;
     LayoutTree tree;
     Style root_style;
     root_style.display = block ? Display::Block : flex ? Display::Flex : Display::Grid;
@@ -999,14 +1001,25 @@ void nested_percentage_case(std::string_view name) {
     const auto root = tree.create_node(root_style);
     Style child_style;
     child_style.display = Display::Block;
-    child_style.box.box_sizing = BoxSizing::ContentBox;
-    child_style.box.size = {Length::length(30), Length::length(10)};
+    if (!deep) {
+        child_style.box.box_sizing = BoxSizing::ContentBox;
+        child_style.box.size = {Length::length(30), Length::length(10)};
+    }
     child_style.box.padding.left = Length::percent(0.1f);
     const auto child = tree.create_node(child_style);
     tree.append_child(root, child);
+    std::vector<IdentifiedNode> nodes{{id, root}, {id + 1, child}};
+    if (deep) {
+        Style grandchild_style;
+        grandchild_style.display = Display::Block;
+        grandchild_style.box.size = {Length::length(30), Length::length(10)};
+        const auto grandchild = tree.create_node(grandchild_style);
+        tree.append_child(child, grandchild);
+        nodes.emplace_back(id + 2, grandchild);
+    }
     print(name.data(), tree.compute(root,
         {AvailableSpace::max_content(), AvailableSpace::definite(40)}),
-        {{id, root}, {id + 1, child}});
+        nodes);
 }
 
 void rtl_mixed_case(std::string_view name) {

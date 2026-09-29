@@ -1912,6 +1912,21 @@
     {"name": "nested-percent-grid", "available": ["max-content", 40], "nodes": [
       {"id": 6890, "parent": null, "style": {"display": "Grid", "size": {"height": 40}}},
       {"id": 6891, "parent": 0, "style": {"display": "Block", "box_sizing": "ContentBox", "size": {"width": 30, "height": 10}, "padding": {"left": "10%"}}}
+    ]},
+    {"name": "nested-percent-depth-block", "available": ["max-content", 40], "nodes": [
+      {"id": 6900, "parent": null, "style": {"display": "Block", "size": {"height": 40}}},
+      {"id": 6901, "parent": 0, "style": {"display": "Block", "padding": {"left": "10%"}}},
+      {"id": 6902, "parent": 1, "style": {"display": "Block", "size": {"width": 30, "height": 10}}}
+    ]},
+    {"name": "nested-percent-depth-flex", "available": ["max-content", 40], "nodes": [
+      {"id": 6910, "parent": null, "style": {"display": "Flex", "size": {"height": 40}}},
+      {"id": 6911, "parent": 0, "style": {"display": "Block", "padding": {"left": "10%"}}},
+      {"id": 6912, "parent": 1, "style": {"display": "Block", "size": {"width": 30, "height": 10}}}
+    ]},
+    {"name": "nested-percent-depth-grid", "available": ["max-content", 40], "nodes": [
+      {"id": 6920, "parent": null, "style": {"display": "Grid", "size": {"height": 40}}},
+      {"id": 6921, "parent": 0, "style": {"display": "Block", "padding": {"left": "10%"}}},
+      {"id": 6922, "parent": 1, "style": {"display": "Block", "size": {"width": 30, "height": 10}}}
     ]}
   ]
 }

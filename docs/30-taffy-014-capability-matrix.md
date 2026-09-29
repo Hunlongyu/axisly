@@ -33,7 +33,7 @@
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限、Flex 拉伸交叉轴基准和 Grid 自动轨道比例贡献已差分；未定交叉轴及复杂 min/max 组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width；待建：ratio-indefinite-cross-axis |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分；RTL Block 自动边距在正剩余空间与溢出时按物理右边定位，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、rtl-block-auto-overflow-both／left／right、rtl-block-auto-positive／left／right、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins |
-| `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，带 calc 内边距的确定宽度 Block 嵌套树已差分；自动宽度 Block/Flex 子项的百分比内边距保持未定，Grid 按网格区域宽度解析，叶子的滚动溢出仍使用后续可用宽度；更多百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis、calc-block-child、nested-percent-block／flex／grid |
+| `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，带 calc 内边距的确定宽度 Block 嵌套树已差分；自动宽度 Block/Flex 子项的百分比内边距保持未定，Grid 按网格区域宽度解析；嵌套 Block 的后续子项排布与叶子局部可滚动范围分别验收；更多百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis、calc-block-child、nested-percent-block／flex／grid、nested-percent-depth-block／flex／grid |
 | `border` | 四边 Length／Percent／Calc | 部分：固定数值、叶子 calc 及根容器未定宽度的百分比边框已差分；Block 用确定后的边框作为子项和溢出坐标原点；嵌套循环未完整 | P1 | 已建：content-box-and-negative-margin、root-block／flex／grid-border-percent、calc-leaf-content-box／partial-basis |
 | `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择、滚动项目基线钳制及 Grid 安全对齐在溢出时回退起始边已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline、grid-align-safe／unsafe-overflow |
 | `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；固定交叉尺寸项目在反向换行时按 flex-start 对齐；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline；待建：align-self-full |
@@ -180,6 +180,7 @@
 | `block-legacy-rtl-left`／`block-legacy-rtl-right`／`block-legacy-rtl-center` | RTL Block 的传统物理左、右和居中对齐 |
 | `rtl-block-auto-overflow-both`／`rtl-block-auto-overflow-left`／`rtl-block-auto-overflow-right`／`rtl-block-auto-positive`／`rtl-block-auto-positive-left`／`rtl-block-auto-positive-right` | RTL Block 中双／单自动外边距在正剩余空间和溢出时的物理右边定位及报告边距 |
 | `nested-percent-block`／`nested-percent-flex`／`nested-percent-grid` | 自动宽度容器的百分比内边距：Block/Flex 子项布局保持未定，Grid 项目按区域宽度解析；叶子的局部可滚动范围单独验收 |
+| `nested-percent-depth-block`／`nested-percent-depth-flex`／`nested-percent-depth-grid` | 自动宽度容器下的三层树；Block 子项报告内边距与孙节点位置、容器高度及溢出范围分别差分 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -202,7 +203,7 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二百五十三组可重放树形参考输入、十三组独立 calc
+目前有 44 字段清单、二百五十六组可重放树形参考输入、十三组独立 calc
 参考输入、独立树形工具及旧 Grid 差分回归；树形参考输入的矩形、盒边、
 滚动条及节点局部可滚动溢出
 同时经过新原生树差分。

@@ -10,6 +10,8 @@ from test_flex_matrix import compare
 
 DISPLAYS = ("Block", "FlowRoot", "Flex", "Grid")
 CLEARS = ("None", "Left", "Right", "Both")
+ALIGNMENTS = ("End", "Center", "SpaceAround", "SpaceBetween",
+              "Stretch", "SafeCenter")
 
 
 def make_cases():
@@ -107,6 +109,47 @@ def make_cases():
                 f"{display}-{clear}-{rtl}")
         yield {"name": name, "available": [100, "max-content"], "nodes": nodes}
 
+    for root_kind, align, floated, rtl, compact in itertools.product(
+        range(2), range(len(ALIGNMENTS)), range(2), range(2), range(2)
+    ):
+        root = {"display": "Block" if root_kind == 0 else "FlowRoot",
+                "size": {"width": 100, "height": 20 if compact else 80},
+                "padding": {"left": 2, "top": 2, "right": 2, "bottom": 2},
+                "align_content": ALIGNMENTS[align],
+                "direction": "Rtl" if rtl else "Ltr"}
+        nodes = [{"id": 1, "parent": None, "style": root}]
+        if floated:
+            nodes.append({"id": 2, "parent": 0, "style": {"display": "Block",
+                "float": "Left", "size": {"width": 20, "height": 20}}})
+        nodes.extend([
+            {"id": 3, "parent": 0, "style": {"display": "FlowRoot",
+                "size": {"width": 20, "height": 10}, "margin": {"top": 5}}},
+            {"id": 4, "parent": 0, "style": {"display": "Block",
+                "size": {"width": 20, "height": 8}, "margin": {"top": 3}}},
+        ])
+        name = f"block-align-{root_kind}-{align}-{floated}-{rtl}-{compact}"
+        yield {"name": name, "available": [100, "max-content"], "nodes": nodes}
+
+    for float_side, align, rtl in itertools.product(range(2), range(2), range(2)):
+        nodes = [
+            {"id": 1, "parent": None, "style": {"display": "Block",
+                "size": {"width": 100}, "padding": {"left": 2, "top": 2,
+                    "right": 2, "bottom": 2},
+                "direction": "Rtl" if rtl else "Ltr"}},
+            {"id": 2, "parent": 0, "style": {"display": "Block",
+                "float": "Left" if float_side == 0 else "Right",
+                "size": {"width": 30, "height": 30}}},
+            {"id": 3, "parent": 0, "style": {"display": "Block",
+                "size": {"height": 25}, "margin": {"top": 3},
+                "align_content": "End" if align == 0 else "Center"}},
+            {"id": 4, "parent": 2, "style": {"display": "Flex",
+                "size": {"width": 15, "height": 5}}},
+            {"id": 5, "parent": 0, "style": {"display": "Block",
+                "size": {"height": 8}}},
+        ]
+        name = f"block-align-nested-{float_side}-{align}-{rtl}"
+        yield {"name": name, "available": [100, "max-content"], "nodes": nodes}
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -123,7 +166,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_BLOCK_FLOAT_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 448
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 552
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

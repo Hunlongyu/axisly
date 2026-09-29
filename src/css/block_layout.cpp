@@ -11,13 +11,32 @@ bool scroll_container(Overflow overflow) {
     return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
 }
 
-bool establishes_formatting_context(const LayoutNode& node) {
+// Taffy positions these block items beside floats. A Block with align-content
+// starts a new context for its own children but its border box still overlaps
+// ancestor floats like an ordinary Block item.
+bool avoids_floats_as_block_item(const LayoutNode& node) {
     return node.style.display == Display::FlowRoot
         || node.style.display == Display::Flex
         || node.style.display == Display::Grid
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y);
+}
+
+Unit block_alignment_offset(Unit free, ContentAlignment alignment) {
+    if (alignment.safety == AlignmentSafety::Safe && free < 0) return 0;
+    switch (alignment.position) {
+    case ContentPosition::End:
+    case ContentPosition::FlexEnd: return free;
+    case ContentPosition::Center: return free / 2;
+    case ContentPosition::SpaceAround:
+    case ContentPosition::SpaceEvenly: return free > 0 ? free / 2 : Unit{0};
+    case ContentPosition::Start:
+    case ContentPosition::FlexStart:
+    case ContentPosition::Stretch:
+    case ContentPosition::SpaceBetween: return 0;
+    }
+    return 0;
 }
 } // namespace
 
@@ -163,7 +182,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         std::optional<FloatSlot> formatting_slot;
         if (child.style.float_side == FloatSide::None
-            && establishes_formatting_context(child) && !floats.empty()) {
+            && avoids_floats_as_block_item(child) && !floats.empty()) {
             const Unit separation = pending_margin.merged(
                 MarginStrut::from(margin.top)).resolve(child_id);
             Unit estimated_y = checked(static_cast<double>(context.origin_y)
@@ -191,7 +210,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         const bool same_bfc = child.style.display == Display::Block
             && child.style.float_side == FloatSide::None
             && child.style.position != Position::Absolute
-            && !intrinsic_width && !establishes_formatting_context(child);
+            && !intrinsic_width && !avoids_floats_as_block_item(child)
+            && !child.style.align_content.has_value();
         FloatContext probe_floats;
         BlockContext probe_context{probe_floats, 0, 0};
         auto nested = layout(child_id, child_constraints, depth + 1,
@@ -292,6 +312,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const bool independent = node.style.display != Display::Block
         || node.style.position == Position::Absolute
         || node.style.item_is_table || node.style.box.replaced
+        || node.style.align_content.has_value()
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y)
@@ -335,20 +356,37 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const bool contains_floats = !node.parent || node.style.display == Display::FlowRoot
         || node.style.position == Position::Absolute
         || node.style.float_side != FloatSide::None
+        || node.style.align_content.has_value()
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y);
-    Size candidate{
-        outer_width,
-        preferred_height ? *preferred_height
-            : checked(static_cast<double>(content_height) + *flow_decoration_height, node.id),
-    };
-    if (contains_floats && !preferred_height) {
-        candidate.height = std::max(candidate.height, checked(
+    Unit intrinsic_outer_height = checked(
+        static_cast<double>(content_height) + *flow_decoration_height, node.id);
+    if (contains_floats) {
+        intrinsic_outer_height = std::max(intrinsic_outer_height, checked(
             static_cast<double>(y_origin) + floats.maximum_bottom()
                 - context.origin_y, node.id));
     }
+    Size candidate{
+        outer_width,
+        preferred_height ? *preferred_height
+            : intrinsic_outer_height,
+    };
     candidate = constrain_size(candidate, box);
+    if (node.style.align_content) {
+        const Unit free = checked(static_cast<double>(candidate.height)
+            - intrinsic_outer_height, node.id);
+        const Unit offset = block_alignment_offset(free, *node.style.align_content);
+        if (offset != 0) {
+            for (std::size_t source = 0; source < node.children.size(); ++source) {
+                const auto& child = get(node.children[source]);
+                if (child.style.display != Display::None
+                    && child.style.position != Position::Absolute) {
+                    translate(fragments[source], 0, offset, child.id);
+                }
+            }
+        }
+    }
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));

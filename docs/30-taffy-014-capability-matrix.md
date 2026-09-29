@@ -39,7 +39,7 @@
 | `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；固定交叉尺寸项目在反向换行时按 flex-start 对齐；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline；待建：align-self-full |
 | `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 默认 End 与单项 Start 覆盖、SafeCenter／Center 在轨道小于项目时的位置已差分；非拉伸的嵌套 Grid 在自动轨道与弹性轨道中按区域可用空间和固有贡献确定尺寸；其他安全值与复杂组合未完整 | P3 | 已建：grid-justify-items-end、grid-justify-safe／unsafe-overflow、test_mixed_nested.py |
 | `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch，self-start／self-end 按项目自身方向解析；基线未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr；待建：justify-self-full |
-| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；Flex 的 Start／End 在反向换行时按书写方向对齐，FlexStart／FlexEnd 按行堆叠方向对齐；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment、648 组 Flex 方向／换行／对齐组合差分 |
+| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；Block 将正常流子项作为单组垂直对齐，含安全回退及浮动，同时其子树建立独立格式化上下文；作为祖先浮动旁的 Block 项目时，Taffy 仍允许它的盒与浮动重叠；Flex 的 Start／End 在反向换行时按书写方向对齐，FlexStart／FlexEnd 按行堆叠方向对齐；复杂组合未验收 | P2/P3/P4 | 已建：grid-content-alignment、648 组 Flex 方向／换行／对齐组合差分、block-align-matrix |
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；Flex 自动容器固有尺寸阶段以零为 `calc` 间隙百分比基准，保留固定长度项，尺寸确定后重算主轴分配；Grid 自动容器先按零间隙确定轨道尺寸，再重算偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、calc-flex-gap-basis／auto-gap、calc-grid-gap-item／auto-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
@@ -226,11 +226,12 @@ basis／增长策略、LTR／RTL 与三种尺寸查询，共 3,456 组。叶节�
 内容尺寸不同；比较嵌套节点、叶节点的盒尺寸与滚动溢出，验证固有约束
 传递、交叉轴探测、非拉伸 Grid 子容器的尺寸确定及最终双轴布局。
 
-`test_block_float_matrix.py` 生成 448 组 Block／Float 组合：根容器 Block／
+`test_block_float_matrix.py` 生成 552 组 Block／Float 组合：根容器 Block／
 FlowRoot、左右双侧浮动、四种 `clear`、普通 Block／FlowRoot／Flex／Grid
 跟随节点、自动／固定宽度与 LTR／RTL；另有 128 组普通 Block 后代的浮动、
 padding、外边距、方向与独立格式化上下文交互，以及 64 组三层 Block 的
-跨层外边距折叠。普通 Block 后代使用共享浮动上下文，
+跨层外边距折叠；再组合 104 组 Block `align-content` 的单组对齐、
+空间不足时的安全回退与浮动，包括子树上下文边界。普通 Block 后代使用共享浮动上下文，
 FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚动溢出。
 `inherited_float_invalidation` 验证祖先浮动尺寸修改后，后代布局与缓存失效。
 复杂外边距折叠和更多深层嵌套仍待验收。

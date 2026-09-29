@@ -652,6 +652,39 @@ void percent_gap_case(std::string_view name) {
         {AvailableSpace::max_content(), AvailableSpace::max_content()}), nodes);
 }
 
+void percent_cross_gap_case(std::string_view name) {
+    const bool grid = name.starts_with("grid-");
+    const int id = grid ? 2130 : 2120;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = grid ? Display::Grid : Display::Flex;
+    root_style.box.size.width = Length::length(grid ? 20.0f : 40.0f);
+    root_style.gap.height = Length::percent(0.1f);
+    if (grid) {
+        root_style.grid.template_columns = {TrackSizing::fixed(20)};
+        root_style.grid.template_rows = {
+            TrackSizing::fixed(10), TrackSizing::fixed(10)};
+    } else {
+        root_style.flex_wrap = FlexWrap::Wrap;
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (int index = 0; index < (grid ? 2 : 3); ++index) {
+        Style style;
+        style.box.size = {Length::length(20), Length::length(10)};
+        if (grid) {
+            style.grid.row = {
+                GridLine::index(static_cast<std::int16_t>(index + 1)),
+                GridLine::index(static_cast<std::int16_t>(index + 2))};
+        }
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + static_cast<int>(nodes.size()), child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(40), AvailableSpace::max_content()}), nodes);
+}
+
 void flex_wrap_reverse_physical_case(std::string_view name) {
     const bool row = name.ends_with("row");
     const int id = row ? 1960 : 1970;
@@ -2058,6 +2091,8 @@ int main(int argc, char** argv) {
             || name == "flex-fixed-percent-gap"
             || name == "grid-auto-percent-gap"
             || name == "grid-fixed-percent-gap") percent_gap_case(name);
+        else if (name == "flex-auto-cross-percent-gap"
+            || name == "grid-auto-row-percent-gap") percent_cross_gap_case(name);
         else if (name == "grid-row-dense-holes") grid_row_dense_holes();
         else if (name == "grid-named-line-occurrences") grid_named_line_occurrences();
         else if (name == "block-parent-child-margins") block_parent_child_margins();

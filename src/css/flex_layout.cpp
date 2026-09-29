@@ -243,7 +243,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     const auto cross_available = row ? inner_height : inner_width;
     Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
         main_available, node.id);
-    Unit cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
+    const Unit cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
         cross_available, node.id);
 
     std::vector<Fragment> fragments(node.children.size());
@@ -476,15 +476,6 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         border_width = constrain_axis(checked(used_cross + *deco_width,
             node.id), box.minimum.width, box.maximum.width);
         inner_width = std::max(Unit{0}, *border_width - *deco_width);
-    }
-    if (!cross_available) {
-        const Unit previous_gap = cross_gap;
-        cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
-            row ? *inner_height : *inner_width, node.id);
-        if (lines.size() > 1) {
-            used_cross += static_cast<double>(lines.size() - 1)
-                * (cross_gap - previous_gap);
-        }
     }
     const Unit cross_size = row ? *inner_height : *inner_width;
     if (lines.size() == 1) lines.front().cross = cross_size;

@@ -124,6 +124,8 @@ CASES = (
     "flex-fixed-percent-gap",
     "grid-auto-percent-gap",
     "grid-fixed-percent-gap",
+    "flex-auto-cross-percent-gap",
+    "grid-auto-row-percent-gap",
     "block-float-intrinsic-child",
     "block-float-intrinsic-overflow",
     "block-float-intrinsic-pair",

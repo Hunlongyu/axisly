@@ -459,6 +459,13 @@ class TreeReferenceTests(unittest.TestCase):
             "grid-fixed-percent-gap": {2110: [0, 0, 100, 10],
                                        2111: [0, 0, 20, 10],
                                        2112: [30, 0, 20, 10]},
+            "flex-auto-cross-percent-gap": {2120: [0, 0, 40, 20],
+                                             2121: [0, 0, 20, 10],
+                                             2122: [20, 0, 20, 10],
+                                             2123: [0, 10, 20, 10]},
+            "grid-auto-row-percent-gap": {2130: [0, 0, 20, 20],
+                                          2131: [0, 0, 20, 10],
+                                          2132: [0, 12, 20, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

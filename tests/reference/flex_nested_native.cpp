@@ -31,7 +31,8 @@ MeasureFunction measured(Size minimum, Size preferred) {
 }
 
 void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
-              std::size_t nested_direction, std::size_t variant, std::size_t rtl) {
+              std::size_t nested_kind, std::size_t nested_direction,
+              std::size_t variant, std::size_t rtl) {
     const bool row = direction < 2;
     LayoutTree tree;
     Style root_style;
@@ -48,8 +49,18 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     }
     const auto root = tree.create_node(root_style);
     Style nested_style;
-    nested_style.flex_direction = nested_direction == 0
-        ? FlexDirection::Row : FlexDirection::Column;
+    nested_style.display = nested_kind == 0 ? Display::Flex : Display::Grid;
+    if (nested_kind == 0) {
+        nested_style.flex_direction = nested_direction == 0
+            ? FlexDirection::Row : FlexDirection::Column;
+    } else {
+        nested_style.grid.template_columns = nested_direction == 0
+            ? std::vector<TemplateTrack>{TrackSizing::automatic(), TrackSizing::automatic()}
+            : std::vector<TemplateTrack>{TrackSizing::automatic()};
+        nested_style.grid.template_rows = nested_direction == 0
+            ? std::vector<TemplateTrack>{TrackSizing::automatic()}
+            : std::vector<TemplateTrack>{TrackSizing::automatic(), TrackSizing::automatic()};
+    }
     nested_style.align_items = {ItemPosition::Start};
     nested_style.box.padding = {Length::length(2), Length::length(2),
         Length::length(2), Length::length(2)};
@@ -76,7 +87,8 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     const auto prefix = scenario == 0 ? "flex-nested-"
         : scenario == 1 ? "flex-nested-max-" : "flex-nested-min-";
     const auto name = prefix + std::to_string(direction) + '-'
-        + std::to_string(wrap) + '-' + std::to_string(nested_direction)
+        + std::to_string(wrap) + '-' + std::to_string(nested_kind)
+        + '-' + std::to_string(nested_direction)
         + '-' + std::to_string(variant) + '-' + std::to_string(rtl);
     const auto available = scenario == 0
         ? AvailableSize{AvailableSpace::definite(row ? 90.0F : 80.0F),
@@ -103,12 +115,14 @@ int main(int argc, char** argv) {
         bool first = true;
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
+        for (std::size_t nested_kind = 0; nested_kind < 2; ++nested_kind)
         for (std::size_t nested_direction = 0; nested_direction < 2; ++nested_direction)
         for (std::size_t variant = 0; variant < 2; ++variant)
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, direction, wrap, nested_direction, variant, rtl);
+            run_case(scenario, direction, wrap, nested_kind,
+                nested_direction, variant, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

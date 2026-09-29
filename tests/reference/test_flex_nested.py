@@ -1,4 +1,4 @@
-"""Measured leaves inside nested Flex containers against pinned Taffy 0.14."""
+"""Measured leaves inside nested Flex and Grid containers against Taffy 0.14."""
 
 import argparse
 import itertools
@@ -13,8 +13,8 @@ WRAPS = ("NoWrap", "Wrap", "WrapReverse")
 
 
 def make_cases(scenario):
-    for direction, wrap, nested_direction, variant, rtl in itertools.product(
-        range(4), range(3), range(2), range(2), range(2)
+    for direction, wrap, nested_kind, nested_direction, variant, rtl in itertools.product(
+        range(4), range(3), range(2), range(2), range(2), range(2)
     ):
         row = direction < 2
         width, height = (90, 80) if row else (80, 90)
@@ -28,12 +28,16 @@ def make_cases(scenario):
         if scenario == "definite":
             root["size"] = {"width": width, "height": height}
         nested = {
-            "display": "Flex",
-            "flex_direction": "Row" if nested_direction == 0 else "Column",
+            "display": "Flex" if nested_kind == 0 else "Grid",
             "align_items": "Start", "flex_shrink": 0,
             "padding": {"left": 2, "top": 2, "right": 2, "bottom": 2},
             "gap": {"width": 3, "height": 3},
         }
+        if nested_kind == 0:
+            nested["flex_direction"] = "Row" if nested_direction == 0 else "Column"
+        else:
+            nested["grid_template_columns"] = "auto auto" if nested_direction == 0 else "auto"
+            nested["grid_template_rows"] = "auto" if nested_direction == 0 else "auto auto"
         if variant == 1:
             nested["flex_grow"] = 1
             nested["flex_basis"] = 20
@@ -52,7 +56,8 @@ def make_cases(scenario):
         prefix = {"definite": "flex-nested", "max-content": "flex-nested-max",
                   "min-content": "flex-nested-min"}[scenario]
         available = [width, height] if scenario == "definite" else [scenario, scenario]
-        yield {"name": f"{prefix}-{direction}-{wrap}-{nested_direction}-{variant}-{rtl}",
+        yield {"name": f"{prefix}-{direction}-{wrap}-{nested_kind}-"
+                       f"{nested_direction}-{variant}-{rtl}",
                "available": available, "nodes": nodes}
 
 
@@ -74,7 +79,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_FLEX_NESTED_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 96
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 192
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

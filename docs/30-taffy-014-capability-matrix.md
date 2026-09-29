@@ -46,7 +46,7 @@
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；ColumnReverse 的居中、换列、RTL 反向换列与自动外边距已差分，复杂尺寸交互未验收 | P2 | 已建：flex-row-grow、flex-column-reverse-center／wrap／rtl-wrap-reverse／auto-margin |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；`min-content` 下允许换行时以最大单项尺寸确定初始主轴宽度并重新分行；分行采用受项目 min/max 约束的假设尺寸，反向换行溢出时应用行对齐回退；NoWrap／Wrap／WrapReverse 与四种主轴方向、RTL、项目和内容对齐在三种尺寸查询下差分；平衡换行复杂组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse、test_flex_matrix.py、test_flex_bounds.py |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance |
-| `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分，显式与百分比 basis 已加入三种尺寸查询下的方向／换行／RTL 组合；固有尺寸贡献与实际基础尺寸分离，自动尺寸容器在 `max-content` 下保持原分行；Flex 子容器的测量叶节点已覆盖三种尺寸查询，更多嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis、test_flex_factors.py、test_flex_nested.py |
+| `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分，显式与百分比 basis 已加入三种尺寸查询下的方向／换行／RTL 组合；固有尺寸贡献与实际基础尺寸分离，自动尺寸容器在 `max-content` 下保持原分行；Flex 内嵌 Flex／Grid 的测量叶节点已覆盖三种尺寸查询，更多嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis、test_flex_factors.py、test_flex_nested.py |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；四向主轴、普通换行、LTR／RTL 与显式／百分比 basis 已组合差分；复杂嵌套仍不足。Taffy 0.14 在系数和小于 1 时对初始剩余空间缩放后再次扣除行间隙；该版本差分已固定，但与 W3C 步骤 9.7 的规则不同，见下文差异记录 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze、test_flex_factors.py |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；四向主轴、普通换行、LTR／RTL 已组合差分；嵌套 Flex 收缩中按真实约束违例冻结，避免浮点舍入把未违例项目一起冻结；其他复杂嵌套仍不足。低系数与行间隙的版本行为见上项 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze、test_flex_factors.py、test_flex_nested.py |
 | `grid_template_rows` | 固有／minmax／fit-content／fr／repeat 轨道 | 部分：新入口支持主要轨道函数与自动重复；自动重复行的百分比间隙与最小／最大高度组合已差分；容器固有高度确定后重新解析循环百分比轨道；`min-content` 查询下弹性轨道保留基准尺寸，`max-content` 按项目跨越轨道求 `fr` 单位，双轴固有查询已加入组合差分；其他尺寸阶段仍需差分 | P3 | 已建：css-grid-tracks-placement、grid-auto-fill／fit、grid-percent-indefinite-rows、repeat-gap-row-max／min、test_grid_matrix.py、test_grid_span_matrix.py |
@@ -219,10 +219,10 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 LTR／RTL，共 432 组；特别覆盖系数和小于 1 与行间隙交互，以及固有尺寸
 贡献与实际布局尺寸不同的情况。
 
-`test_flex_nested.py` 组合四种外层主轴、三种普通换行、两种内层 Flex 主轴、
-两类内层 basis／增长策略、LTR／RTL 与三种尺寸查询，共 288 组。叶节点的
-最小内容与首选内容尺寸不同；比较嵌套节点、叶节点的盒尺寸与滚动溢出，
-验证固有约束传递、交叉轴探测及最终双轴布局。
+`test_flex_nested.py` 组合四种外层主轴、三种普通换行、内层 Flex／Grid、
+两种内层排列方向、两类内层 basis／增长策略、LTR／RTL 与三种尺寸查询，
+共 576 组。叶节点的最小内容与首选内容尺寸不同；比较嵌套节点、叶节点的
+盒尺寸与滚动溢出，验证固有约束传递、交叉轴探测及最终双轴布局。
 
 `test_grid_matrix.py` 生成 2,646 组 Grid 组合：七类双轨道模板分别用于行列，
 三种横向对齐、三种纵向对齐、LTR／RTL，以及确定尺寸、`max-content`、

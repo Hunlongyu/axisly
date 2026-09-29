@@ -18,9 +18,9 @@ ALIGNMENTS = ("Start", "Center", "End")
 POSITION_CASES = range(15)
 
 
-def positioned_style(scenario, child_rtl):
+def positioned_style(scenario, child_rtl, relative):
     style = {
-        "display": "Block", "position": "Absolute",
+        "display": "Block", "position": "Relative" if relative else "Absolute",
         "direction": "Rtl" if child_rtl else "Ltr",
         "size": {"width": 20, "height": 10},
     }
@@ -62,9 +62,9 @@ def positioned_style(scenario, child_rtl):
 
 
 def make_cases():
-    for mode, alignment, parent_rtl, child_rtl, scenario in itertools.product(
-        range(len(DISPLAY_MODES)), range(len(ALIGNMENTS)), range(2), range(2),
-        POSITION_CASES,
+    for relative, mode, alignment, parent_rtl, child_rtl, scenario in itertools.product(
+        range(2), range(len(DISPLAY_MODES)), range(len(ALIGNMENTS)),
+        range(2), range(2), POSITION_CASES,
     ):
         if mode != 5 and scenario in (11, 12):
             continue
@@ -96,7 +96,7 @@ def make_cases():
                 "display": "Block", "size": {"width": 25, "height": 12},
                 "flex_shrink": 0}},
             {"id": 3, "parent": 0,
-             "style": positioned_style(scenario, child_rtl)},
+             "style": positioned_style(scenario, child_rtl, relative)},
             {"id": 4, "parent": 2, "style": {
                 "display": "Block", "size": {"width": 12, "height": 6}}},
             {"id": 5, "parent": 0, "style": {
@@ -104,7 +104,8 @@ def make_cases():
                 "flex_shrink": 0}},
         ]
         yield {
-            "name": f"position-matrix-{mode}-{alignment}-{parent_rtl}-"
+            "name": f"{'relative' if relative else 'position'}-matrix-"
+                    f"{mode}-{alignment}-{parent_rtl}-"
                     f"{child_rtl}-{scenario}",
             "available": [120, 80], "nodes": nodes,
         }
@@ -128,8 +129,8 @@ def main():
     native = json.loads(subprocess.run(
         [args.axisly], text=True, capture_output=True, check=True,
     ).stdout)
-    assert native["protocol"] == "AXISLY_POSITION_MATRIX_V1"
-    assert len(cases) == len(expected) == len(native["cases"]) == 1428
+    assert native["protocol"] == "AXISLY_POSITION_MATRIX_V2"
+    assert len(cases) == len(expected) == len(native["cases"]) == 2856
     failures = []
     for actual, oracle in zip(native["cases"], expected, strict=True):
         try:

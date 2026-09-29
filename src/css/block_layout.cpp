@@ -302,7 +302,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             has_flow = true;
         }
         const auto [relative_x, relative_y] = relative_offset(child,
-            Size{content_width, content_height_basis}, node.id);
+            Size{content_width, content_height_basis},
+            node.style.box.direction, node.id);
         translate(nested, relative_x, relative_y, child_id);
         fragments[source] = std::move(nested);
     }

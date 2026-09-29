@@ -880,6 +880,12 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 cell_width, margin.left, margin.right, id),
                 resolved.minimum.width, resolved.maximum.width);
         }
+        if (!final.known_width && child_box.size.width.kind() == LengthKind::Auto
+            && !resolved.preferred.width
+            && (child.style.display == Display::Block
+                || child.style.display == Display::FlowRoot)) {
+            final.content_based_width = true;
+        }
         if (vertical.position == ItemPosition::Stretch
             && child_box.size.height.kind() == LengthKind::Auto
             && resolved.margin.top.kind != EdgeKind::Auto
@@ -945,7 +951,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             if (auto_top) used_top = share;
             if (auto_bottom) used_bottom = share;
         }
-        Unit x = checked(static_cast<double>(cell_x) + used_left
+        const Unit inline_start_margin = node.style.box.direction == Direction::Rtl
+            ? used_right : used_left;
+        Unit x = checked(static_cast<double>(cell_x) + inline_start_margin
             + ((auto_left || auto_right) ? 0 : align_offset(horizontal_free,
                 horizontal, true, node.style.box.direction,
                 child.style.box.direction, id)), id);
@@ -961,7 +969,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             checked(static_cast<double>(content_x) + x, id),
             checked(static_cast<double>(content_y) + y, id), id);
         const auto [relative_x, relative_y] = relative_offset(child,
-            Size{*inner_width, *inner_height}, node.id);
+            Size{cell_width, cell_height}, node.style.box.direction, node.id);
         translate(child_fragment, relative_x, relative_y, id);
         fragments[i] = std::move(child_fragment);
     }

@@ -56,6 +56,7 @@ struct FlexItem {
     Unit cross{};
     bool auto_main_start{}, auto_main_end{};
     bool auto_cross_start{}, auto_cross_end{};
+    bool content_based_cross_width{};
     bool scroll_container{};
 };
 
@@ -406,6 +407,24 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
         }
+        const auto cross_alignment = child.style.align_self.value_or(
+            node.style.align_items.value_or(ItemAlignment{}));
+        const auto cross_preferred = axis(child_box.preferred, row, false);
+        const auto main_preferred = axis(child_box.preferred, row, true);
+        const auto& cross_size_style = row
+            ? child.style.box.size.height : child.style.box.size.width;
+        const bool cross_auto_margin = (row
+            ? child_box.margin.top.kind == EdgeKind::Auto
+                || child_box.margin.bottom.kind == EdgeKind::Auto
+            : child_box.margin.left.kind == EdgeKind::Auto
+                || child_box.margin.right.kind == EdgeKind::Auto);
+        const bool content_based_cross_width = !row
+            && (child.style.display == Display::Block
+                || child.style.display == Display::FlowRoot)
+            && cross_size_style.kind() == LengthKind::Auto
+            && !cross_preferred
+            && (cross_alignment.position != ItemPosition::Stretch
+                || cross_auto_margin);
         const auto main_decoration = row
             ? child_box.horizontal_decoration() : child_box.vertical_decoration();
         if (!main_decoration) {
@@ -413,6 +432,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 "Flex item decoration requires a definite containing inline size");
         }
         Constraints child_constraints;
+        child_constraints.content_based_width = content_based_cross_width;
         child_constraints.containing_width = inner_width;
         child_constraints.containing_height = inner_height;
         child_constraints.available.width = inner_width
@@ -470,17 +490,6 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 basis = limit ? std::max(minimum, std::min(maximum, *limit)) : maximum;
             }
         }
-        const auto cross_alignment = child.style.align_self.value_or(
-            node.style.align_items.value_or(ItemAlignment{}));
-        const auto cross_preferred = axis(child_box.preferred, row, false);
-        const auto main_preferred = axis(child_box.preferred, row, true);
-        const auto& cross_size_style = row
-            ? child.style.box.size.height : child.style.box.size.width;
-        const bool cross_auto_margin = (row
-            ? child_box.margin.top.kind == EdgeKind::Auto
-                || child_box.margin.bottom.kind == EdgeKind::Auto
-            : child_box.margin.left.kind == EdgeKind::Auto
-                || child_box.margin.right.kind == EdgeKind::Auto);
         if (child_box.aspect_ratio && cross_available
             && !main_preferred && !cross_preferred
             && cross_size_style.kind() == LengthKind::Auto
@@ -548,6 +557,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         item.auto_main_end = (main_reverse ? margin_start : margin_end).kind == EdgeKind::Auto;
         item.auto_cross_start = (cross_reverse ? cross_end : cross_start).kind == EdgeKind::Auto;
         item.auto_cross_end = (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto;
+        item.content_based_cross_width = content_based_cross_width;
         item.scroll_container = scroll_container;
         items.push_back(std::move(item));
     }
@@ -634,6 +644,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         for (const auto index : line.items) {
             auto& item = items[index];
             Constraints final_constraints;
+            final_constraints.content_based_width = item.content_based_cross_width;
             final_constraints.containing_width = child_percentage_width;
             final_constraints.containing_height = child_percentage_height;
             final_constraints.available.width = inner_width
@@ -843,7 +854,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 row ? checked(static_cast<double>(content_y) + cross_position, item.id)
                     : checked(static_cast<double>(content_y) + main_position, item.id), item.id);
             const auto [relative_x, relative_y] = relative_offset(get(item.id),
-                Size{*inner_width, *inner_height}, node.id);
+                Size{*inner_width, *inner_height}, node.style.box.direction, node.id);
             translate(fragment, relative_x, relative_y, item.id);
             main_cursor += main_start_margin + item.target + main_end_margin + main_gap
                 + distribution.extra_gap;

@@ -76,7 +76,7 @@ void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
 void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
     const std::unordered_map<std::uint64_t, LayoutNode>& nodes);
 [[nodiscard]] std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
-    Size containing, NodeId parent);
+    Size containing, Direction containing_direction, NodeId parent);
 
 class LayoutFailure final : public std::runtime_error {
 public:

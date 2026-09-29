@@ -43,10 +43,10 @@ Style parent_style(std::size_t mode, std::size_t alignment, bool rtl) {
     return style;
 }
 
-Style positioned_style(std::size_t scenario, bool rtl) {
+Style positioned_style(std::size_t scenario, bool rtl, bool relative) {
     Style style;
     style.display = Display::Block;
-    style.position = Position::Absolute;
+    style.position = relative ? Position::Relative : Position::Absolute;
     style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
     style.box.size = {Length::length(20), Length::length(10)};
     switch (scenario) {
@@ -115,7 +115,7 @@ Style positioned_style(std::size_t scenario, bool rtl) {
 
 void run_case(std::size_t mode, std::size_t alignment,
               std::size_t parent_rtl, std::size_t child_rtl,
-              std::size_t scenario) {
+              std::size_t scenario, bool relative) {
     LayoutTree tree;
     const auto parent = tree.create_node(parent_style(mode, alignment, parent_rtl != 0));
     Style before_style;
@@ -123,7 +123,8 @@ void run_case(std::size_t mode, std::size_t alignment,
     before_style.box.size = {Length::length(25), Length::length(12)};
     before_style.flex_shrink = 0;
     const auto before = tree.create_node(before_style);
-    const auto absolute = tree.create_node(positioned_style(scenario, child_rtl != 0));
+    const auto positioned = tree.create_node(positioned_style(
+        scenario, child_rtl != 0, relative));
     Style inner_style;
     inner_style.display = Display::Block;
     inner_style.box.size = {Length::length(12), Length::length(6)};
@@ -134,22 +135,24 @@ void run_case(std::size_t mode, std::size_t alignment,
     after_style.flex_shrink = 0;
     const auto after = tree.create_node(after_style);
     tree.append_child(parent, before);
-    tree.append_child(parent, absolute);
-    tree.append_child(absolute, inner);
+    tree.append_child(parent, positioned);
+    tree.append_child(positioned, inner);
     tree.append_child(parent, after);
-    const auto name = "position-matrix-" + std::to_string(mode) + '-'
+    const auto name = std::string(relative ? "relative-matrix-" : "position-matrix-")
+        + std::to_string(mode) + '-'
         + std::to_string(alignment) + '-' + std::to_string(parent_rtl) + '-'
         + std::to_string(child_rtl) + '-' + std::to_string(scenario);
     reference::write_case(std::cout, name, tree.compute(parent,
         {AvailableSpace::definite(120), AvailableSpace::definite(80)}),
-        {{1, parent}, {2, before}, {3, absolute}, {4, inner}, {5, after}}, true);
+        {{1, parent}, {2, before}, {3, positioned}, {4, inner}, {5, after}}, true);
 }
 } // namespace
 
 int main() {
     try {
-        std::cout << "{\"protocol\":\"AXISLY_POSITION_MATRIX_V1\",\"cases\":[";
+        std::cout << "{\"protocol\":\"AXISLY_POSITION_MATRIX_V2\",\"cases\":[";
         bool first = true;
+        for (std::size_t relative = 0; relative < 2; ++relative)
         for (std::size_t mode = 0; mode < 9; ++mode)
         for (std::size_t alignment = 0; alignment < 3; ++alignment)
         for (std::size_t parent_rtl = 0; parent_rtl < 2; ++parent_rtl)
@@ -158,7 +161,7 @@ int main() {
             if (mode != 5 && (scenario == 11 || scenario == 12)) continue;
             if (!first) std::cout << ',';
             first = false;
-            run_case(mode, alignment, parent_rtl, child_rtl, scenario);
+            run_case(mode, alignment, parent_rtl, child_rtl, scenario, relative != 0);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

@@ -137,14 +137,16 @@ AbsoluteAxis solve_absolute_axis(const AbsoluteAxisInput& input) {
 } // namespace
 
 std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
-                                      Size containing, NodeId parent) {
+                                      Size containing,
+                                      Direction containing_direction,
+                                      NodeId parent) {
     if (node.style.position != Position::Relative) return {};
     const auto& inset = node.style.inset;
     const auto left = inset_value(inset.left, containing.width, node.id);
     const auto right = inset_value(inset.right, containing.width, node.id);
     const auto top = inset_value(inset.top, containing.height, node.id);
     const auto bottom = inset_value(inset.bottom, containing.height, node.id);
-    const Unit x = node.style.box.direction == Direction::Rtl && right
+    const Unit x = containing_direction == Direction::Rtl && right
         ? checked(-static_cast<double>(*right), parent)
         : left ? *left : right ? checked(-static_cast<double>(*right), parent) : Unit{0};
     const Unit y = top ? *top : bottom ? checked(-static_cast<double>(*bottom), parent) : Unit{0};

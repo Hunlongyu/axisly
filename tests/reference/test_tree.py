@@ -687,6 +687,23 @@ class TreeReferenceTests(unittest.TestCase):
                 6661: [60, 0, 60, 10]},
             "named-line-existing-backward-span-first": {6670: [0, 0, 160, 40],
                 6671: [20, 0, 40, 10]},
+            "flex-column-reverse-center": {6930: [0, 0, 80, 100],
+                6931: [30, 67.5, 20, 10], 6932: [25, 42.5, 30, 20],
+                6933: [35, 22.5, 10, 15]},
+            "flex-column-reverse-wrap": {6940: [0, 0, 70, 70],
+                6941: [0, 35, 20, 35], 6942: [0, 0, 15, 30],
+                6943: [45, 35, 25, 35], 6944: [45, 5, 10, 25]},
+            "flex-column-reverse-rtl-wrap-reverse": {6950: [0, 0, 70, 70],
+                6951: [0, 35, 20, 35], 6952: [0, 0, 15, 30],
+                6953: [35, 35, 25, 35]},
+            "flex-column-reverse-auto-margin": {6960: [0, 0, 60, 80],
+                6961: [40, 55, 20, 20], 6962: [50, 0, 10, 10]},
+            "flex-auto-main-pair": {6970: [0, 0, 100, 40],
+                6971: [30, 0, 20, 10], 6972: [80, 0, 20, 10]},
+            "flex-auto-cross-pair": {6980: [0, 0, 60, 50],
+                6981: [0, 20, 20, 10], 6982: [20, 0, 10, 20]},
+            "flex-auto-overflow": {6990: [0, 0, 20, 20],
+                6991: [0, -5, 20, 30]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

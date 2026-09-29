@@ -117,6 +117,101 @@ void balance() {
         {{50, root}, {51, a}, {52, b}, {53, c}});
 }
 
+void flex_column_reverse_case(std::string_view name) {
+    const bool center = name == "flex-column-reverse-center";
+    const bool wrap = name == "flex-column-reverse-wrap";
+    const bool rtl_wrap = name == "flex-column-reverse-rtl-wrap-reverse";
+    const bool auto_margin = name == "flex-column-reverse-auto-margin";
+    const int first_id = center ? 6930 : wrap ? 6940 : rtl_wrap ? 6950 : 6960;
+
+    LayoutTree tree;
+    Style root_style;
+    root_style.flex_direction = FlexDirection::ColumnReverse;
+    root_style.box.size = center ? Dimensions{Length::length(80), Length::length(100)}
+        : auto_margin ? Dimensions{Length::length(60), Length::length(80)}
+        : Dimensions{Length::length(70), Length::length(70)};
+    if (wrap) {
+        root_style.flex_wrap = FlexWrap::Wrap;
+        root_style.align_content = {ContentPosition::SpaceBetween};
+    }
+    if (rtl_wrap) root_style.flex_wrap = FlexWrap::WrapReverse;
+    if (wrap || rtl_wrap) root_style.gap = {Length::length(5), Length::length(5)};
+    if (center) {
+        root_style.gap.height = Length::length(5);
+        root_style.justify_content = {ContentPosition::Center};
+        root_style.align_items = {ItemPosition::Center};
+    }
+    if (rtl_wrap || auto_margin) root_style.box.direction = Direction::Rtl;
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{first_id, root}};
+    const std::vector<Size> sizes = center ? std::vector<Size>{{20, 10}, {30, 20}, {10, 15}}
+        : wrap ? std::vector<Size>{{20, 35}, {15, 30}, {25, 35}, {10, 25}}
+        : rtl_wrap ? std::vector<Size>{{20, 35}, {15, 30}, {25, 35}}
+        : std::vector<Size>{{20, 20}, {10, 10}};
+    for (std::size_t index = 0; index < sizes.size(); ++index) {
+        Style style;
+        style.box.size = {Length::length(sizes[index].width),
+            Length::length(sizes[index].height)};
+        if (auto_margin && index == 0) {
+            style.box.margin.top = Length::automatic();
+            style.box.margin.bottom = Length::length(5);
+        }
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        nodes.emplace_back(first_id + static_cast<int>(index) + 1, child);
+    }
+    const auto* label = center ? "flex-column-reverse-center"
+        : wrap ? "flex-column-reverse-wrap"
+        : rtl_wrap ? "flex-column-reverse-rtl-wrap-reverse"
+        : "flex-column-reverse-auto-margin";
+    const Unit available_width = center ? Unit{80} : auto_margin ? Unit{60} : Unit{70};
+    const Unit available_height = center ? Unit{100} : auto_margin ? Unit{80} : Unit{70};
+    print(label, tree.compute(root, {AvailableSpace::definite(available_width),
+        AvailableSpace::definite(available_height)}), nodes);
+}
+
+void flex_auto_margin_case(std::string_view name) {
+    const bool main_pair = name == "flex-auto-main-pair";
+    const bool cross_pair = name == "flex-auto-cross-pair";
+    const int first_id = main_pair ? 6970 : cross_pair ? 6980 : 6990;
+    const Size container = main_pair ? Size{100, 40}
+        : cross_pair ? Size{60, 50} : Size{20, 20};
+    LayoutTree tree;
+    Style root_style;
+    root_style.box.size = {Length::length(container.width),
+        Length::length(container.height)};
+    const auto root = tree.create_node(root_style);
+    Style first_style;
+    const Size first_size = main_pair ? Size{20, 10}
+        : cross_pair ? Size{20, 10} : Size{30, 30};
+    first_style.box.size = {Length::length(first_size.width),
+        Length::length(first_size.height)};
+    if (!cross_pair) {
+        first_style.box.margin.left = Length::automatic();
+        first_style.box.margin.right = Length::automatic();
+    }
+    if (!main_pair) {
+        first_style.box.margin.top = Length::automatic();
+        first_style.box.margin.bottom = Length::automatic();
+    }
+    const auto first = tree.create_node(first_style);
+    tree.append_child(root, first);
+    std::vector<IdentifiedNode> nodes{{first_id, root}, {first_id + 1, first}};
+    if (main_pair || cross_pair) {
+        Style second_style;
+        const Size second_size = main_pair ? Size{20, 10} : Size{10, 20};
+        second_style.box.size = {Length::length(second_size.width),
+            Length::length(second_size.height)};
+        const auto second = tree.create_node(second_style);
+        tree.append_child(root, second);
+        nodes.emplace_back(first_id + 2, second);
+    }
+    const auto* label = main_pair ? "flex-auto-main-pair"
+        : cross_pair ? "flex-auto-cross-pair" : "flex-auto-overflow";
+    print(label, tree.compute(root, {AvailableSpace::definite(container.width),
+        AvailableSpace::definite(container.height)}), nodes);
+}
+
 void grid_tracks() {
     LayoutTree tree;
     Style root_style;
@@ -2797,6 +2892,14 @@ int main(int argc, char** argv) {
         if (name == "flex-row-grow") row_grow();
         else if (name == "content-box-and-negative-margin") negative_margin();
         else if (name == "flex-balance-lines") balance();
+        else if (name == "flex-column-reverse-center"
+            || name == "flex-column-reverse-wrap"
+            || name == "flex-column-reverse-rtl-wrap-reverse"
+            || name == "flex-column-reverse-auto-margin")
+            flex_column_reverse_case(name);
+        else if (name == "flex-auto-main-pair"
+            || name == "flex-auto-cross-pair"
+            || name == "flex-auto-overflow") flex_auto_margin_case(name);
         else if (name == "css-grid-tracks-placement") grid_tracks();
         else if (name == "named-area-placement") named_area();
         else if (name == "grid-auto-fill") grid_auto_repeat(false);

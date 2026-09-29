@@ -32,7 +32,7 @@
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；叶子 calc 最小尺寸已对照；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height、calc-leaf-min-max |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限、Flex 拉伸交叉轴基准和 Grid 自动轨道比例贡献已差分；未定交叉轴及复杂 min/max 组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width；待建：ratio-indefinite-cross-axis |
-| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分；RTL Block 自动边距在正剩余空间与溢出时按物理右边定位，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、rtl-block-auto-overflow-both／left／right、rtl-block-auto-positive／left／right、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins |
+| `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Flex 主轴正剩余空间分配与交叉轴正负剩余空间分配均输出已使用边距；Block 浮动旁及下方的负外边距、根容器未定宽度的百分比边距已差分；RTL Block 自动边距在正剩余空间与溢出时按物理右边定位，叶子 calc 盒边按内联基准解析；复杂折叠仍未完整 | P1/P4 | 已建：flex-auto-main-pair／cross-pair／overflow、flex-column-reverse-auto-margin、content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、rtl-block-auto-overflow-both／left／right、rtl-block-auto-positive／left／right、grid-auto-margins、block-float-negative-below、root-block／flex／grid-margin-percent、calc-leaf-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，带 calc 内边距的确定宽度 Block 嵌套树已差分；自动宽度 Block/Flex 子项的百分比内边距保持未定，Grid 按网格区域宽度解析；嵌套 Block 的后续子项排布与叶子局部可滚动范围分别验收；更多百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis、calc-block-child、nested-percent-block／flex／grid、nested-percent-depth-block／flex／grid |
 | `border` | 四边 Length／Percent／Calc | 部分：固定数值、叶子 calc 及根容器未定宽度的百分比边框已差分；Block 用确定后的边框作为子项和溢出坐标原点；嵌套循环未完整 | P1 | 已建：content-box-and-negative-margin、root-block／flex／grid-border-percent、calc-leaf-content-box／partial-basis |
 | `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择、滚动项目基线钳制及 Grid 安全对齐在溢出时回退起始边已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline、grid-align-safe／unsafe-overflow |
@@ -43,7 +43,7 @@
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；Flex 自动容器固有尺寸阶段以零为 `calc` 间隙百分比基准，保留固定长度项，尺寸确定后重算主轴分配；Grid 自动容器先按零间隙确定轨道尺寸，再重算偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、calc-flex-gap-basis／auto-gap、calc-grid-gap-item／auto-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
-| `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
+| `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；ColumnReverse 的居中、换列、RTL 反向换列与自动外边距已差分，复杂尺寸交互未验收 | P2 | 已建：flex-row-grow、flex-column-reverse-center／wrap／rtl-wrap-reverse／auto-margin |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；复杂组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse |
 | `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance |
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分；嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis |
@@ -203,7 +203,7 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二百五十六组可重放树形参考输入、十三组独立 calc
+目前有 44 字段清单、二百六十三组可重放树形参考输入、十三组独立 calc
 参考输入、独立树形工具及旧 Grid 差分回归；树形参考输入的矩形、盒边、
 滚动条及节点局部可滚动溢出
 同时经过新原生树差分。

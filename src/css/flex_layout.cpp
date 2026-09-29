@@ -23,6 +23,16 @@ Unit axis(const Insets& value, bool row, bool main, bool start) {
     return start ? value.top : value.bottom;
 }
 
+void set_axis_margin(Insets& margin, bool row, bool main,
+                     bool logical_start, bool reverse, Unit value) {
+    const bool physical_start = logical_start != reverse;
+    if (row == main) {
+        (physical_start ? margin.left : margin.right) = value;
+    } else {
+        (physical_start ? margin.top : margin.bottom) = value;
+    }
+}
+
 std::optional<Unit> axis(const ResolvedDimensions& size, bool row, bool main) {
     return row == main ? size.width : size.height;
 }
@@ -541,7 +551,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             }
             double cross_remain = static_cast<double>(line.cross) - item.cross
                 - cross_margin_start - cross_margin_end;
-            if (cross_remain > 0 && (item.auto_cross_start || item.auto_cross_end)) {
+            if (item.auto_cross_start || item.auto_cross_end) {
                 const Unit share = checked(cross_remain
                     / (static_cast<int>(item.auto_cross_start) + static_cast<int>(item.auto_cross_end)), item.id);
                 if (item.auto_cross_start) cross_margin_start = share;
@@ -574,6 +584,15 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 + (item.auto_main_start ? auto_share : 0);
             const Unit main_end_margin = axis(item.margin, row, true, main_reverse)
                 + (item.auto_main_end ? auto_share : 0);
+            auto& resolved_margin = fragment.nodes.front().margin;
+            set_axis_margin(resolved_margin, row, true, true, main_reverse,
+                main_start_margin);
+            set_axis_margin(resolved_margin, row, true, false, main_reverse,
+                main_end_margin);
+            set_axis_margin(resolved_margin, row, false, true, cross_reverse,
+                cross_margin_start);
+            set_axis_margin(resolved_margin, row, false, false, cross_reverse,
+                cross_margin_end);
             const double logical_main = main_cursor + main_start_margin;
             const double logical_cross = cross_cursor + cross_offset;
             const Unit main_position = main_reverse

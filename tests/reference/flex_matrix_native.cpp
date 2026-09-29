@@ -17,6 +17,7 @@ constexpr std::array directions{
 };
 constexpr std::array wraps{
     FlexWrap::NoWrap, FlexWrap::Wrap, FlexWrap::WrapReverse,
+    FlexWrap::Balance, FlexWrap::BalanceReverse,
 };
 constexpr std::array item_positions{
     ItemPosition::Start, ItemPosition::End, ItemPosition::Center,
@@ -51,6 +52,7 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     Style root_style;
     root_style.flex_direction = directions[direction];
     root_style.flex_wrap = wraps[wrap];
+    if (wrap >= 3) root_style.flex_line_count = 2;
     root_style.align_items = {item_positions[item]};
     root_style.justify_content = {content_positions[content]};
     root_style.align_content = {line_positions[lines]};

@@ -8,7 +8,7 @@ import subprocess
 
 
 DIRECTIONS = ("Row", "RowReverse", "Column", "ColumnReverse")
-WRAPS = ("NoWrap", "Wrap", "WrapReverse")
+WRAPS = ("NoWrap", "Wrap", "WrapReverse", "Balance", "BalanceReverse")
 ITEM_POSITIONS = ("Start", "End", "Center")
 CONTENT_POSITIONS = ("FlexStart", "FlexEnd", "Center")
 LINE_POSITIONS = ("Start", "End", "Center")
@@ -32,6 +32,8 @@ def make_cases(scenario="definite"):
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
         }
+        if wrap >= 3:
+            style["flex_line_count"] = 2
         if scenario == "definite":
             style["size"] = {"width": 72, "height": 68}
         nodes = [{"id": 1, "parent": None, "style": style}]
@@ -84,20 +86,24 @@ def main():
                         default="definite")
     args = parser.parse_args()
     cases = list(make_cases(args.scenario))
-    fixture = json.dumps({"protocol": "AXISLY_TREE_V1", "cases": cases})
-    oracle = json.loads(subprocess.run(
-        [args.taffy], input=fixture, text=True, capture_output=True, check=True
-    ).stdout)
+    oracle_cases = []
+    for start in range(0, len(cases), 512):
+        fixture = json.dumps({"protocol": "AXISLY_TREE_V1",
+                              "cases": cases[start:start + 512]})
+        oracle = json.loads(subprocess.run(
+            [args.taffy], input=fixture, text=True, capture_output=True, check=True
+        ).stdout)
+        assert oracle["taffy"] == "0.14.0"
+        oracle_cases.extend(oracle["cases"])
     native = json.loads(subprocess.run(
         [args.axisly] + ([] if args.scenario == "definite" else ["--" + args.scenario]),
         text=True, capture_output=True, check=True
     ).stdout)
-    assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == ("AXISLY_FLEX_MATRIX_V1" if args.scenario == "definite"
                                   else "AXISLY_FLEX_INTRINSIC_MATRIX_V1")
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 648
+    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1080
     failures = []
-    for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
+    for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:
             compare(actual, expected)
         except AssertionError as error:

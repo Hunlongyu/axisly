@@ -864,7 +864,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     }
     const auto border = edges(box.border, node.id);
     const auto padding = edges(box.padding, node.id);
-    const Unit content_x = checked(static_cast<double>(border.left) + padding.left, node.id);
+    const Unit content_x = content_origin_x(box, border, padding, node.id);
     const Unit content_y = checked(static_cast<double>(border.top) + padding.top, node.id);
     GridTracks report;
     report.node = node.id;
@@ -927,9 +927,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto& child = get(id);
         if (child.style.position == Position::Absolute
             && child.style.display != Display::None) {
-            Rect area{border.left, border.top,
-                std::max(Unit{0}, candidate.width - border.left - border.right),
-                std::max(Unit{0}, candidate.height - border.top - border.bottom)};
+            Rect area{checked(static_cast<double>(border.left)
+                    + (node.style.box.direction == Direction::Rtl
+                        ? box.scrollbar.width : 0), node.id),
+                border.top,
+                std::max(Unit{0}, candidate.width - border.left - border.right
+                    - box.scrollbar.width),
+                std::max(Unit{0}, candidate.height - border.top - border.bottom
+                    - box.scrollbar.height)};
             const auto explicit_span = [](const GridPlacement& placement,
                 const AxisPlacement& resolved, const TrackAxis& tracks) {
                 if (!resolved.start || placement.start.kind() == GridLineKind::Auto

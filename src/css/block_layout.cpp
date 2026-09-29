@@ -90,7 +90,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         ? std::max(Unit{0}, *preferred_height - *flow_decoration_height) : Unit{0};
     const auto border = edges(flow_box.border, node.id);
     const auto padding = edges(flow_box.padding, node.id);
-    const Unit x_origin = checked(static_cast<double>(border.left) + padding.left, node.id);
+    const Unit x_origin = content_origin_x(flow_box, border, padding, node.id);
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
     std::vector<Fragment> fragments(node.children.size());
     std::vector<std::optional<Unit>> static_block_y(node.children.size());

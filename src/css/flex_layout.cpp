@@ -941,7 +941,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 : checked(logical_cross, item.id);
             const auto border = edges(box.border, node.id);
             const auto padding = edges(box.padding, node.id);
-            const Unit content_x = checked(static_cast<double>(border.left) + padding.left, node.id);
+            const Unit content_x = content_origin_x(box, border, padding, node.id);
             const Unit content_y = checked(static_cast<double>(border.top) + padding.top, node.id);
             translate(fragment,
                 row ? checked(static_cast<double>(content_x) + main_position, item.id)

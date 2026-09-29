@@ -78,6 +78,8 @@ struct BlockContext;
 [[nodiscard]] AvailableSpace subtract_decoration(AvailableSpace space, Unit amount);
 [[nodiscard]] ResolvedBox resolve_layout_box(const LayoutNode& node,
     std::optional<Unit> containing_width, std::optional<Unit> containing_height);
+[[nodiscard]] Unit content_origin_x(const ResolvedBox& box,
+    Insets border, Insets padding, NodeId node);
 [[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
     const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
     std::optional<Unit> last_baseline = std::nullopt);

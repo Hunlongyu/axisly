@@ -85,21 +85,13 @@ ResolvedBox resolve_layout_box(const LayoutNode& node,
         ? node.style.scrollbar_width : Unit{0};
     resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
         ? node.style.scrollbar_width : Unit{0};
-    if (resolved.box_sizing == BoxSizing::ContentBox) {
-        for (auto* value : {&resolved.preferred.width, &resolved.minimum.width,
-                            &resolved.maximum.width, &resolved.specified_minimum.width,
-                            &resolved.specified_maximum.width}) {
-            if (*value) *value = checked(static_cast<double>(**value)
-                + resolved.scrollbar.width, node.id);
-        }
-        for (auto* value : {&resolved.preferred.height, &resolved.minimum.height,
-                            &resolved.maximum.height, &resolved.specified_minimum.height,
-                            &resolved.specified_maximum.height}) {
-            if (*value) *value = checked(static_cast<double>(**value)
-                + resolved.scrollbar.height, node.id);
-        }
-    }
     return resolved;
+}
+
+Unit content_origin_x(const ResolvedBox& box, Insets border,
+                      Insets padding, NodeId node) {
+    return checked(static_cast<double>(padding.left) + border.left
+        + (box.direction == Direction::Rtl ? box.scrollbar.width : 0), node);
 }
 
 NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& resolved,
@@ -108,7 +100,7 @@ NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& res
     const auto margin = edges(resolved.margin, node.id);
     const auto padding = edges(resolved.padding, node.id);
     const auto border = edges(resolved.border, node.id);
-    const Unit left = padding.left + border.left;
+    const Unit left = content_origin_x(resolved, border, padding, node.id);
     const Unit top = padding.top + border.top;
     const Unit width = std::max(Unit{0}, content_axis(size.width,
         padding.left, padding.right, border.left, border.right) - resolved.scrollbar.width);

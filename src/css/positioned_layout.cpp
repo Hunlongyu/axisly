@@ -84,6 +84,26 @@ StaticPlacement item_placement(ItemAlignment alignment, bool horizontal,
     return flex_start;
 }
 
+StaticPlacement grid_item_placement(ItemAlignment alignment, bool horizontal,
+    Direction container_direction, Direction item_direction, bool overflow) {
+    const auto start = writing_start(horizontal, container_direction);
+    if (alignment.safety == AlignmentSafety::Safe && overflow) return start;
+    switch (alignment.position) {
+    case ItemPosition::Start:
+    case ItemPosition::FlexStart:
+    case ItemPosition::Baseline:
+    case ItemPosition::Stretch: return start;
+    case ItemPosition::End:
+    case ItemPosition::FlexEnd: return opposite(start);
+    case ItemPosition::SelfStart:
+        return writing_start(horizontal, item_direction);
+    case ItemPosition::SelfEnd:
+        return opposite(writing_start(horizontal, item_direction));
+    case ItemPosition::Center: return StaticPlacement::Center;
+    }
+    return start;
+}
+
 Unit static_offset(StaticPlacement placement, Unit containing_size, Unit item_size,
                    Unit start_margin, Unit end_margin, NodeId node) {
     const Unit free = checked(static_cast<double>(containing_size)
@@ -258,6 +278,7 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                     child.style.box.direction, cross_reverse,
                     fragment.size.width + margin.left + margin.right > content_width);
             placed_horizontal.offset = checked(static_cast<double>(padding.left)
+                + (rtl ? parent_box.scrollbar.width : 0)
                 + static_offset(placement, content_width, fragment.size.width,
                     margin.left, margin.right, child.id), child.id);
         }
@@ -278,16 +299,16 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         const auto align = child.style.align_self.value_or(
             parent.style.align_items.value_or(ItemAlignment{}));
         if (static_x) {
-            const auto placement = item_placement(justify, true,
-                parent.style.box.direction, child.style.box.direction, false,
+            const auto placement = grid_item_placement(justify, true,
+                parent.style.box.direction, child.style.box.direction,
                 fragment.size.width + margin.left + margin.right > containing_width);
             placed_horizontal.offset = static_offset(placement, containing_width,
                 fragment.size.width, horizontal.start_margin,
                 horizontal.end_margin, child.id);
         }
         if (static_y) {
-            const auto placement = item_placement(align, false,
-                parent.style.box.direction, child.style.box.direction, false,
+            const auto placement = grid_item_placement(align, false,
+                parent.style.box.direction, child.style.box.direction,
                 fragment.size.height + margin.top + margin.bottom > containing_height);
             placed_vertical.offset = static_offset(placement, containing_height,
                 fragment.size.height, vertical.start_margin,
@@ -297,6 +318,8 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         || parent.style.display == Display::FlowRoot) && (static_x || static_y)) {
         if (static_x) {
             placed_horizontal.offset = checked(static_cast<double>(padding.left)
+                + (parent.style.box.direction == Direction::Rtl
+                    ? parent_box.scrollbar.width : 0)
                 + static_offset(writing_start(true, parent.style.box.direction),
                     content_width, fragment.size.width, margin.left, margin.right,
                     child.id), child.id);

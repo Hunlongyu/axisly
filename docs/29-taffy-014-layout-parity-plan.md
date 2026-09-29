@@ -180,6 +180,10 @@ layout／paint containment、方向和
 自动最小尺寸置零。更深层嵌套和复杂定位组合继续按矩阵验收。
 另有 28 组 `None`／`Layout`／`Paint`／`Content` 对照，覆盖子树溢出、
 跨算法基线与 Block 浮动包含；独立数值断言固定三种效果的差别。
+滚动条对照现覆盖 144 组 Block／Flex／Grid、LTR／RTL、两种盒尺寸、
+六种双轴 overflow 组合，以及百分比正常流和绝对定位子项。
+它修正了 ContentBox 指定尺寸重复加入滚动条宽度、RTL 内容起点、
+绝对定位静态对齐和 Grid 定位区域的共用计算。
 
 ### P5：性能与真实宿主收尾
 

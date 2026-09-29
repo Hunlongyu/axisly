@@ -29,7 +29,7 @@ GridLine line(std::size_t index) {
 
 void run_case(std::size_t start, std::size_t end, std::size_t axis,
               std::size_t rtl, std::size_t flow, std::size_t second_placement,
-              std::size_t sizing) {
+              std::size_t sizing, std::size_t auto_tracks) {
     LayoutTree tree;
     Style root_style;
     root_style.display = Display::Grid;
@@ -44,6 +44,10 @@ void run_case(std::size_t start, std::size_t end, std::size_t axis,
     root_style.grid.template_columns = {TrackSizing::fixed(20),
         TrackSizing::fixed(20), TrackSizing::fixed(20)};
     root_style.grid.template_rows = root_style.grid.template_columns;
+    if (auto_tracks) {
+        root_style.grid.auto_columns = {TrackSizing::fixed(11), TrackSizing::fixed(17)};
+        root_style.grid.auto_rows = {TrackSizing::fixed(13), TrackSizing::fixed(29)};
+    }
     root_style.grid.column_line_names = {{"x"}, {"x"}, {"x"}, {"x"}};
     root_style.grid.row_line_names = root_style.grid.column_line_names;
     root_style.justify_items = {sizing ? ItemPosition::Stretch : ItemPosition::Start};
@@ -74,32 +78,46 @@ void run_case(std::size_t start, std::size_t end, std::size_t axis,
     }
     const auto second = tree.create_node(second_style);
     tree.append_child(root, second);
+    Style third_style;
+    third_style.box.size = {Length::length(10), Length::length(10)};
+    const auto third = tree.create_node(third_style);
+    tree.append_child(root, third);
 
     const auto name = std::string("grid-line-matrix-")
         + std::to_string(start) + '-' + std::to_string(end)
         + '-' + std::to_string(axis) + '-' + std::to_string(rtl)
         + '-' + std::to_string(flow) + '-' + std::to_string(second_placement)
-        + '-' + std::to_string(sizing);
+        + '-' + std::to_string(sizing) + '-' + std::to_string(auto_tracks);
     reference::write_case(std::cout, name, tree.compute(root,
         {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
-        {{1, root}, {2, first}, {3, second}});
+        {{1, root}, {2, first}, {3, second}, {4, third}});
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     try {
+        std::size_t start_begin = 0;
+        std::size_t start_end = 12;
+        if (argc == 3 && std::string(argv[1]) == "--start-line") {
+            start_begin = std::stoul(argv[2]);
+            if (start_begin >= 12) throw std::invalid_argument("Unknown start line");
+            start_end = start_begin + 1;
+        } else if (argc != 1) {
+            throw std::invalid_argument("Expected --start-line INDEX or no argument");
+        }
         std::cout << "{\"protocol\":\"AXISLY_GRID_LINE_MATRIX_V1\",\"cases\":[";
         bool first = true;
-        for (std::size_t start = 0; start < 12; ++start)
+        for (std::size_t start = start_begin; start < start_end; ++start)
         for (std::size_t end = 0; end < 12; ++end)
         for (std::size_t axis = 0; axis < 2; ++axis)
         for (std::size_t rtl = 0; rtl < 2; ++rtl)
         for (std::size_t flow = 0; flow < 4; ++flow)
         for (std::size_t second_placement = 0; second_placement < 4; ++second_placement)
-        for (std::size_t sizing = 0; sizing < 2; ++sizing) {
+        for (std::size_t sizing = 0; sizing < 2; ++sizing)
+        for (std::size_t auto_tracks = 0; auto_tracks < 2; ++auto_tracks) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(start, end, axis, rtl, flow, second_placement, sizing);
+            run_case(start, end, axis, rtl, flow, second_placement, sizing, auto_tracks);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

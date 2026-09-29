@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Grid named span with negative numeric anchor</title>
+<style>
+  #grid {
+    display: grid;
+    box-sizing: border-box;
+    width: 100px;
+    height: 100px;
+    padding: 5px;
+    gap: 3px;
+    grid-template-columns: [x] 20px [x] 20px [x] 20px [x];
+    grid-template-rows: 20px;
+  }
+  #item {
+    grid-column: span 3 x / -1;
+    height: 10px;
+  }
+</style>
+<div id="grid"><div id="item"></div></div>
+<pre id="result"></pre>
+<script>
+  const grid = document.getElementById("grid").getBoundingClientRect();
+  const item = document.getElementById("item").getBoundingClientRect();
+  const left = item.left - grid.left;
+  const width = item.width;
+  document.getElementById("result").textContent =
+      left === 5 && width === 66 ? "PASS" : `FAIL left=${left} width=${width}`;
+</script>

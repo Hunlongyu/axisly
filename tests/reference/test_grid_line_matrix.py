@@ -13,9 +13,11 @@ LINES = ("auto", "1", "2", "-1", "x", "2 x", "span 1", "span 2 x",
 TEMPLATE = "[x] 20px [x] 20px [x] 20px [x]"
 
 
-def make_cases():
-    for start, end, axis, rtl, flow, second, sizing in itertools.product(
-        range(len(LINES)), range(len(LINES)), range(2), range(2), range(4), range(4), range(2)
+def make_cases(start_line=None):
+    starts = range(len(LINES)) if start_line is None else (start_line,)
+    for start, end, axis, rtl, flow, second, sizing, auto_tracks in itertools.product(
+        starts, range(len(LINES)), range(2), range(2), range(4), range(4),
+        range(2), range(2)
     ):
         root = {
             "display": "Grid", "size": {"width": 100, "height": 100},
@@ -28,6 +30,9 @@ def make_cases():
             "justify_items": "Stretch" if sizing else "Start",
             "align_items": "Stretch" if sizing else "Start",
         }
+        if auto_tracks:
+            root["grid_auto_columns"] = "11px 17px"
+            root["grid_auto_rows"] = "13px 29px"
         placement = {"start": LINES[start], "end": LINES[end]}
         item = {"grid_column" if axis == 0 else "grid_row": placement}
         if not sizing:
@@ -43,8 +48,9 @@ def make_cases():
             {"id": 1, "parent": None, "style": root},
             {"id": 2, "parent": 0, "style": item},
             {"id": 3, "parent": 0, "style": second_style},
+            {"id": 4, "parent": 0, "style": {"size": {"width": 10, "height": 10}}},
         ]
-        yield {"name": f"grid-line-matrix-{start}-{end}-{axis}-{rtl}-{flow}-{second}-{sizing}",
+        yield {"name": f"grid-line-matrix-{start}-{end}-{axis}-{rtl}-{flow}-{second}-{sizing}-{auto_tracks}",
                "available": [100, 100], "nodes": nodes}
 
 
@@ -52,8 +58,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
+    parser.add_argument("--start-line", type=int)
     args = parser.parse_args()
-    cases = list(make_cases())
+    if args.start_line is not None and not 0 <= args.start_line < len(LINES):
+        parser.error("--start-line must name an available line endpoint")
+    cases = list(make_cases(args.start_line))
     expected_cases = []
     for offset in range(0, len(cases), 1024):
         oracle = json.loads(subprocess.run(
@@ -64,10 +73,13 @@ def main():
         assert oracle["taffy"] == "0.14.0"
         expected_cases.extend(oracle["cases"])
     native = json.loads(subprocess.run(
-        [args.axisly], text=True, capture_output=True, check=True,
+        [args.axisly] + ([] if args.start_line is None
+                         else ["--start-line", str(args.start_line)]),
+        text=True, capture_output=True, check=True,
     ).stdout)
     assert native["protocol"] == "AXISLY_GRID_LINE_MATRIX_V1"
-    assert len(expected_cases) == len(native["cases"]) == len(cases) == 18432
+    expected_count = 36864 if args.start_line is None else 3072
+    assert len(expected_cases) == len(native["cases"]) == len(cases) == expected_count
     failures = []
     for actual, expected in zip(native["cases"], expected_cases, strict=True):
         try:

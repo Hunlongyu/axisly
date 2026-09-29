@@ -71,6 +71,17 @@ class TreeReferenceTests(unittest.TestCase):
             "grid-auto-fit": {90: [0, 0, 100, 30], 91: [0, 0, 10, 10]},
             "block-adjacent-margins": {100: [0, 0, 200, 100], 101: [0, 0, 200, 10],
                                        102: [0, 30, 200, 10]},
+            "grid-content-alignment": {110: [0, 0, 100, 80],
+                                       111: [80, 42.5, 10, 10]},
+            "flex-intrinsic-basis": {120: [0, 0, 200, 40], 121: [0, 0, 30, 10],
+                                     122: [30, 0, 20, 10]},
+            "flex-baseline": {130: [0, 0, 200, 50], 131: [0, 10, 30, 20],
+                              132: [30, 0, 40, 20]},
+            "grid-baseline": {140: [0, 0, 100, 40], 141: [0, 10, 20, 20],
+                              142: [50, 0, 20, 20]},
+            "grid-auto-margins": {150: [0, 0, 100, 50], 151: [40, 40, 20, 10]},
+            "rtl-block-child": {160: [0, 0, 100, 40], 161: [80, 0, 20, 10]},
+            "flex-scrollbar-reservation": {170: [0, 0, 100, 50], 171: [0, 0, 90, 20]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

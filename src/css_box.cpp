@@ -110,11 +110,13 @@ std::optional<Unit> ResolvedEdges::vertical() const {
 }
 
 std::optional<Unit> ResolvedBox::horizontal_decoration() const {
-    return decoration(padding, border, true);
+    const auto value = decoration(padding, border, true);
+    return value ? std::optional<Unit>(safe_add(*value, scrollbar.width)) : std::nullopt;
 }
 
 std::optional<Unit> ResolvedBox::vertical_decoration() const {
-    return decoration(padding, border, false);
+    const auto value = decoration(padding, border, false);
+    return value ? std::optional<Unit>(safe_add(*value, scrollbar.height)) : std::nullopt;
 }
 
 ResolvedBox resolve_box(const BoxStyle& style,

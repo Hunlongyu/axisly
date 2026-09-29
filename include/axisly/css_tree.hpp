@@ -48,6 +48,7 @@ struct NodeLayout {
     // Root-relative border and content rectangles; margin is outside border.
     Rect border_box{}, content_box{};
     Insets margin{}, padding{}, border{};
+    Size scrollbar{};
     std::optional<Unit> first_baseline, last_baseline;
 };
 

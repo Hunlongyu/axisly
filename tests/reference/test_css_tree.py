@@ -18,6 +18,13 @@ CASES = (
     "hidden-and-positioned",
     "block-float-clear",
     "block-adjacent-margins",
+    "grid-content-alignment",
+    "flex-intrinsic-basis",
+    "flex-baseline",
+    "grid-baseline",
+    "grid-auto-margins",
+    "rtl-block-child",
+    "flex-scrollbar-reservation",
     "mixed-block-flex-grid",
 )
 
@@ -50,6 +57,12 @@ def main() -> None:
                 math.isfinite(a) and math.isclose(a, b, rel_tol=0, abs_tol=0.01)
                 for a, b in zip(rect, expected[node_id], strict=True)
             ), (name, node_id, rect, expected[node_id])
+        for node in native["nodes"]:
+            target = next(item for item in reference["nodes"] if item["id"] == node["id"])
+            for field in ("margin", "padding", "border", "scrollbar"):
+                assert all(math.isclose(a, b, rel_tol=0, abs_tol=0.01)
+                           for a, b in zip(node[field], target[field], strict=True)), (
+                    name, node["id"], field, node[field], target[field])
 
 
 if __name__ == "__main__":

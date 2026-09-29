@@ -44,6 +44,8 @@ struct FlexItem {
 struct FlexLine {
     std::vector<std::size_t> items;
     Unit cross{};
+    Unit baseline_ascent{}, baseline_descent{};
+    bool has_baseline{};
 };
 
 Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId node) {
@@ -130,7 +132,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             continue;
         }
         ResolvedBox child_box;
-        try { child_box = resolve_box(child.style.box, inner_width, inner_height); }
+        try { child_box = resolve_layout_box(child, inner_width, inner_height); }
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
         }
@@ -162,8 +164,35 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     : std::max(*resolved, *decoration);
             }
         } else if (flex_basis != LengthKind::Auto) {
-            throw LayoutFailure(LayoutErrorCode::Unsupported, id,
-                "Content and intrinsic Flex basis keywords are not implemented yet");
+            const auto probe = [&](AvailableSpace main_space) {
+                auto query = child_constraints;
+                if (row) {
+                    query.ignore_preferred_width = true;
+                    query.available.width = main_space;
+                } else {
+                    query.ignore_preferred_height = true;
+                    query.available.height = main_space;
+                }
+                return axis(layout(id, query, depth + 1).size, row, true);
+            };
+            if (flex_basis == LengthKind::Stretch && main_available) {
+                basis = std::max(Unit{0}, checked(static_cast<double>(*main_available)
+                    - axis(margin, row, true, true)
+                    - axis(margin, row, true, false), id));
+            } else if (flex_basis == LengthKind::MinContent) {
+                basis = probe(AvailableSpace::min_content());
+            } else if (flex_basis == LengthKind::Content
+                || flex_basis == LengthKind::MaxContent
+                || flex_basis == LengthKind::Stretch) {
+                basis = probe(AvailableSpace::max_content());
+            } else {
+                const Unit minimum = probe(AvailableSpace::min_content());
+                const Unit maximum = probe(AvailableSpace::max_content());
+                std::optional<Unit> limit = flex_basis == LengthKind::FitContent
+                    ? main_available
+                    : child.style.flex_basis.resolve_fit_content_limit(main_available);
+                basis = limit ? std::max(minimum, std::min(maximum, *limit)) : maximum;
+            }
         }
         auto minimum = axis(child_box.minimum, row, true);
         if (!minimum) {
@@ -172,10 +201,18 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 minimum = Unit{0};
             } else {
                 auto min_constraints = child_constraints;
-                if (row) min_constraints.available.width = AvailableSpace::min_content();
-                else min_constraints.available.height = AvailableSpace::min_content();
+                if (row) {
+                    min_constraints.available.width = AvailableSpace::min_content();
+                    min_constraints.ignore_preferred_width = true;
+                } else {
+                    min_constraints.available.height = AvailableSpace::min_content();
+                    min_constraints.ignore_preferred_height = true;
+                }
                 const auto intrinsic = layout(id, min_constraints, depth + 1);
                 minimum = axis(intrinsic.size, row, true);
+                if (const auto suggested = axis(child_box.preferred, row, true)) {
+                    minimum = std::min(*minimum, *suggested);
+                }
             }
         }
         const auto maximum = axis(child_box.maximum, row, true);
@@ -301,6 +338,27 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 + axis(item.margin, row, false, true)
                 + axis(item.margin, row, false, false), item.id);
             line.cross = std::max(line.cross, outer_cross);
+            if (row) {
+                const auto& child = get(item.id);
+                const auto alignment = child.style.align_self.value_or(
+                    node.style.align_items.value_or(ItemAlignment{}));
+                if (alignment.position == ItemPosition::Baseline) {
+                    const Unit baseline = fragments[item.source_index].nodes.front()
+                        .first_baseline.value_or(item.cross);
+                    const Unit before = checked(static_cast<double>(item.margin.top)
+                        + baseline, item.id);
+                    const Unit after = checked(static_cast<double>(item.margin.bottom)
+                        + item.cross - baseline, item.id);
+                    line.baseline_ascent = std::max(line.baseline_ascent, before);
+                    line.baseline_descent = std::max(line.baseline_descent, after);
+                    line.has_baseline = true;
+                }
+            }
+        }
+        if (line.has_baseline) {
+            line.cross = std::max(line.cross, checked(
+                static_cast<double>(line.baseline_ascent) + line.baseline_descent,
+                node.id));
         }
     }
 
@@ -380,6 +438,14 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 cross_remain = 0;
             }
             Unit cross_offset = cross_margin_start;
+            if (row && line.has_baseline
+                && alignment.position == ItemPosition::Baseline
+                && !item.auto_cross_start && !item.auto_cross_end) {
+                const Unit baseline = fragment.nodes.front()
+                    .first_baseline.value_or(item.cross);
+                cross_offset = checked(static_cast<double>(line.baseline_ascent)
+                    - baseline, item.id);
+            }
             if (!(item.auto_cross_start || item.auto_cross_end)
                 && !(alignment.safety == AlignmentSafety::Safe && cross_remain < 0)) {
                 if (alignment.position == ItemPosition::End

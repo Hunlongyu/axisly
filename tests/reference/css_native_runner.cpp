@@ -24,8 +24,18 @@ void print(const char* name, const LayoutResult& result,
         if (!first) std::cout << ',';
         first = false;
         const auto& rect = layout->border_box;
+        const auto& margin = layout->margin;
+        const auto& border = layout->border;
+        const auto& padding = layout->padding;
         std::cout << "{\"id\":" << id << ",\"rect\":[" << rect.x << ',' << rect.y
-            << ',' << rect.width << ',' << rect.height << "]}";
+            << ',' << rect.width << ',' << rect.height << "],\"margin\":["
+            << margin.left << ',' << margin.top << ',' << margin.right << ','
+            << margin.bottom << "],\"padding\":[" << padding.left << ','
+            << padding.top << ',' << padding.right << ',' << padding.bottom
+            << "],\"border\":[" << border.left << ',' << border.top << ','
+            << border.right << ',' << border.bottom
+            << "],\"scrollbar\":[" << layout->scrollbar.width
+            << ',' << layout->scrollbar.height << "]}";
     }
     std::cout << "]}\n";
 }
@@ -253,6 +263,161 @@ void block_adjacent_margins() {
         {{100, root}, {101, first}, {102, second}});
 }
 
+void grid_content_alignment() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(80)};
+    root_style.grid.template_columns = {TrackSizing::fixed(20), TrackSizing::fixed(20)};
+    root_style.grid.template_rows = {TrackSizing::fixed(10), TrackSizing::fixed(10)};
+    root_style.gap = {Length::length(10), Length::length(5)};
+    root_style.justify_content = ContentAlignment{ContentPosition::SpaceBetween};
+    root_style.align_content = ContentAlignment{ContentPosition::Center};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size = {Length::length(10), Length::length(10)};
+    child_style.grid.column = {GridLine::index(2), GridLine::span(1)};
+    child_style.grid.row = {GridLine::index(2), GridLine::span(1)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print("grid-content-alignment", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(80)}),
+        {{110, root}, {111, child}});
+}
+
+void flex_intrinsic_basis() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.box.size = {Length::length(200), Length::length(40)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size = {Length::length(100), Length::length(10)};
+    child_style.flex_basis = Length::content();
+    const auto measure = [](const MeasureRequest& request) {
+        const Unit width = request.available_width.kind == AvailableKind::MinContent
+            ? 20.0f : 30.0f;
+        return Measurement{{width, 10}, {}, {}};
+    };
+    const auto first = tree.create_node(child_style, measure);
+    child_style.flex_basis = Length::min_content();
+    const auto second = tree.create_node(child_style, measure);
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    print("flex-intrinsic-basis", tree.compute(root,
+        {AvailableSpace::definite(200), AvailableSpace::definite(40)}),
+        {{120, root}, {121, first}, {122, second}});
+}
+
+void flex_baseline() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.box.size = {Length::length(200), Length::length(50)};
+    root_style.align_items = ItemAlignment{ItemPosition::Baseline};
+    const auto root = tree.create_node(root_style);
+    Style first_style;
+    first_style.box.size = {Length::length(30), Length::length(20)};
+    const auto first = tree.create_node(first_style,
+        [](const MeasureRequest&) {
+            return Measurement{{30, 20}, 5.0f, {}};
+        });
+    Style second_style;
+    second_style.box.size = {Length::length(40), Length::length(20)};
+    const auto second = tree.create_node(second_style,
+        [](const MeasureRequest&) {
+            return Measurement{{40, 20}, 15.0f, {}};
+        });
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    print("flex-baseline", tree.compute(root,
+        {AvailableSpace::definite(200), AvailableSpace::definite(50)}),
+        {{130, root}, {131, first}, {132, second}});
+}
+
+void grid_baseline() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(40)};
+    root_style.grid.template_columns = {TrackSizing::fixed(50), TrackSizing::fixed(50)};
+    root_style.grid.template_rows = {TrackSizing::fixed(30)};
+    root_style.align_items = ItemAlignment{ItemPosition::Baseline};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size = {Length::length(20), Length::length(20)};
+    const auto first = tree.create_node(child_style,
+        [](const MeasureRequest&) {
+            return Measurement{{20, 20}, 5.0f, {}};
+        });
+    const auto second = tree.create_node(child_style,
+        [](const MeasureRequest&) {
+            return Measurement{{20, 20}, 15.0f, {}};
+        });
+    tree.append_child(root, first);
+    tree.append_child(root, second);
+    print("grid-baseline", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(40)}),
+        {{140, root}, {141, first}, {142, second}});
+}
+
+void grid_auto_margins() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(100), Length::length(50)};
+    root_style.grid.template_columns = {TrackSizing::fixed(100)};
+    root_style.grid.template_rows = {TrackSizing::fixed(50)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    child_style.box.margin.left = Length::automatic();
+    child_style.box.margin.right = Length::automatic();
+    child_style.box.margin.top = Length::automatic();
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print("grid-auto-margins", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(50)}),
+        {{150, root}, {151, child}});
+}
+
+void rtl_block_child() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.direction = Direction::Rtl;
+    root_style.box.size = {Length::length(100), Length::length(40)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.display = Display::Block;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print("rtl-block-child", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(40)}),
+        {{160, root}, {161, child}});
+}
+
+void flex_scrollbar_reservation() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.box.size = {Length::length(100), Length::length(50)};
+    root_style.overflow_y = Overflow::Scroll;
+    root_style.scrollbar_width = 10;
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.flex_grow = 1;
+    child_style.box.size.height = Length::length(20);
+    const auto child = tree.create_node(child_style,
+        [](const MeasureRequest& request) {
+            const Unit width = request.available_width.kind == AvailableKind::MinContent
+                ? 20.0f : 30.0f;
+            return Measurement{{width, 20}, {}, {}};
+        });
+    tree.append_child(root, child);
+    print("flex-scrollbar-reservation", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(50)}),
+        {{170, root}, {171, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -299,6 +464,13 @@ int main(int argc, char** argv) {
         else if (name == "hidden-and-positioned") hidden_and_positioned();
         else if (name == "block-float-clear") block_float_clear();
         else if (name == "block-adjacent-margins") block_adjacent_margins();
+        else if (name == "grid-content-alignment") grid_content_alignment();
+        else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();
+        else if (name == "flex-baseline") flex_baseline();
+        else if (name == "grid-baseline") grid_baseline();
+        else if (name == "grid-auto-margins") grid_auto_margins();
+        else if (name == "rtl-block-child") rtl_block_child();
+        else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

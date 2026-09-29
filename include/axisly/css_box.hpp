@@ -60,6 +60,7 @@ struct ResolvedDimensions {
 
 struct ResolvedBox {
     ResolvedEdges margin, padding, border;
+    Size scrollbar{};
     // These are border-box sizes. An absent value remains under algorithm control:
     // auto, intrinsic keywords and percentages with an indefinite basis differ.
     ResolvedDimensions preferred, minimum, maximum;

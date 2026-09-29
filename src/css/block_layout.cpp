@@ -93,7 +93,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         child_constraints.containing_width = content_width;
         if (preferred_height) child_constraints.containing_height = content_height_basis;
         ResolvedBox child_box;
-        try { child_box = resolve_box(child.style.box, content_width,
+        try { child_box = resolve_layout_box(child, content_width,
             child_constraints.containing_height); }
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, child_id, error.what());
@@ -129,8 +129,27 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             if (child.style.clear != ClearSide::None) {
                 y = std::max(y, clear_bottom(floats, child.style.clear));
             }
+            const bool auto_left = child_box.margin.left.kind == EdgeKind::Auto;
+            const bool auto_right = child_box.margin.right.kind == EdgeKind::Auto;
+            Unit used_left = margin.left, used_right = margin.right;
+            const Unit horizontal_free = checked(static_cast<double>(content_width)
+                - nested.size.width - margin.left - margin.right, child_id);
+            if (horizontal_free > 0 && (auto_left || auto_right)) {
+                const Unit share = checked(static_cast<double>(horizontal_free)
+                    / (static_cast<int>(auto_left) + static_cast<int>(auto_right)), child_id);
+                if (auto_left) used_left = share;
+                if (auto_right) used_right = share;
+                nested.nodes.front().margin.left = used_left;
+                nested.nodes.front().margin.right = used_right;
+            }
+            const Unit x = auto_left || auto_right
+                ? used_left
+                : node.style.box.direction == Direction::Rtl
+                    ? checked(static_cast<double>(content_width)
+                        - nested.size.width - used_right, child_id)
+                    : used_left;
             translate(nested,
-                checked(static_cast<double>(x_origin) + margin.left, child_id),
+                checked(static_cast<double>(x_origin) + x, child_id),
                 checked(static_cast<double>(y_origin) + y, child_id), child_id);
             cursor = checked(static_cast<double>(y) + nested.size.height, child_id);
             pending_margin = margin.bottom;

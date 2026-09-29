@@ -9,6 +9,24 @@ bool numeric(const Length& value) {
     return value.kind() == LengthKind::Length || value.kind() == LengthKind::Percent
         || value.kind() == LengthKind::Calc;
 }
+template <typename Enum>
+void enumeration(Enum value, Enum last, const char* message) {
+    const auto raw = static_cast<int>(value);
+    if (raw < 0 || raw > static_cast<int>(last)) {
+        throw std::invalid_argument(message);
+    }
+}
+void item_alignment(const std::optional<ItemAlignment>& value) {
+    if (!value) return;
+    enumeration(value->position, ItemPosition::Stretch, "Invalid CSS item alignment");
+    enumeration(value->safety, AlignmentSafety::Safe, "Invalid CSS alignment safety");
+}
+void content_alignment(const std::optional<ContentAlignment>& value) {
+    if (!value) return;
+    enumeration(value->position, ContentPosition::SpaceAround,
+        "Invalid CSS content alignment");
+    enumeration(value->safety, AlignmentSafety::Safe, "Invalid CSS alignment safety");
+}
 void dimension(const Length& value, bool auto_allowed) {
     switch (value.kind()) {
     case LengthKind::Length:
@@ -41,6 +59,25 @@ void edges(const EdgeValues& values, bool auto_allowed) {
 } // namespace
 
 void validate_style(const Style& style) {
+    enumeration(style.display, Display::None, "Invalid CSS display");
+    enumeration(style.position, Position::Absolute, "Invalid CSS position");
+    enumeration(style.overflow_x, Overflow::Scroll, "Invalid CSS overflow");
+    enumeration(style.overflow_y, Overflow::Scroll, "Invalid CSS overflow");
+    enumeration(style.float_side, FloatSide::Right, "Invalid CSS float");
+    enumeration(style.clear, ClearSide::Both, "Invalid CSS clear");
+    enumeration(style.contain, Contain::Content, "Invalid CSS containment");
+    enumeration(style.text_align, TextAlign::LegacyCenter, "Invalid CSS text alignment");
+    enumeration(style.flex_direction, FlexDirection::ColumnReverse,
+        "Invalid CSS flex direction");
+    enumeration(style.flex_wrap, FlexWrap::BalanceReverse, "Invalid CSS flex wrap");
+    enumeration(style.box.box_sizing, BoxSizing::ContentBox, "Invalid CSS box sizing");
+    enumeration(style.box.direction, Direction::Rtl, "Invalid CSS direction");
+    item_alignment(style.align_items);
+    item_alignment(style.align_self);
+    item_alignment(style.justify_items);
+    item_alignment(style.justify_self);
+    content_alignment(style.align_content);
+    content_alignment(style.justify_content);
     dimension(style.box.size.width, true);
     dimension(style.box.size.height, true);
     edge(style.box.min_size.width, true);

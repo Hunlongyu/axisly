@@ -603,6 +603,53 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
     }
 }
 
+void align_tracks(TrackAxis& axis, Unit available,
+                  ContentAlignment alignment, NodeId id) {
+    const Unit used = axis.offsets.empty() ? 0 : axis.offsets.back();
+    const Unit free = checked(static_cast<double>(available) - used, id);
+    if (alignment.safety == AlignmentSafety::Safe && free < 0) return;
+    std::size_t visible = 0;
+    for (const auto& track : axis.tracks) if (!track.collapsed) ++visible;
+    Unit start = 0, extra_gap = 0;
+    switch (alignment.position) {
+    case ContentPosition::End:
+    case ContentPosition::FlexEnd: start = free; break;
+    case ContentPosition::Center: start = checked(static_cast<double>(free) / 2, id); break;
+    case ContentPosition::SpaceBetween:
+        if (free > 0 && visible > 1) {
+            extra_gap = checked(static_cast<double>(free) / (visible - 1), id);
+        }
+        break;
+    case ContentPosition::SpaceAround:
+        if (free > 0 && visible) {
+            extra_gap = checked(static_cast<double>(free) / visible, id);
+            start = checked(static_cast<double>(extra_gap) / 2, id);
+        }
+        break;
+    case ContentPosition::SpaceEvenly:
+        if (free > 0 && visible) {
+            extra_gap = checked(static_cast<double>(free) / (visible + 1), id);
+            start = extra_gap;
+        }
+        break;
+    default: break;
+    }
+    bool later_visible = false;
+    for (std::size_t i = axis.tracks.size(); i-- > 0;) {
+        if (!axis.tracks[i].collapsed && later_visible) {
+            axis.gutter_after[i] = checked(
+                static_cast<double>(axis.gutter_after[i]) + extra_gap, id);
+        }
+        later_visible |= !axis.tracks[i].collapsed;
+    }
+    if (axis.offsets.empty()) axis.offsets.resize(1);
+    axis.offsets[0] = start;
+    for (std::size_t i = 0; i < axis.tracks.size(); ++i) {
+        axis.offsets[i + 1] = checked(static_cast<double>(axis.offsets[i])
+            + axis.tracks[i].size + axis.gutter_after[i], id);
+    }
+}
+
 Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId id) {
     const auto numeric = value.resolve_numeric(basis);
     if (!numeric) return 0;
@@ -694,7 +741,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         if (placements[i].hidden) continue;
         const auto id = node.children[i];
         ResolvedBox child_box;
-        try { child_box = resolve_box(get(id).style.box, inner_width, inner_height); }
+        try { child_box = resolve_layout_box(get(id), inner_width, inner_height); }
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
         }
@@ -724,6 +771,12 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     }
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);
+    inner_width = std::max(Unit{0}, candidate.width - *decoration_width);
+    inner_height = std::max(Unit{0}, candidate.height - *decoration_height);
+    align_tracks(track_columns, *inner_width,
+        node.style.justify_content.value_or(ContentAlignment{}), node.id);
+    align_tracks(track_rows, *inner_height,
+        node.style.align_content.value_or(ContentAlignment{}), node.id);
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
@@ -735,6 +788,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     for (const auto& track : track_rows.tracks) report.rows.push_back(track.size);
     result.grid_tracks.push_back(std::move(report));
     std::vector<Fragment> fragments(node.children.size());
+    struct BaselinePlacement {
+        std::size_t source;
+        std::int32_t row;
+        Unit baseline;
+        Unit margin_top;
+    };
+    std::vector<BaselinePlacement> baseline_items;
+    std::unordered_map<std::int32_t, Unit> row_baselines;
     const auto border = edges(box.border, node.id);
     const auto padding = edges(box.padding, node.id);
     const Unit content_x = checked(static_cast<double>(border.left) + padding.left, node.id);
@@ -754,7 +815,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const Unit cell_x = track_columns.line(place.column_start);
         const Unit cell_y = track_rows.line(place.row_start);
         const auto& child_box = child.style.box;
-        const auto resolved = resolve_box(child_box, cell_width, cell_height);
+        const auto resolved = resolve_layout_box(child, cell_width, cell_height);
         const auto margin = edges(resolved.margin, id);
         Constraints final;
         final.containing_width = cell_width;
@@ -779,14 +840,43 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 static_cast<double>(cell_height) - margin.top - margin.bottom, id));
         }
         auto child_fragment = layout(id, final, depth + 1);
+        if (vertical.position == ItemPosition::Baseline
+            && resolved.margin.top.kind != EdgeKind::Auto
+            && resolved.margin.bottom.kind != EdgeKind::Auto) {
+            const Unit baseline = child_fragment.nodes.front()
+                .first_baseline.value_or(child_fragment.size.height);
+            const Unit ascent = checked(static_cast<double>(margin.top) + baseline, id);
+            auto [entry, inserted] = row_baselines.try_emplace(place.row_start, ascent);
+            if (!inserted) entry->second = std::max(entry->second, ascent);
+            baseline_items.push_back({i, place.row_start, baseline, margin.top});
+        }
         const Unit horizontal_free = checked(static_cast<double>(cell_width)
             - child_fragment.size.width - margin.left - margin.right, id);
         const Unit vertical_free = checked(static_cast<double>(cell_height)
             - child_fragment.size.height - margin.top - margin.bottom, id);
-        Unit x = checked(static_cast<double>(cell_x) + margin.left
-            + align_offset(horizontal_free, horizontal, id), id);
-        Unit y = checked(static_cast<double>(cell_y) + margin.top
-            + align_offset(vertical_free, vertical, id), id);
+        const bool auto_left = resolved.margin.left.kind == EdgeKind::Auto;
+        const bool auto_right = resolved.margin.right.kind == EdgeKind::Auto;
+        const bool auto_top = resolved.margin.top.kind == EdgeKind::Auto;
+        const bool auto_bottom = resolved.margin.bottom.kind == EdgeKind::Auto;
+        Unit used_left = margin.left, used_right = margin.right;
+        Unit used_top = margin.top, used_bottom = margin.bottom;
+        if (horizontal_free > 0 && (auto_left || auto_right)) {
+            const Unit share = checked(static_cast<double>(horizontal_free)
+                / (static_cast<int>(auto_left) + static_cast<int>(auto_right)), id);
+            if (auto_left) used_left = share;
+            if (auto_right) used_right = share;
+        }
+        if (vertical_free > 0 && (auto_top || auto_bottom)) {
+            const Unit share = checked(static_cast<double>(vertical_free)
+                / (static_cast<int>(auto_top) + static_cast<int>(auto_bottom)), id);
+            if (auto_top) used_top = share;
+            if (auto_bottom) used_bottom = share;
+        }
+        Unit x = checked(static_cast<double>(cell_x) + used_left
+            + ((auto_left || auto_right) ? 0 : align_offset(horizontal_free, horizontal, id)), id);
+        Unit y = checked(static_cast<double>(cell_y) + used_top
+            + ((auto_top || auto_bottom) ? 0 : align_offset(vertical_free, vertical, id)), id);
+        child_fragment.nodes.front().margin = {used_left, used_top, used_right, used_bottom};
         if (node.style.box.direction == Direction::Rtl) {
             x = checked(static_cast<double>(*inner_width) - x - child_fragment.size.width, id);
         }
@@ -797,6 +887,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             Size{*inner_width, *inner_height}, node.id);
         translate(child_fragment, relative_x, relative_y, id);
         fragments[i] = std::move(child_fragment);
+    }
+    for (const auto& item : baseline_items) {
+        const Unit delta = checked(static_cast<double>(row_baselines.at(item.row))
+            - item.baseline - item.margin_top, node.id);
+        translate(fragments[item.source], 0, delta, node.id);
+        auto& used_margin = fragments[item.source].nodes.front().margin;
+        used_margin.top = checked(static_cast<double>(used_margin.top) + delta,
+            node.id);
     }
     for (auto& fragment : fragments) {
         result.nodes.insert(result.nodes.end(),

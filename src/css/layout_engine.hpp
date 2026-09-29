@@ -20,6 +20,7 @@ struct Constraints {
     std::optional<Unit> known_width, known_height; // border-box
     AvailableSize available;
     std::optional<Unit> containing_width, containing_height;
+    bool ignore_preferred_width{}, ignore_preferred_height{};
     bool operator==(const Constraints&) const = default;
 };
 
@@ -41,6 +42,8 @@ using CacheMap = std::unordered_map<std::uint64_t, CacheEntry>;
 [[nodiscard]] Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
                                 Unit first_border, Unit last_border);
 [[nodiscard]] AvailableSpace subtract_decoration(AvailableSpace space, Unit amount);
+[[nodiscard]] ResolvedBox resolve_layout_box(const LayoutNode& node,
+    std::optional<Unit> containing_width, std::optional<Unit> containing_height);
 [[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
     const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
     std::optional<Unit> last_baseline = std::nullopt);

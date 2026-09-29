@@ -42,7 +42,7 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     const auto top = inset_value(inset.top, containing_height, child.id);
     const auto bottom = inset_value(inset.bottom, containing_height, child.id);
     ResolvedBox child_box;
-    try { child_box = resolve_box(child.style.box, containing_width, containing_height); }
+    try { child_box = resolve_layout_box(child, containing_width, containing_height); }
     catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, child.id, error.what());
     }

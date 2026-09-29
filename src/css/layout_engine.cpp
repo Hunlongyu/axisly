@@ -36,6 +36,29 @@ AvailableSpace subtract_decoration(AvailableSpace space, Unit amount) {
     return AvailableSpace::definite(std::max(Unit{0}, space.value - amount));
 }
 
+ResolvedBox resolve_layout_box(const LayoutNode& node,
+                               std::optional<Unit> containing_width,
+                               std::optional<Unit> containing_height) {
+    auto resolved = resolve_box(node.style.box, containing_width, containing_height);
+    resolved.scrollbar.width = node.style.overflow_y == Overflow::Scroll
+        ? node.style.scrollbar_width : Unit{0};
+    resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
+        ? node.style.scrollbar_width : Unit{0};
+    if (resolved.box_sizing == BoxSizing::ContentBox) {
+        for (auto* value : {&resolved.preferred.width, &resolved.minimum.width,
+                            &resolved.maximum.width}) {
+            if (*value) *value = checked(static_cast<double>(**value)
+                + resolved.scrollbar.width, node.id);
+        }
+        for (auto* value : {&resolved.preferred.height, &resolved.minimum.height,
+                            &resolved.maximum.height}) {
+            if (*value) *value = checked(static_cast<double>(**value)
+                + resolved.scrollbar.height, node.id);
+        }
+    }
+    return resolved;
+}
+
 NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& resolved,
                        std::optional<Unit> first_baseline,
                        std::optional<Unit> last_baseline) {
@@ -44,10 +67,12 @@ NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& res
     const auto border = edges(resolved.border, node.id);
     const Unit left = padding.left + border.left;
     const Unit top = padding.top + border.top;
-    const Unit width = content_axis(size.width, padding.left, padding.right, border.left, border.right);
-    const Unit height = content_axis(size.height, padding.top, padding.bottom, border.top, border.bottom);
+    const Unit width = std::max(Unit{0}, content_axis(size.width,
+        padding.left, padding.right, border.left, border.right) - resolved.scrollbar.width);
+    const Unit height = std::max(Unit{0}, content_axis(size.height,
+        padding.top, padding.bottom, border.top, border.bottom) - resolved.scrollbar.height);
     return {node.id, node.parent, {0, 0, size.width, size.height},
-        {left, top, width, height}, margin, padding, border,
+        {left, top, width, height}, margin, padding, border, resolved.scrollbar,
         first_baseline ? std::optional<Unit>(*first_baseline + top) : std::nullopt,
         last_baseline ? std::optional<Unit>(*last_baseline + top) : std::nullopt};
 }
@@ -136,10 +161,12 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
     }
     ResolvedBox box;
     try {
-        box = resolve_box(node.style.box, constraints.containing_width, constraints.containing_height);
+        box = resolve_layout_box(node, constraints.containing_width, constraints.containing_height);
     } catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
     }
+    if (constraints.ignore_preferred_width) box.preferred.width.reset();
+    if (constraints.ignore_preferred_height) box.preferred.height.reset();
     if (node.children.empty()) {
         fragment = leaf(node, constraints, box);
         stage(id, constraints, fragment);
@@ -228,8 +255,12 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
     };
     auto width = constraints.known_width ? constraints.known_width : box.preferred.width;
     auto height = constraints.known_height ? constraints.known_height : box.preferred.height;
-    if (!width) width = intrinsic(node.style.box.size.width, true);
-    if (!height) height = intrinsic(node.style.box.size.height, false);
+    if (!width && !constraints.ignore_preferred_width) {
+        width = intrinsic(node.style.box.size.width, true);
+    }
+    if (!height && !constraints.ignore_preferred_height) {
+        height = intrinsic(node.style.box.size.height, false);
+    }
     if (box.aspect_ratio && width.has_value() != height.has_value()) {
         const double ratio = *box.aspect_ratio;
         if (width) {

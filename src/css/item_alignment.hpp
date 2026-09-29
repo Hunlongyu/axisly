@@ -25,6 +25,7 @@ enum class ItemEdge { Start, Center, End };
         physical_end = !(horizontal && item_direction == Direction::Rtl);
         break;
     case ItemPosition::FlexStart:
+    case ItemPosition::Stretch:
         physical_end = flex_start_at_physical_end;
         break;
     case ItemPosition::FlexEnd:
@@ -32,7 +33,6 @@ enum class ItemEdge { Start, Center, End };
         break;
     case ItemPosition::Start:
     case ItemPosition::Baseline:
-    case ItemPosition::Stretch:
     case ItemPosition::Center:
         physical_end = horizontal && container_direction == Direction::Rtl;
         break;

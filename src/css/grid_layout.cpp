@@ -609,8 +609,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         if (vertical.position == ItemPosition::Baseline
             && resolved.margin.top.kind != EdgeKind::Auto
             && resolved.margin.bottom.kind != EdgeKind::Auto) {
-            const Unit baseline = child_fragment.nodes.front()
-                .first_baseline.value_or(child_fragment.size.height);
+            const Unit baseline = child_baseline(child_fragment, child.style)
+                .value_or(child_fragment.size.height);
             const Unit ascent = checked(static_cast<double>(margin.top) + baseline, id);
             auto [entry, inserted] = row_baselines.try_emplace(place.row_start, ascent);
             if (!inserted) entry->second = std::max(entry->second, ascent);
@@ -665,6 +665,34 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         auto& used_margin = fragments[item.source].nodes.front().margin;
         used_margin.top = checked(static_cast<double>(used_margin.top) + delta,
             node.id);
+    }
+    std::optional<std::int32_t> first_row;
+    std::optional<std::size_t> first_item;
+    for (std::size_t source = 0; source < placements.size(); ++source) {
+        if (placements[source].hidden
+            || get(node.children[source]).style.position == Position::Absolute) continue;
+        if (!first_row || placements[source].row_start < *first_row) {
+            first_row = placements[source].row_start;
+            first_item = source;
+        }
+    }
+    if (first_row) {
+        std::optional<BaselinePlacement> aligned;
+        for (const auto& item : baseline_items) {
+            if (item.row == *first_row) {
+                aligned = item;
+                break;
+            }
+        }
+        const auto source = aligned ? aligned->source : *first_item;
+        const auto& fragment = fragments[source];
+        const Unit baseline = aligned
+            ? checked(static_cast<double>(aligned->baseline)
+                + aligned->margin_top, node.id)
+            : fragment.size.height;
+        result.nodes.front().first_baseline = checked(
+            static_cast<double>(fragment.nodes.front().border_box.y)
+                + baseline, node.id);
     }
     for (auto& fragment : fragments) {
         result.nodes.insert(result.nodes.end(),

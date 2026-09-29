@@ -48,6 +48,8 @@ void leaf_and_block() {
         "Child box must be placed within parent content box");
     require(result.find(child)->first_baseline == 15 && calls == 1,
         "Leaf baseline and measurement count must be retained");
+    require(result.find(root)->first_baseline == 32,
+        "Block must export its first in-flow child's baseline in local coordinates");
 }
 
 void topology_and_hidden() {

@@ -446,8 +446,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 const auto alignment = child.style.align_self.value_or(
                     node.style.align_items.value_or(ItemAlignment{}));
                 if (alignment.position == ItemPosition::Baseline) {
-                    const Unit baseline = fragments[item.source_index].nodes.front()
-                        .first_baseline.value_or(item.cross);
+                    const Unit baseline = child_baseline(
+                        fragments[item.source_index], child.style).value_or(item.cross);
                     const Unit before = checked(static_cast<double>(item.margin.top)
                         + baseline, item.id);
                     const Unit after = checked(static_cast<double>(item.margin.bottom)
@@ -546,12 +546,14 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             if (row && line.has_baseline
                 && alignment.position == ItemPosition::Baseline
                 && !item.auto_cross_start && !item.auto_cross_end) {
-                const Unit baseline = fragment.nodes.front()
-                    .first_baseline.value_or(item.cross);
+                const Unit baseline = child_baseline(fragment, child_style)
+                    .value_or(item.cross);
                 cross_offset = checked(static_cast<double>(line.baseline_ascent)
                     - baseline, item.id);
             }
             if (!(item.auto_cross_start || item.auto_cross_end)
+                && !(row && line.has_baseline
+                    && alignment.position == ItemPosition::Baseline)
                 && !(alignment.safety == AlignmentSafety::Safe && cross_remain < 0)) {
                 const auto edge = item_edge(alignment.position, !row,
                     node.style.box.direction, child_style.box.direction,
@@ -596,6 +598,37 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
+    if (!lines.empty()) {
+        const bool wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
+            || node.style.flex_wrap == FlexWrap::BalanceReverse;
+        const auto& first_line = wrap_reverse ? lines.back() : lines.front();
+        if (!first_line.items.empty()) {
+            std::size_t selected = first_line.items.front();
+            if (row) {
+                for (const auto index : first_line.items) {
+                    const auto& item = items[index];
+                    const auto& child_style = get(item.id).style;
+                    const auto alignment = child_style.align_self.value_or(
+                        node.style.align_items.value_or(ItemAlignment{}));
+                    if (alignment.position == ItemPosition::Baseline
+                        && !item.auto_cross_start && !item.auto_cross_end) {
+                        selected = index;
+                        break;
+                    }
+                }
+            } else if (node.style.flex_direction == FlexDirection::ColumnReverse) {
+                selected = first_line.items.back();
+            }
+            const auto& item = items[selected];
+            const auto& child_style = get(item.id).style;
+            const auto& fragment = fragments[item.source_index];
+            const Unit baseline = child_baseline(fragment, child_style)
+                .value_or(fragment.size.height);
+            result.nodes.front().first_baseline = checked(
+                static_cast<double>(fragment.nodes.front().border_box.y)
+                    + baseline, node.id);
+        }
+    }
     for (std::size_t source = 0; source < fragments.size(); ++source) {
         const auto id = node.children[source];
         if (get(id).style.position == Position::Absolute

@@ -284,6 +284,18 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
+    for (std::size_t source = 0; source < node.children.size(); ++source) {
+        const auto& child = get(node.children[source]);
+        if (child.style.display == Display::None
+            || child.style.position == Position::Absolute
+            || child.style.float_side != FloatSide::None) continue;
+        const auto baseline = child_baseline(fragments[source], child.style);
+        if (!baseline) continue;
+        result.nodes.front().first_baseline = checked(
+            static_cast<double>(fragments[source].nodes.front().border_box.y)
+                + *baseline, node.id);
+        break;
+    }
     result.nodes.front().margin.top = margins.top.resolve(node.id);
     result.nodes.front().margin.bottom = margins.bottom.resolve(node.id);
     result.block_margins = margins;

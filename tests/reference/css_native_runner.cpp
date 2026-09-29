@@ -363,6 +363,149 @@ void grid_baseline() {
         {{140, root}, {141, first}, {142, second}});
 }
 
+void nested_container_baseline(std::string_view name) {
+    LayoutTree tree;
+    const bool block = name.starts_with("nested-block-");
+    const bool grid = name.starts_with("nested-grid-");
+    const int kind = block ? 0 : grid ? 2 : 1;
+    const bool layout_contain = name.find("-layout-contain-") != std::string_view::npos;
+    const bool paint_contain = name.find("-paint-contain-") != std::string_view::npos;
+    const int variant = layout_contain ? 1 : paint_contain ? 2 : 0;
+    const int base = 5000 + kind * 30 + variant * 10;
+
+    Style root_style;
+    root_style.box.size = {Length::length(100), Length::length(50)};
+    root_style.align_items = ItemAlignment{ItemPosition::Baseline};
+    const auto root = tree.create_node(root_style);
+    Style inner_style;
+    inner_style.display = block ? Display::Block : grid ? Display::Grid : Display::Flex;
+    inner_style.box.size = {Length::length(30), Length::length(20)};
+    inner_style.contain = layout_contain ? Contain::Layout
+        : paint_contain ? Contain::Paint : Contain::None;
+    const auto inner = tree.create_node(inner_style);
+    Style inner_leaf_style;
+    inner_leaf_style.box.size = {Length::length(10), Length::length(10)};
+    const auto inner_leaf = tree.create_node(inner_leaf_style,
+        [](const MeasureRequest&) { return Measurement{{10, 10}, 3.0f, {}}; });
+    Style outer_leaf_style;
+    outer_leaf_style.box.size = {Length::length(20), Length::length(20)};
+    const auto outer_leaf = tree.create_node(outer_leaf_style,
+        [](const MeasureRequest&) { return Measurement{{20, 20}, 15.0f, {}}; });
+    tree.append_child(root, inner);
+    tree.append_child(inner, inner_leaf);
+    tree.append_child(root, outer_leaf);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(50)}),
+        {{base, root}, {base + 1, inner}, {base + 2, inner_leaf},
+         {base + 3, outer_leaf}});
+}
+
+void container_baseline_edge(std::string_view name) {
+    LayoutTree tree;
+    Style outer_style;
+    outer_style.box.size = {Length::length(100), Length::length(50)};
+    outer_style.align_items = ItemAlignment{ItemPosition::Baseline};
+    const auto outer = tree.create_node(outer_style);
+    Style inner_style;
+    inner_style.display = name.starts_with("block-") ? Display::Block
+        : name.starts_with("grid-") ? Display::Grid : Display::Flex;
+    const bool second = name == "block-second-child-baseline";
+    const bool scroll = name == "block-scroll-child-baseline";
+    const bool wrap = name == "flex-wrap-reverse-baseline";
+    const bool column = name == "flex-column-reverse-baseline";
+    const bool grid_rows = name == "grid-first-row-baseline";
+    const bool grid_aligned = name == "grid-aligned-baseline";
+    inner_style.box.size = {Length::length(wrap || column || grid_rows ? 20.0f : 30.0f),
+                            Length::length(wrap || column || grid_rows ? 30.0f : 20.0f)};
+    if (wrap) inner_style.flex_wrap = FlexWrap::WrapReverse;
+    if (column) inner_style.flex_direction = FlexDirection::ColumnReverse;
+    if (grid_rows) inner_style.grid.template_rows =
+        {TrackSizing::fixed(10), TrackSizing::fixed(10)};
+    if (grid_aligned) {
+        inner_style.grid.template_columns =
+            {TrackSizing::fixed(15), TrackSizing::fixed(15)};
+        inner_style.align_items = ItemAlignment{ItemPosition::Baseline};
+    }
+    const auto inner = tree.create_node(inner_style);
+    tree.append_child(outer, inner);
+    const int base = second ? 5100 : scroll ? 5110 : wrap ? 5120
+        : column ? 5130 : grid_rows ? 5140 : 5150;
+    std::vector<IdentifiedNode> nodes{{base, outer}, {base + 1, inner}};
+    if (second) {
+        Style empty_style;
+        empty_style.display = Display::Block;
+        empty_style.box.size = {Length::length(10), Length::length(5)};
+        const auto empty = tree.create_node(empty_style);
+        tree.append_child(inner, empty);
+        nodes.emplace_back(base + 2, empty);
+    }
+    Style first_style;
+    first_style.box.size = {Length::length(wrap || column ? 20.0f : 10.0f),
+                            Length::length(10)};
+    if (scroll) first_style.overflow_y = Overflow::Scroll;
+    if (grid_rows) {
+        first_style.grid.row.start = GridLine::index(2);
+        first_style.grid.row.end = GridLine::index(3);
+    }
+    const auto first = tree.create_node(first_style,
+        [scroll, wrap, column](const MeasureRequest&) {
+            return Measurement{{wrap || column ? 20.0f : 10.0f,
+                    scroll ? 40.0f : 10.0f},
+                scroll ? 40.0f : 3.0f, {}};
+        });
+    tree.append_child(inner, first);
+    nodes.emplace_back(base + (second ? 3 : 2), first);
+    if (wrap || column || grid_rows || grid_aligned) {
+        Style second_style;
+        second_style.box.size = {Length::length(wrap || column ? 20.0f : 10.0f),
+                                 Length::length(10)};
+        if (grid_rows) {
+            second_style.grid.row.start = GridLine::index(1);
+            second_style.grid.row.end = GridLine::index(2);
+        }
+        const auto next = tree.create_node(second_style,
+            [wrap, column](const MeasureRequest&) {
+                return Measurement{{wrap || column ? 20.0f : 10.0f, 10}, 7.0f, {}};
+            });
+        tree.append_child(inner, next);
+        nodes.emplace_back(base + 3, next);
+    }
+    Style sibling_style;
+    sibling_style.box.size = {Length::length(20), Length::length(20)};
+    const auto sibling = tree.create_node(sibling_style,
+        [](const MeasureRequest&) { return Measurement{{20, 20}, 15.0f, {}}; });
+    tree.append_child(outer, sibling);
+    nodes.emplace_back(base + (second ? 4 : (scroll ? 3 : 4)), sibling);
+    print(name.data(), tree.compute(outer,
+        {AvailableSpace::definite(100), AvailableSpace::definite(50)}), nodes);
+}
+
+void scroll_baseline_case(std::string_view name) {
+    const bool grid = name.starts_with("grid-");
+    const int base = grid ? 5170 : 5160;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = grid ? Display::Grid : Display::Flex;
+    root_style.box.size = {Length::length(100), Length::length(40)};
+    root_style.align_items = ItemAlignment{ItemPosition::Baseline};
+    if (grid) root_style.grid.template_columns =
+        {TrackSizing::fixed(50), TrackSizing::fixed(50)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.box.size = {Length::length(20), Length::length(10)};
+    child_style.overflow_y = Overflow::Scroll;
+    const auto scroll = tree.create_node(child_style,
+        [](const MeasureRequest&) { return Measurement{{20, 40}, 40.0f, {}}; });
+    child_style.overflow_y = Overflow::Visible;
+    const auto normal = tree.create_node(child_style,
+        [](const MeasureRequest&) { return Measurement{{20, 10}, 7.0f, {}}; });
+    tree.append_child(root, scroll);
+    tree.append_child(root, normal);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(40)}),
+        {{base, root}, {base + 1, scroll}, {base + 2, normal}});
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2090,6 +2233,17 @@ int main(int argc, char** argv) {
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();
         else if (name == "flex-baseline") flex_baseline();
         else if (name == "grid-baseline") grid_baseline();
+        else if (name.starts_with("nested-block-")
+            || name.starts_with("nested-flex-")
+            || name.starts_with("nested-grid-")) nested_container_baseline(name);
+        else if (name == "block-second-child-baseline"
+            || name == "block-scroll-child-baseline"
+            || name == "flex-wrap-reverse-baseline"
+            || name == "flex-column-reverse-baseline"
+            || name == "grid-first-row-baseline"
+            || name == "grid-aligned-baseline") container_baseline_edge(name);
+        else if (name == "flex-scroll-baseline"
+            || name == "grid-scroll-baseline") scroll_baseline_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

@@ -67,6 +67,8 @@ using CacheMap = std::unordered_map<std::uint64_t, CacheEntry>;
     const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
     std::optional<Unit> last_baseline = std::nullopt);
 void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
+[[nodiscard]] std::optional<Unit> child_baseline(const Fragment& fragment,
+    const Style& style);
 void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
     const std::unordered_map<std::uint64_t, LayoutNode>& nodes);
 [[nodiscard]] std::pair<Unit, Unit> relative_offset(const LayoutNode& node,

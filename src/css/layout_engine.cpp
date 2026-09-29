@@ -7,6 +7,12 @@
 #include <utility>
 
 namespace axisly::css::detail {
+namespace {
+bool suppresses_baseline(Contain contain) noexcept {
+    return contain == Contain::Layout || contain == Contain::Content;
+}
+} // namespace
+
 Unit checked(double value, NodeId id) {
     if (!std::isfinite(value) || std::abs(value) > std::numeric_limits<Unit>::max()) {
         throw LayoutFailure(LayoutErrorCode::NumericOverflow, id, "CSS layout numeric overflow");
@@ -114,6 +120,16 @@ void translate(Fragment& fragment, Unit x, Unit y, NodeId node) {
     }
 }
 
+std::optional<Unit> child_baseline(const Fragment& fragment, const Style& style) {
+    if (fragment.nodes.empty()) return std::nullopt;
+    const auto baseline = fragment.nodes.front().first_baseline;
+    if (style.overflow_y == Overflow::Hidden || style.overflow_y == Overflow::Scroll) {
+        return std::clamp(baseline.value_or(fragment.size.height),
+            Unit{0}, fragment.size.height);
+    }
+    return baseline;
+}
+
 Engine::Engine(const std::unordered_map<std::uint64_t, LayoutNode>& nodes,
                const CacheMap& cache, TreeLimits limits)
     : nodes_(nodes), cache_(cache), limits_(limits) {}
@@ -198,6 +214,10 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
     if (constraints.ignore_preferred_height) box.preferred.height.reset();
     if (node.children.empty()) {
         fragment = leaf(node, constraints, box);
+        if (suppresses_baseline(node.style.contain)) {
+            fragment.nodes.front().first_baseline.reset();
+            fragment.nodes.front().last_baseline.reset();
+        }
         if (node.style.display == Display::Block) {
             const auto margin = edges(box.margin, node.id);
             const auto decoration = box.vertical_decoration();
@@ -231,6 +251,10 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth) {
     default:
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, id,
             "CSS display value is invalid");
+    }
+    if (suppresses_baseline(node.style.contain)) {
+        fragment.nodes.front().first_baseline.reset();
+        fragment.nodes.front().last_baseline.reset();
     }
     stage(id, constraints, fragment);
     return fragment;

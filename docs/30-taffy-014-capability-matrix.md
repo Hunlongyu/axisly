@@ -16,14 +16,14 @@
 
 | Style 字段 | Taffy 0.14 输入与关键取值 | Axisly 现状 | 阶段 | 参考用例 |
 | --- | --- | --- | --- | --- |
-| `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：新树均可调度；各算法尚未完整 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned |
+| `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：新树均可调度；Block／Flex／Grid 向嵌套父容器传递首基线，各算法尚未完整 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned、nested-block／flex／grid-baseline |
 | `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 部分：标记使 Block 子项不拉伸自动宽度并阻断父子边距折叠；复杂内在尺寸未完整 | P4 | 已建：block-table-intrinsic、block-table-margin-boundary |
 | `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；叶子测量后的纵横比与约束、Flex 拉伸交叉轴传递到主轴基准、Grid 行区域对自动列的比例贡献已差分；更多跨算法组合未完整 | P1/P2/P3 | 已建：block-replaced-intrinsic、block-replaced-ratio、flex-replaced-ratio、grid-replaced-ratio |
 | `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸与 Flex 差分已覆盖 | P1 | 已建：content-box-and-negative-margin |
 | `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入基本方向规则；Grid/Flex 的 self-start／self-end 按项目自身方向解析，混合树未验收 | P1/P4 | 已建：rtl-block-child、grid-self-ltr-rtl、flex-self-rtl-ltr；待建：rtl-mixed |
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 与 Grid 单轨道自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding、grid-scroll-automatic-minimum |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 部分：Scroll 轴预留空间并报告宽度；溢出范围与子项组合仍需差分 | P4 | 已建：flex-scrollbar-reservation、overflow-scroll-padding |
-| `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；溢出与基线规则未完整 | P4 | 已建：block-contain-float |
+| `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 部分：Block 独立格式化上下文包含浮动；Layout／Content 抑制基线，Paint 保留基线；溢出细节仍未完整 | P4 | 已建：block-contain-float、nested-block／flex／grid-layout／paint-contain-baseline |
 | `float` | None／Left／Right，Block 子项 | 部分：独立浮动区域模块计算左右浮动、clear、不同高度的纵向空隙、FlowRoot／Flex／Grid／滚动容器旁的剩余宽度及宽度不足时的下移；FlowRoot 负外边距在浮动盒旁受边缘约束，移到下方后可越过容器边缘；自动宽度浮动 Block 查询子树固有宽度并累计内部浮动贡献；嵌套包含块及完整 CSS 浮动规则未验收 | P4 | 已建：block-float-clear、block-float-flow-root、block-float-fixed-wrap、block-float-both-sides、block-float-vertical-hole、block-float-negative-below、block-float-intrinsic-child、block-float-intrinsic-pair、block-float-intrinsic-flex、block-float-intrinsic-grid |
 | `clear` | None／Left／Right／Both | 部分：普通块按左右浮动底部清除；浮动盒自身清除按 Taffy 0.14 的已有浮动底部下移；复杂折叠未验收 | P4 | 已建：block-float-clear、block-float-self-clear |
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；绝对定位自动宽度 Block 查询内容并包含内部浮动；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-block-auto-static、absolute-block-auto-floats、absolute-flex-static-center、absolute-grid-static-center |
@@ -35,8 +35,8 @@
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；Block 浮动旁及下方的负外边距差分已覆盖，复杂折叠仍未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins、block-float-negative-below |
 | `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
 | `border` | 四边 Length／Percent／Calc | 部分：共享盒模型解析，差分覆盖固定数值 | P1 | 已建：content-box-and-negative-margin |
-| `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch 与同一行基线；复杂跨行未验收 | P2/P3 | 已建：flex-baseline、grid-baseline |
-| `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column；待建：align-self-full |
+| `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择与滚动项目基线钳制已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline |
+| `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；固定交叉尺寸项目在反向换行时按 flex-start 对齐；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline；待建：align-self-full |
 | `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 常用位置与 stretch；安全值未完整 | P3 | 待建：justify-items |
 | `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch，self-start／self-end 按项目自身方向解析；基线未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr；待建：justify-self-full |
 | `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
@@ -154,6 +154,12 @@
 | `grid-auto-percent-gap`／`grid-fixed-percent-gap` | Grid 百分比列间隙在自动宽度确定后重新形成轨道偏移，容器固有宽度不随之增加 |
 | `flex-auto-cross-percent-gap`／`grid-auto-row-percent-gap` | 未定交叉轴百分比行距在 Flex 保持为零，在 Grid 高度确定后重新解析 |
 | `block-float-negative-alongside`／`block-float-negative-below`／`block-float-negative-below-overwide`／`block-float-negative-trailing` | FlowRoot 的负外边距在浮动盒旁受边缘约束，移到下方可越过容器边缘；右浮动及负末端外边距与宽度不足时下移 |
+| `nested-block-baseline`／`nested-flex-baseline`／`nested-grid-baseline` | 三种容器把首基线传给外层 Flex 的基线对齐；Grid 未参与内层基线对齐时使用首行项目的盒底 |
+| `nested-block-layout-contain-baseline`／`nested-block-paint-contain-baseline`／`nested-flex-layout-contain-baseline`／`nested-flex-paint-contain-baseline`／`nested-grid-layout-contain-baseline`／`nested-grid-paint-contain-baseline` | Layout containment 抑制首基线，Paint containment 保留首基线，外层按边框盒底合成缺失基线 |
+| `block-second-child-baseline`／`block-scroll-child-baseline` | Block 跳过无基线的首个流内子项；滚动子项的首基线钳制到边框盒 |
+| `flex-wrap-reverse-baseline`／`flex-column-reverse-baseline` | Flex 容器从视觉起始行或列反向的起始项目生成首基线，固定交叉尺寸项目遵守反向换行的 flex-start |
+| `grid-first-row-baseline`／`grid-aligned-baseline` | Grid 按行号选择首行，优先使用参与基线对齐的项目及其行内基线位移 |
+| `flex-scroll-baseline`／`grid-scroll-baseline` | 滚动项目即使报告超过盒高的内容基线，参与基线对齐时也按边框盒高度钳制 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -176,8 +182,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、一百七十三组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这一百七十三组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、一百八十九组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这一百八十九组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

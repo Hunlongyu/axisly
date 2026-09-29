@@ -178,6 +178,8 @@ layout／paint containment、方向和
 已加入 56 组 `Visible`／`Clip`／`Hidden`／`Scroll` 双轴与自动最小尺寸
 对照：三种根布局均检验子树溢出传播，Flex／Grid 检验 `Clip` 不将
 自动最小尺寸置零。更深层嵌套和复杂定位组合继续按矩阵验收。
+另有 28 组 `None`／`Layout`／`Paint`／`Content` 对照，覆盖子树溢出、
+跨算法基线与 Block 浮动包含；独立数值断言固定三种效果的差别。
 
 ### P5：性能与真实宿主收尾
 

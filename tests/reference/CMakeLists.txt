@@ -42,6 +42,11 @@ target_link_libraries(axisly_overflow_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_overflow_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_overflow_matrix_native)
 
+add_executable(axisly_contain_matrix_native contain_matrix_native.cpp)
+target_link_libraries(axisly_contain_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_contain_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_contain_matrix_native)
+
 add_executable(axisly_flex_matrix_native flex_matrix_native.cpp)
 target_link_libraries(axisly_flex_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_flex_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
@@ -153,6 +158,12 @@ add_test(NAME axisly.reference.overflow_matrix COMMAND "${Python3_EXECUTABLE}"
     --axisly "$<TARGET_FILE:axisly_overflow_matrix_native>"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.overflow_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.contain_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_contain_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_contain_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.contain_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.flex_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_matrix.py"

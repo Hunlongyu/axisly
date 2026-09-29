@@ -78,13 +78,15 @@ void run_case(std::size_t root_kind, std::size_t float_side,
 
 void run_nested_case(std::size_t root_float, std::size_t padding,
                      std::size_t top_margin, std::size_t inner_float,
-                     std::size_t display, std::size_t clear) {
+                     std::size_t display, std::size_t clear,
+                     std::size_t rtl) {
     LayoutTree tree;
     Style root_style;
     root_style.display = Display::Block;
     root_style.box.size.width = Length::length(100);
     root_style.box.padding = {Length::length(2), Length::length(2),
         Length::length(2), Length::length(2)};
+    root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
     const auto root = tree.create_node(root_style);
 
     Style root_float_style;
@@ -100,6 +102,7 @@ void run_nested_case(std::size_t root_float, std::size_t padding,
     outer_style.box.margin.left = Length::length(3);
     outer_style.box.margin.top = Length::length(top_margin ? 4.0f : 0.0f);
     outer_style.box.padding.left = Length::length(padding ? 3.0f : 0.0f);
+    outer_style.box.padding.right = Length::length(padding ? 2.0f : 0.0f);
     outer_style.box.padding.top = Length::length(padding ? 3.0f : 0.0f);
     const auto outer = tree.create_node(outer_style);
     tree.append_child(root, outer);
@@ -129,7 +132,68 @@ void run_nested_case(std::size_t root_float, std::size_t padding,
         + std::to_string(root_float) + '-' + std::to_string(padding)
         + '-' + std::to_string(top_margin) + '-'
         + std::to_string(inner_float) + '-' + std::to_string(display)
-        + '-' + std::to_string(clear);
+        + '-' + std::to_string(clear) + '-' + std::to_string(rtl);
+    reference::write_case(std::cout, name, tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{1, root}, {2, floating}, {3, outer}, {4, inner},
+         {5, follower}, {6, tail}});
+}
+
+void run_deep_case(std::size_t float_side, std::size_t outer_padding,
+                   std::size_t inner_padding, std::size_t display,
+                   std::size_t clear, std::size_t rtl) {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    root_style.box.padding = {Length::length(2), Length::length(2),
+        Length::length(2), Length::length(2)};
+    root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
+    const auto root = tree.create_node(root_style);
+
+    Style float_style;
+    float_style.display = Display::Block;
+    float_style.float_side = float_side == 0 ? FloatSide::Left : FloatSide::Right;
+    float_style.box.size = {Length::length(25), Length::length(30)};
+    const auto floating = tree.create_node(float_style);
+    tree.append_child(root, floating);
+
+    Style outer_style;
+    outer_style.display = Display::Block;
+    outer_style.box.margin.left = Length::length(3);
+    outer_style.box.margin.top = Length::length(5);
+    outer_style.box.padding.left = Length::length(outer_padding ? 3.0f : 0.0f);
+    outer_style.box.padding.top = Length::length(outer_padding ? 3.0f : 0.0f);
+    const auto outer = tree.create_node(outer_style);
+    tree.append_child(root, outer);
+
+    Style inner_style;
+    inner_style.display = Display::Block;
+    inner_style.box.margin.left = Length::length(4);
+    inner_style.box.margin.top = Length::length(2);
+    inner_style.box.padding.left = Length::length(inner_padding ? 2.0f : 0.0f);
+    inner_style.box.padding.top = Length::length(inner_padding ? 2.0f : 0.0f);
+    const auto inner = tree.create_node(inner_style);
+    tree.append_child(outer, inner);
+
+    Style follower_style;
+    follower_style.display = display == 0 ? Display::FlowRoot : Display::Flex;
+    follower_style.clear = clear ? ClearSide::Both : ClearSide::None;
+    follower_style.box.size = {Length::length(20), Length::length(8)};
+    const auto follower = tree.create_node(follower_style);
+    tree.append_child(inner, follower);
+
+    Style tail_style;
+    tail_style.display = Display::FlowRoot;
+    tail_style.box.size = {Length::length(10), Length::length(5)};
+    const auto tail = tree.create_node(tail_style);
+    tree.append_child(root, tail);
+
+    const auto name = std::string("block-float-deep-")
+        + std::to_string(float_side) + '-' + std::to_string(outer_padding)
+        + '-' + std::to_string(inner_padding) + '-'
+        + std::to_string(display) + '-' + std::to_string(clear)
+        + '-' + std::to_string(rtl);
     reference::write_case(std::cout, name, tree.compute(root,
         {AvailableSpace::definite(100), AvailableSpace::max_content()}),
         {{1, root}, {2, floating}, {3, outer}, {4, inner},
@@ -157,10 +221,21 @@ int main() {
         for (std::size_t top_margin = 0; top_margin < 2; ++top_margin)
         for (std::size_t inner_float = 0; inner_float < 2; ++inner_float)
         for (std::size_t display = 0; display < 2; ++display)
-        for (std::size_t clear = 0; clear < 2; ++clear) {
+        for (std::size_t clear = 0; clear < 2; ++clear)
+        for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             std::cout << ',';
             run_nested_case(root_float, padding, top_margin,
-                inner_float, display, clear);
+                inner_float, display, clear, rtl);
+        }
+        for (std::size_t float_side = 0; float_side < 2; ++float_side)
+        for (std::size_t outer_padding = 0; outer_padding < 2; ++outer_padding)
+        for (std::size_t inner_padding = 0; inner_padding < 2; ++inner_padding)
+        for (std::size_t display = 0; display < 2; ++display)
+        for (std::size_t clear = 0; clear < 2; ++clear)
+        for (std::size_t rtl = 0; rtl < 2; ++rtl) {
+            std::cout << ',';
+            run_deep_case(float_side, outer_padding, inner_padding,
+                display, clear, rtl);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

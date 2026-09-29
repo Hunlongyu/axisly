@@ -48,19 +48,21 @@ def make_cases():
                 f"{follower_display}-{follower_width}-{rtl}")
         yield {"name": name, "available": [100, "max-content"], "nodes": nodes}
 
-    for root_float, padding, top_margin, inner_float, display, clear in itertools.product(
-        range(2), range(2), range(2), range(2), range(2), range(2)
+    for root_float, padding, top_margin, inner_float, display, clear, rtl in itertools.product(
+        range(2), range(2), range(2), range(2), range(2), range(2), range(2)
     ):
         nodes = [
             {"id": 1, "parent": None, "style": {"display": "Block",
                 "size": {"width": 100}, "padding": {"left": 2, "top": 2,
-                    "right": 2, "bottom": 2}}},
+                    "right": 2, "bottom": 2},
+                "direction": "Rtl" if rtl else "Ltr"}},
             {"id": 2, "parent": 0, "style": {"display": "Block",
                 "float": "Left" if root_float == 0 else "Right",
                 "size": {"width": 20, "height": 20}}},
             {"id": 3, "parent": 0, "style": {"display": "Block",
                 "margin": {"left": 3, "top": 4 if top_margin else 0},
                 "padding": {"left": 3 if padding else 0,
+                    "right": 2 if padding else 0,
                     "top": 3 if padding else 0}}},
             {"id": 4, "parent": 2, "style": {"display": "Block",
                 "float": "Left" if inner_float == 0 else "Right",
@@ -72,7 +74,37 @@ def make_cases():
                 "size": {"width": 15, "height": 10}}},
         ]
         name = (f"block-float-nested-{root_float}-{padding}-{top_margin}-"
-                f"{inner_float}-{display}-{clear}")
+                f"{inner_float}-{display}-{clear}-{rtl}")
+        yield {"name": name, "available": [100, "max-content"], "nodes": nodes}
+
+    for float_side, outer_padding, inner_padding, display, clear, rtl in itertools.product(
+        range(2), range(2), range(2), range(2), range(2), range(2)
+    ):
+        nodes = [
+            {"id": 1, "parent": None, "style": {"display": "Block",
+                "size": {"width": 100}, "padding": {"left": 2, "top": 2,
+                    "right": 2, "bottom": 2},
+                "direction": "Rtl" if rtl else "Ltr"}},
+            {"id": 2, "parent": 0, "style": {"display": "Block",
+                "float": "Left" if float_side == 0 else "Right",
+                "size": {"width": 25, "height": 30}}},
+            {"id": 3, "parent": 0, "style": {"display": "Block",
+                "margin": {"left": 3, "top": 5},
+                "padding": {"left": 3 if outer_padding else 0,
+                    "top": 3 if outer_padding else 0}}},
+            {"id": 4, "parent": 2, "style": {"display": "Block",
+                "margin": {"left": 4, "top": 2},
+                "padding": {"left": 2 if inner_padding else 0,
+                    "top": 2 if inner_padding else 0}}},
+            {"id": 5, "parent": 3, "style": {
+                "display": "FlowRoot" if display == 0 else "Flex",
+                "clear": "Both" if clear else "None",
+                "size": {"width": 20, "height": 8}}},
+            {"id": 6, "parent": 0, "style": {"display": "FlowRoot",
+                "size": {"width": 10, "height": 5}}},
+        ]
+        name = (f"block-float-deep-{float_side}-{outer_padding}-{inner_padding}-"
+                f"{display}-{clear}-{rtl}")
         yield {"name": name, "available": [100, "max-content"], "nodes": nodes}
 
 
@@ -91,7 +123,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_BLOCK_FLOAT_MATRIX_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 320
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 448
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

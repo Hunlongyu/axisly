@@ -125,7 +125,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     Unit cursor = 0;
     MarginStrut pending_margin, leading_margin;
     bool has_flow = false, has_nonempty_flow = false;
-    bool leading_open = true, leading_clear = false;
+    bool leading_open = true, leading_clear = false, placed_local_float = false;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto child_id = node.children[source];
         const auto& child = get(child_id);
@@ -236,6 +236,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 checked(static_cast<double>(y_origin) + top, child_id), child_id);
             floats.add(child.style.float_side, float_x, float_y,
                 outer_float_width, outer_float_height, child_id);
+            placed_local_float = true;
         } else {
             const MarginStrut child_top = nested.block_margins
                 ? nested.block_margins->top : MarginStrut::from(margin.top);
@@ -244,7 +245,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             const bool child_through = nested.block_margins
                 && nested.block_margins->through;
             if (leading_open) {
-                if (child.style.clear != ClearSide::None || !floats.empty()) {
+                if (child.style.clear != ClearSide::None || placed_local_float) {
                     leading_clear = true;
                 }
                 if (!leading_clear) {
@@ -301,7 +302,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         && border.bottom == 0 && padding.bottom == 0
         && !preferred_height && !box.minimum.height.value_or(Unit{0});
     const bool through = collapse_top && collapse_bottom
-        && !has_nonempty_flow && floats.empty();
+        && !has_nonempty_flow && !placed_local_float;
     Unit top_shift = 0;
     if (through) {
         const MarginStrut all = margins.top.merged(margins.bottom)

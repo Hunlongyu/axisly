@@ -226,10 +226,11 @@ basis／增长策略、LTR／RTL 与三种尺寸查询，共 3,456 组。叶节�
 内容尺寸不同；比较嵌套节点、叶节点的盒尺寸与滚动溢出，验证固有约束
 传递、交叉轴探测、非拉伸 Grid 子容器的尺寸确定及最终双轴布局。
 
-`test_block_float_matrix.py` 生成 320 组 Block／Float 组合：根容器 Block／
+`test_block_float_matrix.py` 生成 448 组 Block／Float 组合：根容器 Block／
 FlowRoot、左右双侧浮动、四种 `clear`、普通 Block／FlowRoot／Flex／Grid
-跟随节点、自动／固定宽度与 LTR／RTL；另有 64 组普通 Block 后代的浮动、
-padding、外边距和独立格式化上下文交互。普通 Block 后代使用共享浮动上下文，
+跟随节点、自动／固定宽度与 LTR／RTL；另有 128 组普通 Block 后代的浮动、
+padding、外边距、方向与独立格式化上下文交互，以及 64 组三层 Block 的
+跨层外边距折叠。普通 Block 后代使用共享浮动上下文，
 FlowRoot／Flex／Grid 使用独立上下文；差分比较父相对几何和滚动溢出。
 `inherited_float_invalidation` 验证祖先浮动尺寸修改后，后代布局与缓存失效。
 复杂外边距折叠和更多深层嵌套仍待验收。

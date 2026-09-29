@@ -28,7 +28,7 @@
 | `clear` | None／Left／Right／Both | 部分：普通块按左右浮动底部清除；浮动盒自身清除按 Taffy 0.14 的已有浮动底部下移；双侧浮动与跨层普通 Block 后代组合已差分，复杂折叠未验收 | P4 | 已建：block-float-clear、block-float-self-clear、block-float-matrix |
 | `position` | Relative／Absolute | 部分：相对偏移、绝对定位、Block 正常流静态纵坐标、Flex/Grid 基本静态对齐及 Grid 指定区域；绝对定位自动宽度 Block 查询内容并包含内部浮动；复杂静态位置和祖先包含块未完整 | P4 | 已建：hidden-and-positioned、grid-absolute-area、absolute-block-static-flow、absolute-block-auto-static、absolute-block-auto-floats、absolute-flex-static-center、absolute-grid-static-center |
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；百分比偏移已覆盖 Block／Flex／Grid、边框内包含块和 Grid 指定区域；复杂百分比循环未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint、absolute-percent-basic、absolute-percent-border、absolute-percent-grid-area |
-| `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；嵌套 Block／Flex／Grid 容器的 min-content／max-content／fit-content 与有参 fit-content 已按双轴差分，含根节点尺寸查询、Block 正常流高度及局部缓存失效；独立 calc 参考树验证叶子双轴及嵌套 Block／Flex／Grid 的确定基准计算；更深层容器固有尺寸与循环百分比未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width、test_intrinsic_size.py、intrinsic_container_invalidation、calc-leaf-size／indefinite／partial-basis、calc-block-child、calc-flex-gap-basis、calc-grid-gap-item |
+| `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；嵌套 Block／Flex／Grid 容器的 min-content／max-content／fit-content 与有参 fit-content 已按双轴差分，含三层混合算法、同节点双轴固有关键字、根节点尺寸查询、Block 正常流高度及局部缓存失效；独立 calc 参考树验证叶子双轴及嵌套 Block／Flex／Grid 的确定基准计算；循环百分比与更多跨字段组合未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width、test_intrinsic_size.py、intrinsic_container_invalidation、calc-leaf-size／indefinite／partial-basis、calc-block-child、calc-flex-gap-basis、calc-grid-gap-item |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；Flex 容器同时存在最小与最大主轴约束时按最小值确定初次分行上限；叶子 calc 最小尺寸已对照；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height、calc-leaf-min-max、test_flex_bounds.py |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限限制初次分行，`min-content`／`max-content` 查询保留该分行，不在最终尺寸确定后重排；Flex 项目基础尺寸与受上下界约束的假设尺寸分离；叶子 calc 最大尺寸已对照；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance、calc-leaf-min-max、test_flex_bounds.py；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限、Flex 拉伸交叉轴基准和 Grid 自动轨道比例贡献已差分；未定交叉轴及复杂 min/max 组合未完整 | P1–P3 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、flex-replaced-ratio-max-width、grid-replaced-ratio-max-width；待建：ratio-indefinite-cross-axis |
@@ -232,7 +232,8 @@ LTR／RTL，以及明确尺寸、自动尺寸、自动尺寸受最大／最小�
 `test_intrinsic_size.py` 逐轴组合 Block／Flex／Grid、min-content／max-content／
 fit-content／三种有参 fit-content 长度和百分比、LTR／RTL、确定／最小／
 最大内容根可用空间，以及 Block／Flex／Grid 父子算法的九种搭配和子容器
-min/max 尺寸约束，共 1,008 组。除矩形和盒边外，同时比较节点局部溢出与
+min/max 尺寸约束；还覆盖三层混合算法的 27 种组合和同节点双轴固有关键字，
+共 2,142 组。除矩形和盒边外，同时比较节点局部溢出与
 Grid 轨道。锁定的 Taffy 0.14 在根容器的尺寸查询中以根可用空间决定该轴
 尺寸；普通 Block 父节点仅解析子项的宽度固有关键字，高度保持正常流内容
 尺寸；Block／Flex 子容器的有参 fit-content 尺寸按最大内容结果输出，

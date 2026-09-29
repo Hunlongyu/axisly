@@ -16,13 +16,16 @@ ITEM_SIZES = ((22, 17), (29, 23), (18, 31), (27, 14))
 
 
 def make_cases(scenario="definite"):
-    for direction, wrap, item, content, lines, rtl in itertools.product(
+    for direction, wrap, item, content, lines, rtl, line_count in itertools.product(
         range(len(DIRECTIONS)), range(len(WRAPS)), range(len(ITEM_POSITIONS)),
-        range(len(CONTENT_POSITIONS)), range(len(LINE_POSITIONS)), range(2)
+        range(len(CONTENT_POSITIONS)), range(len(LINE_POSITIONS)), range(2),
+        range(1, 4)
     ):
+        if wrap < 3 and line_count != 1:
+            continue
         prefix = {"definite": "flex-matrix", "max-content": "flex-intrinsic-max",
                   "min-content": "flex-intrinsic-min"}[scenario]
-        name = f"{prefix}-{direction}-{wrap}-{item}-{content}-{lines}-{rtl}"
+        name = f"{prefix}-{direction}-{wrap}-{item}-{content}-{lines}-{rtl}-{line_count}"
         style = {
             "display": "Flex", "flex_direction": DIRECTIONS[direction],
             "flex_wrap": WRAPS[wrap], "align_items": ITEM_POSITIONS[item],
@@ -33,7 +36,7 @@ def make_cases(scenario="definite"):
             "gap": {"width": 4, "height": 6},
         }
         if wrap >= 3:
-            style["flex_line_count"] = 2
+            style["flex_line_count"] = line_count
         if scenario == "definite":
             style["size"] = {"width": 72, "height": 68}
         nodes = [{"id": 1, "parent": None, "style": style}]
@@ -101,7 +104,7 @@ def main():
     ).stdout)
     assert native["protocol"] == ("AXISLY_FLEX_MATRIX_V1" if args.scenario == "definite"
                                   else "AXISLY_FLEX_INTRINSIC_MATRIX_V1")
-    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1080
+    assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1944
     failures = []
     for actual, expected in zip(native["cases"], oracle_cases, strict=True):
         try:

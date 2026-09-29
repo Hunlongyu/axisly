@@ -1,6 +1,7 @@
 #include "css_reference_output.hpp"
 
 #include <array>
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -36,23 +37,25 @@ constexpr std::array item_sizes{
 std::string case_name(std::size_t scenario,
                       std::size_t direction, std::size_t wrap,
                       std::size_t item, std::size_t content,
-                      std::size_t lines, std::size_t rtl) {
+                      std::size_t lines, std::size_t rtl,
+                      std::size_t line_count) {
     const auto prefix = scenario == 0 ? "flex-matrix-"
         : scenario == 1 ? "flex-intrinsic-max-" : "flex-intrinsic-min-";
     return prefix + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(item) + '-'
         + std::to_string(content) + '-' + std::to_string(lines) + '-'
-        + std::to_string(rtl);
+        + std::to_string(rtl) + '-' + std::to_string(line_count);
 }
 
 void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
               std::size_t item, std::size_t content,
-              std::size_t lines, std::size_t rtl) {
+              std::size_t lines, std::size_t rtl,
+              std::size_t line_count) {
     LayoutTree tree;
     Style root_style;
     root_style.flex_direction = directions[direction];
     root_style.flex_wrap = wraps[wrap];
-    if (wrap >= 3) root_style.flex_line_count = 2;
+    if (wrap >= 3) root_style.flex_line_count = static_cast<std::uint16_t>(line_count);
     root_style.align_items = {item_positions[item]};
     root_style.justify_content = {content_positions[content]};
     root_style.align_content = {line_positions[lines]};
@@ -75,7 +78,7 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
         nodes.emplace_back(static_cast<int>(index) + 2, child);
     }
     reference::write_case(std::cout,
-        case_name(scenario, direction, wrap, item, content, lines, rtl),
+        case_name(scenario, direction, wrap, item, content, lines, rtl, line_count),
         tree.compute(root, scenario == 0
             ? AvailableSize{AvailableSpace::definite(72), AvailableSpace::definite(68)}
             : scenario == 1
@@ -104,10 +107,13 @@ int main(int argc, char** argv) {
         for (std::size_t item = 0; item < item_positions.size(); ++item)
         for (std::size_t content = 0; content < content_positions.size(); ++content)
         for (std::size_t lines = 0; lines < line_positions.size(); ++lines)
-        for (std::size_t rtl = 0; rtl < 2; ++rtl) {
+        for (std::size_t rtl = 0; rtl < 2; ++rtl)
+        for (std::size_t line_count = 1; line_count <= 3; ++line_count) {
+            if (wrap < 3 && line_count != 1) continue;
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, direction, wrap, item, content, lines, rtl);
+            run_case(scenario, direction, wrap, item, content, lines, rtl,
+                line_count);
         }
         std::cout << "]}\n";
     } catch (const std::exception& error) {

@@ -45,7 +45,7 @@
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；ColumnReverse 的居中、换列、RTL 反向换列与自动外边距已差分，复杂尺寸交互未验收 | P2 | 已建：flex-row-grow、flex-column-reverse-center／wrap／rtl-wrap-reverse／auto-margin |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；`min-content` 下允许换行时以最大单项尺寸确定初始主轴宽度并重新分行；分行采用受项目 min/max 约束的假设尺寸，反向换行溢出时应用行对齐回退；五种策略均与四种主轴方向、RTL、项目和内容对齐在三种尺寸查询下差分；平衡换行的可变内容和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse、test_flex_matrix.py、test_flex_bounds.py |
-| `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；两种 Balance 策略在最少两行时完成固定尺寸组合差分，其他行数和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance、test_flex_matrix.py |
+| `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；两种 Balance 策略在最少一、二、三行时完成固定尺寸组合差分，更多项目和边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance、test_flex_matrix.py |
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比、固有关键字及 Flex 确定宽度容器中的 calc 基准已差分，显式与百分比 basis 已加入三种尺寸查询下的方向／五种换行策略／RTL 组合；固有尺寸贡献与实际基础尺寸分离，自动尺寸容器在 `max-content` 下保持原分行；Flex／Grid 混合树的测量叶节点已覆盖三种尺寸查询，更多嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis、calc-flex-gap-basis、test_flex_factors.py、test_mixed_nested.py |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；四向主轴、五种换行策略、LTR／RTL 与显式／百分比 basis 已组合差分；复杂嵌套仍不足。Taffy 0.14 在系数和小于 1 时对初始剩余空间缩放后再次扣除行间隙；该版本差分已固定，但与 W3C 步骤 9.7 的规则不同，见下文差异记录 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze、test_flex_factors.py |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；四向主轴、五种换行策略、LTR／RTL 已组合差分；嵌套 Flex 收缩中按真实约束违例冻结，避免浮点舍入把未违例项目一起冻结；其他复杂嵌套仍不足。低系数与行间隙的版本行为见上项 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze、test_flex_factors.py、test_mixed_nested.py |
@@ -208,9 +208,9 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 `test_flex_matrix.py` 另外在确定尺寸、`max-content`、`min-content` 三种
-查询下各生成 1,080 组确定性的 Flex 组合：四种主轴方向、五种换行／
+查询下各生成 1,944 组确定性的 Flex 组合：四种主轴方向、五种换行／
 平衡策略、三种项目对齐、三种主轴内容对齐、三种行对齐和两种方向；
-平衡策略设置最少两行。该测试比较每个
+平衡策略分别设置最少一、二、三行。该测试比较每个
 节点的矩形、盒边、滚动条与溢出，项目尺寸固定。
 `test_flex_bounds.py` 另外组合四种主轴方向、三种普通换行、四组项目主轴
 尺寸上下界和 LTR／RTL，共 96 组；覆盖 flex 基础尺寸、假设尺寸、冻结与

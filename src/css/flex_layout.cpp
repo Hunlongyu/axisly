@@ -241,9 +241,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         ? std::optional<Unit>(std::max(Unit{0}, *border_height - *deco_height)) : std::nullopt;
     const auto main_available = row ? inner_width : inner_height;
     const auto cross_available = row ? inner_height : inner_width;
-    const Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
+    Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
         main_available, node.id);
-    const Unit cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
+    Unit cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
         cross_available, node.id);
 
     std::vector<Fragment> fragments(node.children.size());
@@ -415,6 +415,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         }
     }
     const Unit main_size = row ? *inner_width : *inner_height;
+    if (!main_available) {
+        main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
+            main_size, node.id);
+        lines = collect_flex_lines(items, row, main_size, main_gap,
+            node.style.flex_wrap, node.style.flex_line_count);
+    }
     for (auto& line : lines) {
         resolve_flexible_lengths(line, items, main_size, main_gap, row);
         for (const auto index : line.items) {
@@ -470,6 +476,15 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         border_width = constrain_axis(checked(used_cross + *deco_width,
             node.id), box.minimum.width, box.maximum.width);
         inner_width = std::max(Unit{0}, *border_width - *deco_width);
+    }
+    if (!cross_available) {
+        const Unit previous_gap = cross_gap;
+        cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
+            row ? *inner_height : *inner_width, node.id);
+        if (lines.size() > 1) {
+            used_cross += static_cast<double>(lines.size() - 1)
+                * (cross_gap - previous_gap);
+        }
     }
     const Unit cross_size = row ? *inner_height : *inner_width;
     if (lines.size() == 1) lines.front().cross = cross_size;

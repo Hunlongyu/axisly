@@ -364,8 +364,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *decoration_width)) : std::nullopt;
     auto inner_height = border_height
         ? std::optional<Unit>(std::max(Unit{0}, *border_height - *decoration_height)) : std::nullopt;
-    const Unit column_gap = resolved_gap(node.style.gap.width, inner_width, node.id);
-    const Unit row_gap = resolved_gap(node.style.gap.height, inner_height, node.id);
+    Unit column_gap = resolved_gap(node.style.gap.width, inner_width, node.id);
+    Unit row_gap = resolved_gap(node.style.gap.height, inner_height, node.id);
     const auto repeat_basis = [](std::optional<Unit> preferred,
         std::optional<Unit> minimum, std::optional<Unit> maximum, Unit decoration) {
         auto value = preferred ? preferred : maximum ? maximum : minimum;
@@ -484,14 +484,22 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             + *decoration_height, node.id), box.minimum.height, box.maximum.height);
         inner_height = std::max(Unit{0}, *border_height - *decoration_height);
     }
-    if (intrinsic_width && (*inner_width != measured_width || cyclic_columns)) {
+    const Unit final_column_gap = resolved_gap(node.style.gap.width, inner_width, node.id);
+    const Unit final_row_gap = resolved_gap(node.style.gap.height, inner_height, node.id);
+    const bool changed_column_gap = final_column_gap != column_gap;
+    const bool changed_row_gap = final_row_gap != row_gap;
+    column_gap = final_column_gap;
+    row_gap = final_row_gap;
+    if (intrinsic_width && (*inner_width != measured_width || cyclic_columns
+        || changed_column_gap)) {
         track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
             min_column, max_column, inner_width, column_gap, node.id);
         collapse_auto_fit(track_columns, columns, placements, true);
         size_axis(track_columns, contributions, true, inner_width,
             constraints.available.width.kind, node.id);
     }
-    if (intrinsic_height && (*inner_height != measured_height || cyclic_rows)) {
+    if (intrinsic_height && (*inner_height != measured_height || cyclic_rows
+        || changed_row_gap)) {
         track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
             min_row, max_row, inner_height, row_gap, node.id);
         collapse_auto_fit(track_rows, rows, placements, false);

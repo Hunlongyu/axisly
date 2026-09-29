@@ -41,7 +41,7 @@
 | `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch，self-start／self-end 按项目自身方向解析；基线未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr；待建：justify-self-full |
 | `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
-| `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；循环百分比未完整 | P2/P3 | 已建：flex-row-grow；待建：percent-gap |
+| `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；自动容器固有尺寸阶段以零参与百分比间隙计算，尺寸确定后重算 Flex 行内分配和 Grid 轨道偏移；多行、自动重复及嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap；待建：percent-gap-multiline |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐已接入；RTL 组合未验收 | P4 | 已建：block-legacy-text-align |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
 | `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；复杂组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse |
@@ -150,6 +150,8 @@
 | `block-replaced-ratio` | 替换 Block 测量叶子的固有宽度与比例高度 |
 | `flex-replaced-ratio`／`flex-replaced-ratio-max-width` | Flex 的确定拉伸交叉轴经比例形成主轴基准，再按可用宽度和最大宽度收缩 |
 | `grid-replaced-ratio`／`grid-replaced-ratio-fixed`／`grid-replaced-ratio-start`／`grid-replaced-ratio-max-width` | Grid 自动列通过行区域高度与比例获得固有贡献；固定列、显式 start 对齐及最大宽度改变结果 |
+| `flex-auto-percent-gap`／`flex-fixed-percent-gap` | Flex 百分比主轴间隙在自动宽度计算时为零，确定宽度后重新伸缩项目；与固定宽度基准对照 |
+| `grid-auto-percent-gap`／`grid-fixed-percent-gap` | Grid 百分比列间隙在自动宽度确定后重新形成轨道偏移，容器固有宽度不随之增加 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -172,8 +174,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、一百六十三组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这一百六十三组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、一百六十七组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这一百六十七组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

@@ -15,6 +15,19 @@ struct AbsoluteAxis {
     Unit offset{}, start_margin{}, end_margin{};
 };
 
+enum class AbsoluteMarginMode { InsetConstrained, FlexContainer, GridArea };
+
+struct AbsoluteAxisInput {
+    std::optional<Unit> start, end;
+    Unit containing_size{}, item_size{};
+    Unit start_margin{}, end_margin{};
+    bool auto_start{}, auto_end{};
+    Unit auto_margin_basis{};
+    AbsoluteMarginMode margin_mode{AbsoluteMarginMode::InsetConstrained};
+    bool prefer_end{};
+    NodeId node{};
+};
+
 enum class StaticPlacement { Start, Center, End };
 
 StaticPlacement writing_start(bool horizontal, Direction direction) {
@@ -85,28 +98,40 @@ Unit static_offset(StaticPlacement placement, Unit containing_size, Unit item_si
     return start_margin;
 }
 
-AbsoluteAxis solve_absolute_axis(std::optional<Unit> start,
-    std::optional<Unit> end, Unit containing_size, Unit item_size,
-    Unit start_margin, Unit end_margin, bool auto_start, bool auto_end,
-    bool prefer_end, NodeId node) {
-    if (start && end) {
-        const Unit free = checked(static_cast<double>(containing_size)
-            - *start - *end - item_size - start_margin - end_margin, node);
-        if (free > 0 && (auto_start || auto_end)) {
-            const Unit share = checked(static_cast<double>(free)
-                / (static_cast<int>(auto_start) + static_cast<int>(auto_end)), node);
-            if (auto_start) start_margin = share;
-            if (auto_end) end_margin = share;
+AbsoluteAxis solve_absolute_axis(const AbsoluteAxisInput& input) {
+    Unit start_margin = input.start_margin;
+    Unit end_margin = input.end_margin;
+    const Unit specified_start_margin = start_margin;
+    const Unit specified_end_margin = end_margin;
+    const bool distribute_auto_margins = input.margin_mode == AbsoluteMarginMode::GridArea
+        || (input.start && input.end);
+    if (distribute_auto_margins) {
+        double free = static_cast<double>(input.auto_margin_basis)
+            - input.item_size - start_margin - end_margin;
+        if (input.margin_mode == AbsoluteMarginMode::InsetConstrained) {
+            free -= *input.start + *input.end;
+        }
+        if (free > 0 && (input.auto_start || input.auto_end)) {
+            const Unit share = checked(free
+                / (static_cast<int>(input.auto_start) + static_cast<int>(input.auto_end)), input.node);
+            if (input.auto_start) start_margin = share;
+            if (input.auto_end) end_margin = share;
         }
     }
-    const Unit offset = prefer_end && end
-        ? checked(static_cast<double>(containing_size) - *end
-            - item_size - end_margin, node)
-        : start ? checked(static_cast<double>(*start) + start_margin, node)
-        : end ? checked(static_cast<double>(containing_size) - *end
-            - item_size - end_margin, node)
-        : prefer_end ? checked(static_cast<double>(containing_size)
-            - item_size - end_margin, node) : start_margin;
+    // Grid reports the resolved auto margins, but an explicit inset uses
+    // only non-auto margins when choosing the border-box position.
+    const Unit position_start_margin = input.margin_mode == AbsoluteMarginMode::GridArea
+        && (input.start || input.end) ? specified_start_margin : start_margin;
+    const Unit position_end_margin = input.margin_mode == AbsoluteMarginMode::GridArea
+        && (input.start || input.end) ? specified_end_margin : end_margin;
+    const Unit offset = input.prefer_end && input.end
+        ? checked(static_cast<double>(input.containing_size) - *input.end
+            - input.item_size - position_end_margin, input.node)
+        : input.start ? checked(static_cast<double>(*input.start) + position_start_margin, input.node)
+        : input.end ? checked(static_cast<double>(input.containing_size) - *input.end
+            - input.item_size - position_end_margin, input.node)
+        : input.prefer_end ? checked(static_cast<double>(input.containing_size)
+            - input.item_size - position_end_margin, input.node) : position_start_margin;
     return {offset, start_margin, end_margin};
 }
 } // namespace
@@ -171,15 +196,34 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
             - margin.top - margin.bottom, child.id));
     }
     auto fragment = layout(child_id, constraints, depth + 1);
-    const auto horizontal = solve_absolute_axis(left, right, containing_width,
-        fragment.size.width, margin.left, margin.right,
-        child_box.margin.left.kind == EdgeKind::Auto,
-        child_box.margin.right.kind == EdgeKind::Auto,
-        parent.style.box.direction == Direction::Rtl, child.id);
-    const auto vertical = solve_absolute_axis(top, bottom, containing_height,
-        fragment.size.height, margin.top, margin.bottom,
-        child_box.margin.top.kind == EdgeKind::Auto,
-        child_box.margin.bottom.kind == EdgeKind::Auto, false, child.id);
+    const auto margin_mode = parent.style.display == Display::Flex
+        ? AbsoluteMarginMode::FlexContainer
+        : parent.style.display == Display::Grid
+            ? AbsoluteMarginMode::GridArea
+            : AbsoluteMarginMode::InsetConstrained;
+    const Unit horizontal_margin_basis = margin_mode == AbsoluteMarginMode::FlexContainer
+        ? parent_size.width : containing_width;
+    const Unit vertical_margin_basis = margin_mode == AbsoluteMarginMode::FlexContainer
+        ? parent_size.height : containing_height;
+    const auto horizontal = solve_absolute_axis({
+        .start = left, .end = right,
+        .containing_size = containing_width, .item_size = fragment.size.width,
+        .start_margin = margin.left, .end_margin = margin.right,
+        .auto_start = child_box.margin.left.kind == EdgeKind::Auto,
+        .auto_end = child_box.margin.right.kind == EdgeKind::Auto,
+        .auto_margin_basis = horizontal_margin_basis, .margin_mode = margin_mode,
+        .prefer_end = parent.style.box.direction == Direction::Rtl,
+        .node = child.id,
+    });
+    const auto vertical = solve_absolute_axis({
+        .start = top, .end = bottom,
+        .containing_size = containing_height, .item_size = fragment.size.height,
+        .start_margin = margin.top, .end_margin = margin.bottom,
+        .auto_start = child_box.margin.top.kind == EdgeKind::Auto,
+        .auto_end = child_box.margin.bottom.kind == EdgeKind::Auto,
+        .auto_margin_basis = vertical_margin_basis, .margin_mode = margin_mode,
+        .node = child.id,
+    });
     auto placed_horizontal = horizontal;
     auto placed_vertical = vertical;
     const bool static_x = !left && !right;
@@ -236,14 +280,16 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                 parent.style.box.direction, child.style.box.direction, false,
                 fragment.size.width + margin.left + margin.right > containing_width);
             placed_horizontal.offset = static_offset(placement, containing_width,
-                fragment.size.width, margin.left, margin.right, child.id);
+                fragment.size.width, horizontal.start_margin,
+                horizontal.end_margin, child.id);
         }
         if (static_y) {
             const auto placement = item_placement(align, false,
                 parent.style.box.direction, child.style.box.direction, false,
                 fragment.size.height + margin.top + margin.bottom > containing_height);
             placed_vertical.offset = static_offset(placement, containing_height,
-                fragment.size.height, margin.top, margin.bottom, child.id);
+                fragment.size.height, vertical.start_margin,
+                vertical.end_margin, child.id);
         }
     } else if ((parent.style.display == Display::Block
         || parent.style.display == Display::FlowRoot) && (static_x || static_y)) {

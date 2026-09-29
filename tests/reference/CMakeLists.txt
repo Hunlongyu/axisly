@@ -112,6 +112,11 @@ target_link_libraries(axisly_content_alignment_matrix_native PRIVATE axisly::axi
 set_target_properties(axisly_content_alignment_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_content_alignment_matrix_native)
 
+add_executable(axisly_position_matrix_native position_matrix_native.cpp)
+target_link_libraries(axisly_position_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_position_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_position_matrix_native)
+
 add_test(NAME axisly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
     --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/failures")
@@ -276,6 +281,12 @@ add_test(NAME axisly.reference.content_alignment_matrix COMMAND "${Python3_EXECU
     --axisly "$<TARGET_FILE:axisly_content_alignment_matrix_native>"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.content_alignment_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.position_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_position_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_position_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.position_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_calc.py"

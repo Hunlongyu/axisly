@@ -22,6 +22,15 @@ ResolvedDimensions grid_item_minimum(const ResolvedBox& box) {
         std::max(box.specified_minimum.height.value_or(height_floor), height_floor)};
 }
 
+Unit physical_track_start(Unit content_start, Unit inner_size,
+                          Unit inline_start, Unit span,
+                          Direction direction, NodeId node) {
+    const double offset = direction == Direction::Rtl
+        ? static_cast<double>(inner_size) - inline_start - span
+        : inline_start;
+    return checked(static_cast<double>(content_start) + offset, node);
+}
+
 Unit definite_track_size(const TrackSizing& track, Unit basis, NodeId id) {
     const auto minimum = track.minimum.resolve_numeric(basis);
     const auto maximum = track.maximum.resolve_numeric(basis);
@@ -760,10 +769,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto size = track_columns.tracks[i].size;
         report.columns.push_back(size);
         const auto inline_start = track_columns.offsets[i];
-        const auto physical_start = node.style.box.direction == Direction::Rtl
-            ? static_cast<double>(content_x) + *inner_width - inline_start - size
-            : static_cast<double>(content_x) + inline_start;
-        const auto start = checked(physical_start, node.id);
+        const auto start = physical_track_start(content_x, *inner_width,
+            inline_start, size, node.style.box.direction, node.id);
         report.column_positions.push_back({start,
             checked(static_cast<double>(start) + size, node.id)});
     }
@@ -823,9 +830,10 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             if (explicit_span(child.style.grid.column, absolute_columns[i], track_columns)) {
                 const auto start = *absolute_columns[i].start;
                 const auto end = start + absolute_columns[i].span;
-                area.x = checked(static_cast<double>(content_x)
-                    + track_columns.line(start), id);
                 area.width = track_columns.span(start, end);
+                area.x = physical_track_start(content_x, *inner_width,
+                    track_columns.line(start), area.width,
+                    node.style.box.direction, id);
             }
             if (explicit_span(child.style.grid.row, absolute_rows[i], track_rows)) {
                 const auto start = *absolute_rows[i].start;

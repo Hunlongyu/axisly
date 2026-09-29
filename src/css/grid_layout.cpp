@@ -8,7 +8,6 @@
 #include <iterator>
 #include <limits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 namespace axisly::css::detail {
@@ -229,94 +228,157 @@ AxisPlacement axis_placement(const GridPlacement& value, const ExpandedTemplate&
     return {std::nullopt, span};
 }
 
-std::uint64_t cell_key(std::int32_t row, std::int32_t column) {
-    return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(row)) << 32)
-        | static_cast<std::uint32_t>(column);
-}
+struct OccupiedArea {
+    std::int32_t primary_start{}, primary_end{};
+    std::int32_t secondary_start{}, secondary_end{};
+    bool auto_placed{};
+};
 
-bool vacant(const std::unordered_set<std::uint64_t>& occupied,
-            std::int32_t row, std::int32_t column,
-            std::int32_t row_span, std::int32_t column_span) {
-    for (std::int32_t r = row; r < row + row_span; ++r) {
-        for (std::int32_t c = column; c < column + column_span; ++c) {
-            if (occupied.contains(cell_key(r, c))) return false;
-        }
+class GridOccupancy {
+public:
+    void add(std::int32_t primary, std::int32_t primary_span,
+             std::int32_t secondary, std::int32_t secondary_span, bool auto_placed) {
+        areas_.push_back({primary, primary + primary_span,
+            secondary, secondary + secondary_span, auto_placed});
     }
-    return true;
-}
 
-void occupy(std::unordered_set<std::uint64_t>& occupied, const Placement& item) {
-    for (auto row = item.row_start; row < item.row_end; ++row) {
-        for (auto column = item.column_start; column < item.column_end; ++column) {
-            occupied.insert(cell_key(row, column));
+    [[nodiscard]] std::optional<std::int32_t> collision_jump(
+        std::int32_t primary, std::int32_t primary_span,
+        std::int32_t secondary, std::int32_t secondary_span,
+        bool along_primary) const {
+        std::optional<std::int32_t> next;
+        for (const auto& area : areas_) {
+            if (primary >= area.primary_end || primary + primary_span <= area.primary_start
+                || secondary >= area.secondary_end
+                || secondary + secondary_span <= area.secondary_start) continue;
+            const auto end = along_primary ? area.primary_end : area.secondary_end;
+            next = std::max(next.value_or(end), end);
         }
+        return next;
     }
-}
+
+    [[nodiscard]] std::optional<std::int32_t> last_auto_on_secondary(
+        std::int32_t secondary) const {
+        std::optional<std::int32_t> last;
+        for (const auto& area : areas_) {
+            if (!area.auto_placed || secondary < area.secondary_start
+                || secondary >= area.secondary_end) continue;
+            last = std::max(last.value_or(area.primary_end - 1), area.primary_end - 1);
+        }
+        return last;
+    }
+
+private:
+    std::vector<OccupiedArea> areas_;
+};
 
 void place(std::vector<Placement>& placements, std::int32_t explicit_rows,
            std::int32_t explicit_columns, GridAutoFlow flow, NodeId id) {
-    std::unordered_set<std::uint64_t> occupied;
-    auto columns = std::max<std::int32_t>(1, explicit_columns);
-    auto rows = std::max<std::int32_t>(1, explicit_rows);
-    for (auto& item : placements) {
-        if (item.hidden) continue;
-        if (item.column.start) columns = std::max(columns, *item.column.start + item.column.span);
-        if (item.row.start) rows = std::max(rows, *item.row.start + item.row.span);
-    }
-    for (auto& item : placements) {
-        if (item.hidden || !item.row.start || !item.column.start) continue;
-        item.row_start = *item.row.start;
-        item.column_start = *item.column.start;
-        item.row_end = item.row_start + item.row.span;
-        item.column_end = item.column_start + item.column.span;
-        occupy(occupied, item);
-    }
     const bool by_row = flow == GridAutoFlow::Row || flow == GridAutoFlow::RowDense;
     const bool dense = flow == GridAutoFlow::RowDense || flow == GridAutoFlow::ColumnDense;
-    std::int32_t cursor_row = 0, cursor_column = 0;
+    const auto primary = [by_row](const Placement& item) -> const AxisPlacement& {
+        return by_row ? item.column : item.row;
+    };
+    const auto secondary = [by_row](const Placement& item) -> const AxisPlacement& {
+        return by_row ? item.row : item.column;
+    };
+    std::int32_t primary_start = 0;
+    std::int32_t primary_end = by_row ? explicit_columns : explicit_rows;
+    std::int32_t secondary_start = 0;
+    std::int32_t largest_primary_span = 1;
+    for (const auto& item : placements) {
+        if (item.hidden) continue;
+        const auto& p = primary(item);
+        const auto& s = secondary(item);
+        if (p.start) {
+            primary_start = std::min(primary_start, *p.start);
+            primary_end = std::max(primary_end, *p.start + p.span);
+        } else largest_primary_span = std::max(largest_primary_span, p.span);
+        if (s.start) secondary_start = std::min(secondary_start, *s.start);
+    }
+    primary_end = std::max(primary_end, primary_start + largest_primary_span);
+    GridOccupancy occupied;
+    const auto record = [&](Placement& item, std::int32_t p, std::int32_t s,
+                            bool auto_placed) {
+        const auto p_end = p + primary(item).span;
+        const auto s_end = s + secondary(item).span;
+        if (by_row) {
+            item.column_start = p;
+            item.column_end = p_end;
+            item.row_start = s;
+            item.row_end = s_end;
+        } else {
+            item.row_start = p;
+            item.row_end = p_end;
+            item.column_start = s;
+            item.column_end = s_end;
+        }
+        occupied.add(p, primary(item).span, s, secondary(item).span, auto_placed);
+        primary_end = std::max(primary_end, p_end);
+    };
+
+    // Definite positions reserve their cells before either auto-placement phase.
     for (auto& item : placements) {
-        if (item.hidden || (item.row.start && item.column.start)) continue;
-        if (by_row) columns = std::max(columns, item.column.span);
-        else rows = std::max(rows, item.row.span);
+        if (!item.hidden && primary(item).start && secondary(item).start) {
+            record(item, *primary(item).start, *secondary(item).start, false);
+        }
+    }
+
+    // A definite row (column flow: column) is placed before fully automatic items.
+    for (auto& item : placements) {
+        if (item.hidden || primary(item).start || !secondary(item).start) continue;
+        const auto s = *secondary(item).start;
+        auto p = dense ? primary_start
+            : occupied.last_auto_on_secondary(s).value_or(primary_start);
         bool found = false;
-        std::int32_t row = dense ? 0 : cursor_row;
-        std::int32_t column = dense ? 0 : cursor_column;
         for (std::size_t probe = 0; probe < 100'000; ++probe) {
-            if (item.row.start) row = *item.row.start;
-            if (item.column.start) column = *item.column.start;
-            if ((item.row.start || !by_row || column + item.column.span <= columns)
-                && (item.column.start || by_row || row + item.row.span <= rows)
-                && vacant(occupied, row, column, item.row.span, item.column.span)) {
-                found = true;
-                break;
+            const auto collision = occupied.collision_jump(p, primary(item).span,
+                s, secondary(item).span, true);
+            if (!collision) { found = true; break; }
+            p = *collision;
+        }
+        if (!found) throw LayoutFailure(LayoutErrorCode::LimitExceeded, id,
+            "Grid secondary-axis placement search limit exceeded");
+        record(item, p, s, true);
+    }
+
+    // Remaining items share one cursor; dense flow restarts at the implicit grid start.
+    std::int32_t cursor_primary = primary_start;
+    std::int32_t cursor_secondary = secondary_start;
+    for (auto& item : placements) {
+        if (item.hidden || secondary(item).start) continue;
+        std::int32_t p = cursor_primary;
+        std::int32_t s = cursor_secondary;
+        bool found = false;
+        if (primary(item).start) {
+            p = *primary(item).start;
+            if (dense) s = secondary_start;
+            else if (p < cursor_primary) ++s;
+            for (std::size_t probe = 0; probe < 100'000; ++probe) {
+                const auto collision = occupied.collision_jump(p, primary(item).span,
+                    s, secondary(item).span, false);
+                if (!collision) { found = true; break; }
+                s = *collision;
             }
-            if (item.row.start) ++column;
-            else if (item.column.start) ++row;
-            else if (by_row) {
-                ++column;
-                if (column + item.column.span > columns) { column = 0; ++row; }
-            } else {
-                ++row;
-                if (row + item.row.span > rows) { row = 0; ++column; }
+        } else {
+            for (std::size_t probe = 0; probe < 100'000; ++probe) {
+                if (p + primary(item).span > primary_end) {
+                    if (p == primary_start) { found = true; break; }
+                    p = primary_start;
+                    ++s;
+                    continue;
+                }
+                const auto collision = occupied.collision_jump(p, primary(item).span,
+                    s, secondary(item).span, true);
+                if (!collision) { found = true; break; }
+                p = *collision;
             }
         }
-        if (!found) throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "Grid placement search limit exceeded");
-        item.row_start = row;
-        item.column_start = column;
-        item.row_end = row + item.row.span;
-        item.column_end = column + item.column.span;
-        occupy(occupied, item);
-        if (!dense) {
-            cursor_row = row;
-            cursor_column = column;
-            if (by_row) {
-                cursor_column = item.column_end;
-                if (cursor_column >= columns) { cursor_column = 0; ++cursor_row; }
-            } else {
-                cursor_row = item.row_end;
-                if (cursor_row >= rows) { cursor_row = 0; ++cursor_column; }
-            }
-        }
+        if (!found) throw LayoutFailure(LayoutErrorCode::LimitExceeded, id,
+            "Grid automatic placement search limit exceeded");
+        record(item, p, s, true);
+        cursor_primary = dense ? primary_start : p + primary(item).span;
+        cursor_secondary = dense ? secondary_start : s;
     }
 }
 

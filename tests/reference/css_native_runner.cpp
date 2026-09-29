@@ -591,6 +591,72 @@ void grid_repeat_percentage_gap_case(std::string_view name) {
         {AvailableSpace::max_content(), AvailableSpace::max_content()}), nodes);
 }
 
+void grid_auto_placement_case(std::string_view name) {
+    const bool column = name.starts_with("placement-column-")
+        || name == "placement-negative-row-start";
+    const bool dense = name.find("dense-secondary") != std::string_view::npos;
+    const bool secondary_first = name.find("secondary-first") != std::string_view::npos;
+    const bool dense_secondary = name.find("dense-secondary") != std::string_view::npos;
+    const bool negative_start = name.find("negative-") != std::string_view::npos;
+    const bool backtrack = name.find("primary-backtrack") != std::string_view::npos;
+    const int variant = name == "placement-row-secondary-first" ? 0
+        : name == "placement-column-secondary-first" ? 1
+        : name == "placement-row-dense-secondary" ? 2
+        : name == "placement-column-dense-secondary" ? 3
+        : name == "placement-negative-column-start" ? 4
+        : name == "placement-negative-row-start" ? 5
+        : name == "placement-row-primary-backtrack" ? 6 : 7;
+    const int base = 6300 + variant * 10;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(120), Length::length(120)};
+    const int column_count = !column && (negative_start || backtrack) ? 2 : 3;
+    root_style.grid.template_columns.assign(column_count, TrackSizing::fixed(20));
+    root_style.grid.template_rows.assign(2, TrackSizing::fixed(20));
+    root_style.grid.auto_columns = {TrackSizing::fixed(20)};
+    root_style.grid.auto_rows = {TrackSizing::fixed(20)};
+    root_style.grid.auto_flow = column
+        ? (dense ? GridAutoFlow::ColumnDense : GridAutoFlow::Column)
+        : (dense ? GridAutoFlow::RowDense : GridAutoFlow::Row);
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{base, root}};
+    const int child_count = backtrack ? 5 : negative_start ? 3 : 4;
+    for (int i = 0; i < child_count; ++i) {
+        Style child_style;
+        child_style.box.size = {Length::length(10), Length::length(10)};
+        if (secondary_first && (i == 1 || i == 2)) {
+            auto& placement = column ? child_style.grid.column : child_style.grid.row;
+            placement.start = GridLine::index(1);
+        }
+        if (dense_secondary) {
+            if (i == 0) {
+                auto& placement = column ? child_style.grid.row : child_style.grid.column;
+                placement.start = GridLine::index(2);
+                placement.end = GridLine::span(2);
+            } else if (i == 1) {
+                auto& placement = column ? child_style.grid.column : child_style.grid.row;
+                placement.start = GridLine::index(1);
+            }
+        }
+        if (negative_start && i == 0) {
+            auto& negative = column ? child_style.grid.row : child_style.grid.column;
+            auto& other = column ? child_style.grid.column : child_style.grid.row;
+            negative.start = GridLine::index(-4);
+            other.start = GridLine::index(2);
+        }
+        if (backtrack && (i == 2 || i == 3)) {
+            auto& placement = column ? child_style.grid.row : child_style.grid.column;
+            placement.start = GridLine::index(1);
+        }
+        const auto child = tree.create_node(child_style);
+        tree.append_child(root, child);
+        nodes.emplace_back(base + i + 1, child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(120), AvailableSpace::definite(120)}), nodes);
+}
+
 void grid_auto_margins() {
     LayoutTree tree;
     Style root_style;
@@ -2334,6 +2400,8 @@ int main(int argc, char** argv) {
             || name.starts_with("root-grid-")) root_percentage_edges_case(name);
         else if (name.starts_with("repeat-gap-"))
             grid_repeat_percentage_gap_case(name);
+        else if (name.starts_with("placement-"))
+            grid_auto_placement_case(name);
         else if (name == "grid-auto-margins") grid_auto_margins();
         else if (name == "rtl-block-child") rtl_block_child();
         else if (name == "flex-scrollbar-reservation") flex_scrollbar_reservation();

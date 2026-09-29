@@ -53,7 +53,7 @@
 | `grid_template_columns` | 同上，含 auto-fill／auto-fit 与具名线 | 部分：自动重复与具名线已接入，百分比间隙及轨道在自动重复计数中按尺寸约束解析；跨格项目按跨度分批并分阶段计算最小贡献与固有内容尺寸，固有最大尺寸轨道共同分配可用空间并冻结增长上限；`fr` 的固有查询和低系数跨格贡献已有差分；容器固有宽度确定后重新解析循环百分比轨道；固定增长上限也参与非弹性轨道增长，复杂尺寸阶段仍未完整 | P3 | 已建：css-grid-tracks-placement、named-area-placement、grid-span-order-short-first／long-first、grid-equal-intrinsic-growth、grid-capped-intrinsic-growth、grid-scroll-automatic-minimum、grid-spanning-flex-minimum、grid-fr-small-min-query／max-query、grid-percent-indefinite-tracks、grid-fixed-max-pair、repeat-gap-fixed-percent-track |
 | `grid_auto_rows` | 隐式行轨道尺寸序列 | 部分：新入口支持显式网格后的正向循环及前方的逆向序列，含双侧隐式行；复杂放置组合未验收 | P3 | 已建：grid-implicit-positive-rows、grid-implicit-negative-rows、grid-implicit-mixed-rows |
 | `grid_auto_columns` | 隐式列轨道尺寸序列 | 部分：新入口支持正向循环与显式网格前的逆向序列；复杂起点未验收 | P3 | 已建：grid-implicit-negative-lines、grid-negative-implicit-sequence |
-| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；RowDense 补洞通过差分 | P3 | 已建：grid-row-dense-holes |
+| `grid_auto_flow` | Row／Column／RowDense／ColumnDense | 部分：四种放置方向已实现；按“确定双轴、确定次轴、自动游标”阶段排布，负隐式轨道为游标起点；稀疏／Dense 的行列方向已差分，复杂跨格组合未完整 | P3 | 已建：grid-row-dense-holes、placement-row／column-secondary-first、placement-row／column-dense-secondary、placement-negative-column／row-start、placement-row／column-primary-backtrack |
 | `grid_template_areas` | 命名矩形区域 | 部分：矩形区域及起止线生成，通过固定差分 | P3 | 已建：named-area-placement |
 | `grid_template_column_names` | 显式列网格线名 | 部分：显式、重复和多次出现的线名可解析；复杂隐式线未完整 | P3 | 已建：css-grid-tracks-placement、grid-named-line-occurrences |
 | `grid_template_row_names` | 显式行网格线名 | 部分：显式与区域生成的线名可解析；多次出现未完整 | P3 | 已建：named-area-placement |
@@ -164,6 +164,10 @@
 | `root-flex-padding-percent`／`root-flex-border-percent`／`root-flex-margin-percent`／`root-grid-padding-percent`／`root-grid-border-percent`／`root-grid-margin-percent` | Flex/Grid 根在未定包含块宽度下的百分比边值按零参与布局与报告，不把自身内容宽度误作包含块基准 |
 | `repeat-gap-fixed-fill`／`repeat-gap-fixed-fit`／`repeat-gap-max-fill`／`repeat-gap-min-fill`／`repeat-gap-auto-fill`／`repeat-gap-fixed-percent-track` | 自动重复按固定、最大、最小或未定容器宽度选择次数；百分比间隙和百分比轨道参与计数，最小宽度约束参与初次轨道尺寸和最终容器尺寸；本地断言实际轨道条数 |
 | `repeat-gap-row-max`／`repeat-gap-row-min` | 行自动重复按最大／最小高度及百分比行距计数，超出显式行的项目进入隐式行 |
+| `placement-row-secondary-first`／`placement-column-secondary-first` | 确定次轴位置的项目优先占位，之后自动游标跳过已占用轨道；行列方向均差分 |
+| `placement-row-dense-secondary`／`placement-column-dense-secondary` | Dense 模式在确定次轴的放置阶段和自动阶段重新从网格起点搜索 |
+| `placement-negative-column-start`／`placement-negative-row-start` | 负方向隐式轨道形成自动放置游标的起点 |
+| `placement-row-primary-backtrack`／`placement-column-primary-backtrack` | 稀疏流在主轴固定项目回到较早网格线时将次轴游标推进 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -186,8 +190,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、二百零六组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这二百零六组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、二百一十四组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这二百一十四组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

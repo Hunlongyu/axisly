@@ -12,6 +12,16 @@
 
 namespace axisly::css::detail {
 namespace {
+ResolvedDimensions grid_item_minimum(const ResolvedBox& box) {
+    const Unit width_floor = box.horizontal_decoration().value_or(Unit{0});
+    const Unit height_floor = box.vertical_decoration().value_or(Unit{0});
+    // Grid floors each axis at padding and border before transferring a
+    // minimum through aspect-ratio. Both axes are then known, so an isolated
+    // min-width or min-height does not create a second minimum.
+    return {std::max(box.specified_minimum.width.value_or(width_floor), width_floor),
+        std::max(box.specified_minimum.height.value_or(height_floor), height_floor)};
+}
+
 Unit definite_track_size(const TrackSizing& track, Unit basis, NodeId id) {
     const auto minimum = track.minimum.resolve_numeric(basis);
     const auto maximum = track.maximum.resolve_numeric(basis);
@@ -711,8 +721,16 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     }
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);
-    inner_width = std::max(Unit{0}, candidate.width - *decoration_width);
-    inner_height = std::max(Unit{0}, candidate.height - *decoration_height);
+    if (constraints.preserve_known_grid_size) {
+        // Parent Grid item sizing already chose the reported border box. The
+        // child's own min/max constraints still sized its internal tracks.
+        if (constraints.known_width) candidate.width = *constraints.known_width;
+        if (constraints.known_height) candidate.height = *constraints.known_height;
+    }
+    if (!constraints.preserve_known_grid_size) {
+        inner_width = std::max(Unit{0}, candidate.width - *decoration_width);
+        inner_height = std::max(Unit{0}, candidate.height - *decoration_height);
+    }
     align_tracks(track_columns, *inner_width,
         node.style.justify_content.value_or(ContentAlignment{}), node.id);
     align_tracks(track_rows, *inner_height,
@@ -720,6 +738,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     Fragment result;
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
+    if (constraints.preserve_known_grid_size && *border_width != candidate.width) {
+        result.nodes.front().overflow_coordinate_width = *border_width;
+    }
     const auto border = edges(box.border, node.id);
     const auto padding = edges(box.padding, node.id);
     const Unit content_x = checked(static_cast<double>(border.left) + padding.left, node.id);
@@ -865,6 +886,23 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 contribution.min_content.height, contribution.max_content.height,
                 cell_height, margin.top, margin.bottom, id),
                 resolved.minimum.height, resolved.maximum.height);
+        }
+        if (resolved.aspect_ratio && resolved.preferred.width
+            && resolved.preferred.height && !final.known_width
+            && !final.known_height) {
+            const auto minimum = grid_item_minimum(resolved);
+            final.known_width = constrain_axis(*resolved.preferred.width,
+                minimum.width, resolved.maximum.width);
+            final.known_height = constrain_axis(*resolved.preferred.height,
+                minimum.height, resolved.maximum.height);
+            // The Grid item sizing stage has resolved these constraints. Its
+            // final dimensions are passed to the child as known dimensions.
+            if (child.style.display == Display::Grid) {
+                final.preserve_known_grid_size = true;
+            } else {
+                final.ignore_min_max_width = true;
+                final.ignore_min_max_height = true;
+            }
         }
         auto child_fragment = layout(id, final, depth + 1);
         if (vertical.position == ItemPosition::Baseline

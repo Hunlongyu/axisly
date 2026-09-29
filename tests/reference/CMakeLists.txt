@@ -92,6 +92,11 @@ target_link_libraries(axisly_intrinsic_size_native PRIVATE axisly::axisly)
 set_target_properties(axisly_intrinsic_size_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_intrinsic_size_native)
 
+add_executable(axisly_ratio_matrix_native ratio_matrix_native.cpp)
+target_link_libraries(axisly_ratio_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_ratio_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_ratio_matrix_native)
+
 add_test(NAME axisly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
     --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/failures")
@@ -231,6 +236,13 @@ add_test(NAME axisly.reference.intrinsic_size COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}"
     --details)
 set_tests_properties(axisly.reference.intrinsic_size PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.ratio_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_ratio_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_ratio_matrix_native>"
+    --taffy "${taffy_tree_output}"
+    --details)
+set_tests_properties(axisly.reference.ratio_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_calc.py"

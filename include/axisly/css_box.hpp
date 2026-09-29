@@ -65,6 +65,9 @@ struct ResolvedBox {
     // These are border-box sizes. An absent value remains under algorithm control:
     // auto, intrinsic keywords and percentages with an indefinite basis differ.
     ResolvedDimensions preferred, minimum, maximum;
+    // Constraints before aspect-ratio transfer. Flex uses these to resolve
+    // flexible lengths; transferred constraints only bound hypothetical sizes.
+    ResolvedDimensions specified_minimum, specified_maximum;
     std::optional<Unit> aspect_ratio;
     BoxSizing box_sizing{BoxSizing::BorderBox};
     Direction direction{Direction::Ltr};

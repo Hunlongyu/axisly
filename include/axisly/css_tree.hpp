@@ -55,6 +55,9 @@ struct NodeLayout {
     std::optional<Unit> first_baseline, last_baseline;
     // Node-local scrollable region; unlike border_box, it is not root-relative.
     Rect scrollable_overflow_rect{};
+    // Grid may size tracks from a min/max constrained width while a parent
+    // supplies a smaller final border box. RTL overflow uses the track basis.
+    std::optional<Unit> overflow_coordinate_width;
 };
 
 struct GridTrackPosition {

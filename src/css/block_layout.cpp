@@ -175,7 +175,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         const auto margin = edges(child_box.margin, child_id);
         if (child.style.float_side == FloatSide::None
             && !intrinsic_width
-            && child.style.box.size.width.kind() == LengthKind::Auto) {
+            && child.style.box.size.width.kind() == LengthKind::Auto
+            && !child_box.preferred.width) {
             child_constraints.known_width = std::max(Unit{0}, checked(
                 static_cast<double>(content_width) - margin.left - margin.right,
                 child_id));
@@ -203,7 +204,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             formatting_slot->y = checked(static_cast<double>(formatting_slot->y)
                 - context.origin_y, child_id);
             if (child.style.box.size.width.kind() == LengthKind::Auto
-                && !intrinsic_width) {
+                && !child_box.preferred.width && !intrinsic_width) {
                 child_constraints.known_width = formatting_slot->width;
             }
         }

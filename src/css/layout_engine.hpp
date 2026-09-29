@@ -23,6 +23,7 @@ struct Constraints {
     bool ignore_preferred_width{}, ignore_preferred_height{};
     bool ignore_min_max_width{}, ignore_min_max_height{};
     bool content_based_width{};
+    bool preserve_known_grid_size{};
     bool operator==(const Constraints&) const = default;
 };
 

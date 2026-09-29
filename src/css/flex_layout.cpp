@@ -50,6 +50,8 @@ struct FlexItem {
     Unit target{};
     Unit minimum{};
     std::optional<Unit> maximum;
+    Unit hypothetical_minimum{};
+    std::optional<Unit> hypothetical_maximum;
     Unit grow{}, shrink{};
     Unit cross{};
     bool auto_main_start{}, auto_main_end{};
@@ -66,6 +68,7 @@ struct FlexLine {
 
 double bounded_main_size(const FlexItem& item, double value);
 Unit clamped_main_size(const FlexItem& item, double value);
+Unit hypothetical_main_size(const FlexItem& item);
 
 std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
     bool row, std::optional<Unit> available, Unit gap, FlexWrap wrap,
@@ -77,7 +80,7 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         std::vector<Unit> outer_sizes;
         outer_sizes.reserve(items.size());
         for (const auto& item : items) {
-            const Unit hypothetical = clamped_main_size(item, item.base);
+            const Unit hypothetical = hypothetical_main_size(item);
             outer_sizes.push_back(checked(static_cast<double>(hypothetical)
                 + axis(item.margin, row, true, true)
                 + axis(item.margin, row, true, false), item.id));
@@ -96,7 +99,7 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         double estimated_main = 0;
         for (std::size_t i = 0; i < items.size(); ++i) {
             const auto& item = items[i];
-            const auto outer = static_cast<double>(clamped_main_size(item, item.base))
+            const auto outer = static_cast<double>(hypothetical_main_size(item))
                 + axis(item.margin, row, true, true)
                 + axis(item.margin, row, true, false);
             if (wrap != FlexWrap::NoWrap && available
@@ -182,6 +185,14 @@ Unit clamped_main_size(const FlexItem& item, double value) {
     return checked(bounded_main_size(item, value), item.id);
 }
 
+Unit hypothetical_main_size(const FlexItem& item) {
+    double value = item.base;
+    if (item.hypothetical_maximum) {
+        value = std::min(value, static_cast<double>(*item.hypothetical_maximum));
+    }
+    return checked(std::max(value, static_cast<double>(item.hypothetical_minimum)), item.id);
+}
+
 Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
     const double margin = static_cast<double>(axis(item.margin, row, true, true))
         + axis(item.margin, row, true, false);
@@ -201,7 +212,7 @@ Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
     double content = preferred.value_or(item.content_main);
     content += margin;
     if (!row) content = std::max(content, static_cast<double>(item.base));
-    if (const auto minimum_style = axis(item.box.minimum, row, true)) {
+    if (const auto minimum_style = axis(item.box.specified_minimum, row, true)) {
         content = std::max(content, static_cast<double>(*minimum_style));
     }
     if (item.maximum) content = std::min(content,
@@ -464,7 +475,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 : ResolvedDimensions{stretched_cross, std::nullopt}, child_box);
             basis = axis(transferred, row, true).value_or(basis);
         }
-        auto minimum = axis(child_box.minimum, row, true);
+        auto minimum = axis(child_box.specified_minimum, row, true);
         if (!minimum) {
             const auto overflow = row ? child.style.overflow_x : child.style.overflow_y;
             if (overflow == Overflow::Hidden || overflow == Overflow::Scroll) {
@@ -487,7 +498,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 }
             }
         }
-        const auto maximum = axis(child_box.maximum, row, true);
+        const auto maximum = axis(child_box.specified_maximum, row, true);
         const auto& margin_start = row ? child_box.margin.left : child_box.margin.top;
         const auto& margin_end = row ? child_box.margin.right : child_box.margin.bottom;
         const auto& cross_start = row ? child_box.margin.top : child_box.margin.left;
@@ -497,16 +508,26 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             || child.style.overflow_y == Overflow::Hidden
             || child.style.overflow_y == Overflow::Scroll;
         basis = std::max(basis, *main_decoration);
-        items.push_back({id, source, child_box, margin, basis,
-            checked(static_cast<double>(basis) - *main_decoration, id), *main_decoration,
-            axis(base_layout.size, row, true), basis,
-            minimum.value_or(Unit{0}), maximum, child.style.flex_grow, child.style.flex_shrink,
-            axis(base_layout.size, row, false),
-            (main_reverse ? margin_end : margin_start).kind == EdgeKind::Auto,
-            (main_reverse ? margin_start : margin_end).kind == EdgeKind::Auto,
-            (cross_reverse ? cross_end : cross_start).kind == EdgeKind::Auto,
-            (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto,
-            scroll_container});
+        FlexItem item{id, source, child_box, margin};
+        item.base = basis;
+        item.inner_base = checked(static_cast<double>(basis) - *main_decoration, id);
+        item.main_decoration = *main_decoration;
+        item.content_main = axis(base_layout.size, row, true);
+        item.target = basis;
+        item.minimum = minimum.value_or(Unit{0});
+        item.maximum = maximum;
+        item.hypothetical_minimum = std::max(item.minimum,
+            axis(child_box.minimum, row, true).value_or(Unit{0}));
+        item.hypothetical_maximum = axis(child_box.maximum, row, true);
+        item.grow = child.style.flex_grow;
+        item.shrink = child.style.flex_shrink;
+        item.cross = axis(base_layout.size, row, false);
+        item.auto_main_start = (main_reverse ? margin_end : margin_start).kind == EdgeKind::Auto;
+        item.auto_main_end = (main_reverse ? margin_start : margin_end).kind == EdgeKind::Auto;
+        item.auto_cross_start = (cross_reverse ? cross_end : cross_start).kind == EdgeKind::Auto;
+        item.auto_cross_end = (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto;
+        item.scroll_container = scroll_container;
+        items.push_back(std::move(item));
     }
 
     std::vector<FlexLine> lines;
@@ -532,7 +553,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 outer_sizes.push_back(intrinsic_item_main_size(item, row));
             } else {
                 const Unit contribution = std::max(item.base,
-                    axis(item.box.minimum, row, true).value_or(Unit{0}));
+                    axis(item.box.specified_minimum, row, true).value_or(Unit{0}));
                 const double outer = static_cast<double>(contribution)
                     + axis(item.margin, row, true, true)
                     + axis(item.margin, row, true, false);

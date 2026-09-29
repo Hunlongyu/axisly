@@ -75,18 +75,26 @@ ResolvedBox resolve_layout_box(const LayoutNode& node,
                                std::optional<Unit> containing_height) {
     auto resolved = resolve_box(node.style.box, containing_width, containing_height,
         IndefiniteEdgeBasis::Zero);
+    // Taffy transfers a container's max-size through aspect-ratio. Its leaf
+    // algorithm retains independent maximum bounds, so keep that distinction
+    // at the node-resolution boundary.
+    if (!node.children.empty()) {
+        resolved.maximum = transfer_aspect_ratio(resolved.maximum, resolved);
+    }
     resolved.scrollbar.width = node.style.overflow_y == Overflow::Scroll
         ? node.style.scrollbar_width : Unit{0};
     resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
         ? node.style.scrollbar_width : Unit{0};
     if (resolved.box_sizing == BoxSizing::ContentBox) {
         for (auto* value : {&resolved.preferred.width, &resolved.minimum.width,
-                            &resolved.maximum.width}) {
+                            &resolved.maximum.width, &resolved.specified_minimum.width,
+                            &resolved.specified_maximum.width}) {
             if (*value) *value = checked(static_cast<double>(**value)
                 + resolved.scrollbar.width, node.id);
         }
         for (auto* value : {&resolved.preferred.height, &resolved.minimum.height,
-                            &resolved.maximum.height}) {
+                            &resolved.maximum.height, &resolved.specified_minimum.height,
+                            &resolved.specified_maximum.height}) {
             if (*value) *value = checked(static_cast<double>(**value)
                 + resolved.scrollbar.height, node.id);
         }

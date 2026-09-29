@@ -84,7 +84,8 @@ void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
         Unit location_x = checked(static_cast<double>(layout.border_box.x)
             - parent.border_box.x, node.id);
         if (parent_style.box.direction == Direction::Rtl) {
-            location_x = checked(static_cast<double>(parent.border_box.width)
+            location_x = checked(static_cast<double>(parent.overflow_coordinate_width
+                    .value_or(parent.border_box.width))
                 - location_x - layout.border_box.width
                 - parent.overflow_origin_border.right,
                 node.id);

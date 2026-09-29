@@ -730,6 +730,15 @@
         {"id": 1301, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 30, "height": 30}}},
         {"id": 1302, "parent": 0, "style": {"display": "Grid", "size": {"height": 10}}}
       ]
+    },
+    {
+      "name": "block-float-self-clear",
+      "available": [100, "max-content"],
+      "nodes": [
+        {"id": 1310, "parent": null, "style": {"display": "Block", "size": {"width": 100}}},
+        {"id": 1311, "parent": 0, "style": {"display": "Block", "float": "Left", "size": {"width": 30, "height": 30}}},
+        {"id": 1312, "parent": 0, "style": {"display": "Block", "float": "Right", "clear": "Right", "size": {"width": 30, "height": 10}}}
+      ]
     }
   ]
 }

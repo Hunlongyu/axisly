@@ -119,7 +119,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             const Unit outer_float_height = checked(static_cast<double>(nested.size.height)
                 + margin.top + margin.bottom, child_id);
             const auto [float_x, float_y] = floats.place_float(
-                child.style.float_side, outer_float_width,
+                child.style.float_side, child.style.clear, outer_float_width,
                 outer_float_height, cursor, child_id);
             const Unit left = checked(static_cast<double>(float_x) + margin.left, child_id);
             const Unit top = checked(static_cast<double>(float_y) + margin.top, child_id);

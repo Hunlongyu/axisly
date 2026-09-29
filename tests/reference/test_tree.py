@@ -231,6 +231,9 @@ class TreeReferenceTests(unittest.TestCase):
             "block-float-grid-context": {1300: [0, 0, 100, 30],
                                          1301: [0, 0, 30, 30],
                                          1302: [30, 0, 70, 10]},
+            "block-float-self-clear": {1310: [0, 0, 100, 40],
+                                       1311: [0, 0, 30, 30],
+                                       1312: [70, 30, 30, 10]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

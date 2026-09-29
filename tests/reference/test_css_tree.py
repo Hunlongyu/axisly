@@ -92,6 +92,7 @@ CASES = (
     "block-float-overflow-context",
     "block-float-flex-context",
     "block-float-grid-context",
+    "block-float-self-clear",
     "mixed-block-flex-grid",
 )
 

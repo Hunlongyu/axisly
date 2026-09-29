@@ -1266,6 +1266,28 @@ void block_float_context_case(std::string_view name) {
         {AvailableSpace::definite(100), AvailableSpace::max_content()}), nodes);
 }
 
+void block_float_self_clear() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size.width = Length::length(100);
+    const auto root = tree.create_node(root_style);
+    Style float_style;
+    float_style.display = Display::Block;
+    float_style.float_side = FloatSide::Left;
+    float_style.box.size = {Length::length(30), Length::length(30)};
+    const auto left = tree.create_node(float_style);
+    float_style.float_side = FloatSide::Right;
+    float_style.clear = ClearSide::Right;
+    float_style.box.size.height = Length::length(10);
+    const auto right = tree.create_node(float_style);
+    tree.append_child(root, left);
+    tree.append_child(root, right);
+    print("block-float-self-clear", tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()}),
+        {{1310, root}, {1311, left}, {1312, right}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1311,6 +1333,7 @@ int main(int argc, char** argv) {
         else if (name == "grid-auto-fit") grid_auto_repeat(true);
         else if (name == "hidden-and-positioned") hidden_and_positioned();
         else if (name == "block-float-clear") block_float_clear();
+        else if (name == "block-float-self-clear") block_float_self_clear();
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

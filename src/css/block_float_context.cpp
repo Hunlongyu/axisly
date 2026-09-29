@@ -22,9 +22,11 @@ Unit FloatContext::maximum_bottom() const noexcept {
     return bottom;
 }
 
-std::pair<Unit, Unit> FloatContext::place_float(FloatSide side,
+std::pair<Unit, Unit> FloatContext::place_float(FloatSide side, ClearSide clear,
     Unit outer_width, Unit outer_height, Unit initial_y, NodeId node) const {
-    Unit y = initial_y;
+    const Unit y_after_clear = clear == ClearSide::None || regions_.empty()
+        ? initial_y : std::max(initial_y, maximum_bottom());
+    Unit y = y_after_clear;
     for (std::size_t attempt = 0; attempt <= regions_.size(); ++attempt) {
         Unit left = 0, right = content_width_;
         const Unit float_bottom = checked(static_cast<double>(y) + outer_height,

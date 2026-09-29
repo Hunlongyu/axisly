@@ -19,7 +19,7 @@ public:
     [[nodiscard]] bool empty() const noexcept { return regions_.empty(); }
     [[nodiscard]] Unit clear_bottom(ClearSide clear) const noexcept;
     [[nodiscard]] Unit maximum_bottom() const noexcept;
-    [[nodiscard]] std::pair<Unit, Unit> place_float(FloatSide side,
+    [[nodiscard]] std::pair<Unit, Unit> place_float(FloatSide side, ClearSide clear,
         Unit outer_width, Unit outer_height, Unit initial_y, NodeId node) const;
     [[nodiscard]] FloatSlot place_formatting_context(Unit initial_y,
         Unit margin_left, Unit margin_right,

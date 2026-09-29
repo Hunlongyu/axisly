@@ -24,7 +24,8 @@ def make_cases(scenario="definite"):
         if wrap < 3 and line_count != 1:
             continue
         prefix = {"definite": "flex-matrix", "max-content": "flex-intrinsic-max",
-                  "min-content": "flex-intrinsic-min"}[scenario]
+                  "min-content": "flex-intrinsic-min",
+                  "auto-definite": "flex-auto-definite"}[scenario]
         name = f"{prefix}-{direction}-{wrap}-{item}-{content}-{lines}-{rtl}-{line_count}"
         style = {
             "display": "Flex", "flex_direction": DIRECTIONS[direction],
@@ -45,7 +46,7 @@ def make_cases(scenario="definite"):
             "style": {"size": {"width": width, "height": height},
                       "flex_shrink": 0},
         } for index, (width, height) in enumerate(ITEM_SIZES))
-        available = [72, 68] if scenario == "definite" else [scenario, scenario]
+        available = [72, 68] if scenario in ("definite", "auto-definite") else [scenario, scenario]
         yield {"name": name, "available": available, "nodes": nodes}
 
 
@@ -85,7 +86,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--axisly", required=True)
     parser.add_argument("--taffy", required=True)
-    parser.add_argument("--scenario", choices=("definite", "max-content", "min-content"),
+    parser.add_argument("--scenario", choices=("definite", "max-content", "min-content", "auto-definite"),
                         default="definite")
     args = parser.parse_args()
     cases = list(make_cases(args.scenario))
@@ -102,8 +103,9 @@ def main():
         [args.axisly] + ([] if args.scenario == "definite" else ["--" + args.scenario]),
         text=True, capture_output=True, check=True
     ).stdout)
-    assert native["protocol"] == ("AXISLY_FLEX_MATRIX_V1" if args.scenario == "definite"
-                                  else "AXISLY_FLEX_INTRINSIC_MATRIX_V1")
+    assert native["protocol"] == ("AXISLY_FLEX_INTRINSIC_MATRIX_V1"
+                                  if args.scenario in ("max-content", "min-content")
+                                  else "AXISLY_FLEX_MATRIX_V1")
     assert len(oracle_cases) == len(native["cases"]) == len(cases) == 1944
     failures = []
     for actual, expected in zip(native["cases"], oracle_cases, strict=True):

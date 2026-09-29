@@ -516,28 +516,48 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         const bool intrinsic_contribution = main_query == AvailableKind::MaxContent
             || (main_query == AvailableKind::MinContent
                 && node.style.flex_wrap == FlexWrap::NoWrap);
-        double desired = 0;
-        for (const auto& line : lines) {
-            double line_size = line.items.empty() ? 0
-                : static_cast<double>(line.items.size() - 1) * main_gap;
-            for (const auto index : line.items) {
-                const auto& item = items[index];
-                line_size += (intrinsic_contribution
-                    ? intrinsic_item_main_size(item, row)
-                    : main_query == AvailableKind::Definite
-                        ? std::max(item.base, axis(item.box.minimum, row, true).value_or(Unit{0}))
-                        : item.base)
-                    + axis(item.margin, row, true, true)
-                    + axis(item.margin, row, true, false);
-            }
-            desired = std::max(desired, line_size);
+        std::vector<Unit> outer_sizes;
+        outer_sizes.reserve(items.size());
+        for (const auto& item : items) {
+            const Unit contribution = intrinsic_contribution
+                ? intrinsic_item_main_size(item, row)
+                : main_query == AvailableKind::Definite
+                    ? std::max(item.base, axis(item.box.minimum, row, true).value_or(Unit{0}))
+                    : item.base;
+            outer_sizes.push_back(checked(static_cast<double>(contribution)
+                + axis(item.margin, row, true, true)
+                + axis(item.margin, row, true, false), item.id));
         }
-        const Unit inner = checked(std::max(0.0, desired), node.id);
-        const Unit candidate_outer = line_available && lines.size() > 1
-            ? std::max(checked(static_cast<double>(inner)
-                + (row ? *deco_width : *deco_height), node.id), *line_available)
-            : checked(static_cast<double>(inner)
-                + (row ? *deco_width : *deco_height), node.id);
+        const auto widest_line = [&](const std::vector<std::size_t>& counts) {
+            std::size_t next = 0;
+            double widest = 0;
+            for (const auto count : counts) {
+                double length = count ? static_cast<double>(count - 1) * main_gap : 0;
+                for (std::size_t i = 0; i < count; ++i) length += outer_sizes[next++];
+                widest = std::max(widest, length);
+            }
+            return checked(widest, node.id);
+        };
+        std::vector<std::size_t> line_counts;
+        line_counts.reserve(lines.size());
+        for (const auto& line : lines) line_counts.push_back(line.items.size());
+        const Unit inner = widest_line(line_counts);
+        const Unit decoration = row ? *deco_width : *deco_height;
+        Unit candidate_outer = checked(static_cast<double>(inner) + decoration, node.id);
+        const bool balanced = node.style.flex_wrap == FlexWrap::Balance
+            || node.style.flex_wrap == FlexWrap::BalanceReverse;
+        if (main_query == AvailableKind::Definite
+            && line_available && balanced && !outer_sizes.empty()) {
+            const auto unconstrained_counts = balanced_line_counts(outer_sizes,
+                std::numeric_limits<Unit>::infinity(), main_gap,
+                node.style.flex_line_count, 25'000'000);
+            const Unit max_content = checked(static_cast<double>(
+                widest_line(unconstrained_counts)) + decoration, node.id);
+            candidate_outer = std::max(candidate_outer,
+                std::min(max_content, *line_available));
+        } else if (line_available && lines.size() > 1) {
+            candidate_outer = std::max(candidate_outer, *line_available);
+        }
         if (row) {
             border_width = constrain_axis(candidate_outer,
                 box.minimum.width, box.maximum.width);

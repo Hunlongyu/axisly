@@ -40,7 +40,8 @@ std::string case_name(std::size_t scenario,
                       std::size_t lines, std::size_t rtl,
                       std::size_t line_count) {
     const auto prefix = scenario == 0 ? "flex-matrix-"
-        : scenario == 1 ? "flex-intrinsic-max-" : "flex-intrinsic-min-";
+        : scenario == 1 ? "flex-intrinsic-max-"
+        : scenario == 2 ? "flex-intrinsic-min-" : "flex-auto-definite-";
     return prefix + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(item) + '-'
         + std::to_string(content) + '-' + std::to_string(lines) + '-'
@@ -79,7 +80,7 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     }
     reference::write_case(std::cout,
         case_name(scenario, direction, wrap, item, content, lines, rtl, line_count),
-        tree.compute(root, scenario == 0
+        tree.compute(root, scenario == 0 || scenario == 3
             ? AvailableSize{AvailableSpace::definite(72), AvailableSpace::definite(68)}
             : scenario == 1
                 ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
@@ -92,14 +93,14 @@ int main(int argc, char** argv) {
     try {
         const std::string_view mode = argc == 2 ? argv[1] : "";
         if (argc > 2 || (argc == 2 && mode != "--max-content"
-            && mode != "--min-content")) {
-            throw std::invalid_argument("Expected --max-content, --min-content or no argument");
+            && mode != "--min-content" && mode != "--auto-definite")) {
+            throw std::invalid_argument("Expected --max-content, --min-content, --auto-definite or no argument");
         }
         const std::size_t scenario = mode == "--max-content" ? 1
-            : mode == "--min-content" ? 2 : 0;
+            : mode == "--min-content" ? 2 : mode == "--auto-definite" ? 3 : 0;
         std::cout << "{\"protocol\":\""
-            << (scenario == 0 ? "AXISLY_FLEX_MATRIX_V1"
-                : "AXISLY_FLEX_INTRINSIC_MATRIX_V1")
+            << (scenario == 1 || scenario == 2
+                ? "AXISLY_FLEX_INTRINSIC_MATRIX_V1" : "AXISLY_FLEX_MATRIX_V1")
             << "\",\"cases\":[";
         bool first = true;
         for (std::size_t direction = 0; direction < directions.size(); ++direction)

@@ -162,7 +162,8 @@ Taffy 差分，并用规范／WPT 裁决差异；Grid 中 Flex、Flex 中 Grid �
 ### P4：Block／FlowRoot、浮动和跨算法规则
 
 实现 Block 格式化、外边距折叠、FlowRoot、浮动与 clear；统一
-display:none、相对／绝对定位、overflow 与滚动条空间、contain、方向和
+display:none、相对／绝对定位、overflow 与滚动条空间、Taffy 已实现的
+layout／paint containment、方向和
 与各算法相关的盒模型规则。Taffy 不负责文字塑形，宿主仍提供叶子测量。
 
 **验收**：Block／Float 与 Flex／Grid 互相嵌套，包含相对／绝对定位、

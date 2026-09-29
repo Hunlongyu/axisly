@@ -21,9 +21,9 @@
 | `item_is_replaced` | 替换元素的固有尺寸规则 | 未支持 | P1 | 待建：replaced-intrinsic |
 | `box_sizing` | BorderBox／ContentBox | 未支持 | P1 | 已建：content-box-and-negative-margin |
 | `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 未支持 | P1/P4 | 待建：rtl-mixed |
-| `overflow` | x/y：Visible／Clip／Hidden／Scroll／Auto | 未支持 | P4 | 待建：overflow-min-size |
+| `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 未支持 | P4 | 待建：overflow-min-size |
 | `scrollbar_width` | Scroll／Auto 所预留的数值宽度 | 未支持 | P4 | 待建：scrollbar-reservation |
-| `contain` | 布局／尺寸包含标志 | 未支持 | P4 | 待建：contain-size-layout |
+| `contain` | None／Layout／Paint／Content；0.14.0 的尺寸包含尚未实现 | 未支持 | P4 | 待建：contain-layout-paint |
 | `float` | None／Left／Right，Block 子项 | 未支持 | P4 | 已建：block-float-clear |
 | `clear` | None／Left／Right／Both | 未支持 | P4 | 已建：block-float-clear |
 | `position` | Relative／Absolute | 未支持 | P4 | 已建：hidden-and-positioned |

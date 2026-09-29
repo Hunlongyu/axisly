@@ -3,6 +3,14 @@ target_link_libraries(axisly_contract_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_contract_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_contract_tests)
 
+add_executable(axisly_css_foundation_tests css/css_foundation_tests.cpp)
+target_link_libraries(axisly_css_foundation_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_css_foundation_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_foundation_tests)
+foreach(behavior IN ITEMS values box measurement)
+    add_test(NAME axisly.css.foundation.${behavior} COMMAND axisly_css_foundation_tests ${behavior})
+endforeach()
+
 foreach(contract IN ITEMS geometry tracks invalid_tracks ranges invalid_ranges grids measurement results)
     add_test(NAME axisly.${contract} COMMAND axisly_contract_tests ${contract})
 endforeach()
@@ -144,7 +152,7 @@ foreach(behavior IN ITEMS flat_equivalence unchanged targeted_dirty nested_refer
     add_test(NAME axisly.tree.${behavior} COMMAND axisly_tree_tests ${behavior})
 endforeach()
 
-foreach(header IN ITEMS geometry track grid layout measurement result cache rounding measurement_cache tree axisly)
+foreach(header IN ITEMS geometry track grid layout measurement result cache rounding measurement_cache tree css_values css_box css_measurement axisly)
     set(source "${CMAKE_CURRENT_BINARY_DIR}/header_${header}.cpp")
     file(WRITE "${source}" "#include <axisly/${header}.hpp>\n")
     list(APPEND header_check_sources "${source}")

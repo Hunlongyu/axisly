@@ -29,6 +29,9 @@ if(AXISLY_BUILD_REFERENCE_TESTS AND NOT AXISLY_BUILD_TESTS)
 endif()
 
 add_library(axisly STATIC
+    src/css_box.cpp
+    src/css_measurement.cpp
+    src/css_values.cpp
     src/track.cpp
     src/compute_grid.cpp
     src/cache.cpp

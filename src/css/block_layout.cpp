@@ -225,6 +225,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         && (get(*node.parent).style.display == Display::Block
             || get(*node.parent).style.display == Display::FlowRoot);
     const bool independent = node.style.display != Display::Block
+        || node.style.position == Position::Absolute
         || node.style.item_is_table || node.style.box.replaced
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)
@@ -267,6 +268,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
     }
     if (!node.parent || node.style.display == Display::FlowRoot
+        || node.style.position == Position::Absolute
         || node.style.float_side != FloatSide::None
         || node.style.contain != Contain::None
         || scroll_container(node.style.overflow_x)

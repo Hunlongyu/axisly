@@ -1429,6 +1429,109 @@ void flex_auto_max_wrap_case(bool row, FlexWrap wrap, std::string_view name,
         nodes);
 }
 
+void percent_inset_case(std::string_view name) {
+    const bool border = name == "absolute-percent-border";
+    const bool stretch = name == "absolute-percent-stretch";
+    const bool relative = name == "relative-percent-basic";
+    const bool flex = name == "absolute-percent-flex";
+    const bool grid_area = name == "absolute-percent-grid-area";
+    const bool grid = name == "absolute-percent-grid" || grid_area;
+    const int id = border ? 1590 : stretch ? 1600 : relative ? 1610
+        : flex ? 1620 : grid_area ? 1640 : grid ? 1630 : 1580;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = flex ? Display::Flex
+        : grid ? Display::Grid : Display::Block;
+    root_style.box.size = {Length::length(100), Length::length(80)};
+    if (border) {
+        root_style.box.border = {Length::length(5), Length::length(5),
+            Length::length(5), Length::length(5)};
+        root_style.box.padding = {Length::length(10), Length::length(10),
+            Length::length(10), Length::length(10)};
+    }
+    if (grid_area) {
+        root_style.grid.template_columns = {TrackSizing::fixed(50),
+            TrackSizing::fixed(50)};
+        root_style.grid.template_rows = {TrackSizing::fixed(40),
+            TrackSizing::fixed(40)};
+    }
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    child_style.position = relative ? Position::Relative : Position::Absolute;
+    child_style.box.size.height = Length::length(10);
+    if (!stretch) child_style.box.size.width = Length::length(20);
+    if (border) {
+        child_style.inset.right = Length::percent(0.10f);
+        child_style.inset.bottom = Length::percent(0.25f);
+    } else if (stretch) {
+        child_style.inset.left = Length::percent(0.10f);
+        child_style.inset.right = Length::percent(0.20f);
+        child_style.inset.top = Length::length(5);
+    } else if (grid_area) {
+        child_style.inset.left = Length::percent(0.10f);
+        child_style.inset.top = Length::percent(0.25f);
+        child_style.grid.column = {GridLine::index(2), GridLine::index(3)};
+        child_style.grid.row = {GridLine::index(2), GridLine::index(3)};
+    } else {
+        child_style.inset.left = Length::percent(0.25f);
+        child_style.inset.top = Length::percent(0.50f);
+    }
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(80)}),
+        {{id, root}, {id + 1, child}});
+}
+
+void absolute_block_intrinsic_case(std::string_view name) {
+    const bool percent = name == "absolute-block-auto-percent";
+    const bool trailing = name == "absolute-block-auto-trailing";
+    const bool floats = name == "absolute-block-auto-floats";
+    const int id = percent ? 1660 : trailing ? 1670 : floats ? 1680 : 1650;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size = {Length::length(100), Length::length(80)};
+    const auto root = tree.create_node(root_style);
+    Style absolute_style;
+    absolute_style.display = Display::Block;
+    absolute_style.position = Position::Absolute;
+    if (percent) {
+        absolute_style.inset.left = Length::percent(0.10f);
+        absolute_style.inset.top = Length::percent(0.25f);
+    } else if (trailing) {
+        absolute_style.inset.right = Length::percent(0.10f);
+        absolute_style.inset.bottom = Length::percent(0.25f);
+    } else if (floats) {
+        absolute_style.inset.left = Length::length(5);
+    }
+    const auto positioned = tree.create_node(absolute_style);
+    tree.append_child(root, positioned);
+    std::vector<IdentifiedNode> nodes{{id, root}, {id + 1, positioned}};
+    if (floats) {
+        for (int index = 0; index < 2; ++index) {
+            Style float_style;
+            float_style.display = Display::Block;
+            float_style.float_side = FloatSide::Left;
+            float_style.box.size = {Length::length(index == 0 ? 30.0f : 20.0f),
+                Length::length(10)};
+            const auto child = tree.create_node(float_style);
+            tree.append_child(positioned, child);
+            nodes.emplace_back(id + index + 2, child);
+        }
+    } else {
+        const auto child = tree.create_node({}, [](const MeasureRequest& request) {
+            return Measurement{{request.known_content_width.value_or(20.0f),
+                request.known_content_height.value_or(10.0f)},
+                {}, {}, Size{20, 10}};
+        });
+        tree.append_child(positioned, child);
+        nodes.emplace_back(id + 2, child);
+    }
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(80)}), nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1503,6 +1606,17 @@ int main(int argc, char** argv) {
         } else if (name == "flex-auto-max-width-balance-reverse") {
             flex_auto_max_wrap_case(true, FlexWrap::BalanceReverse, name, 1570);
         }
+        else if (name == "absolute-percent-basic"
+            || name == "absolute-percent-border"
+            || name == "absolute-percent-stretch"
+            || name == "relative-percent-basic"
+            || name == "absolute-percent-flex"
+            || name == "absolute-percent-grid"
+            || name == "absolute-percent-grid-area") percent_inset_case(name);
+        else if (name == "absolute-block-auto-static"
+            || name == "absolute-block-auto-percent"
+            || name == "absolute-block-auto-trailing"
+            || name == "absolute-block-auto-floats") absolute_block_intrinsic_case(name);
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

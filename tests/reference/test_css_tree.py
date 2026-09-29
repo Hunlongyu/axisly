@@ -119,6 +119,17 @@ CASES = (
     "flex-auto-max-width-wrap-reverse",
     "flex-auto-max-width-balance",
     "flex-auto-max-width-balance-reverse",
+    "absolute-percent-basic",
+    "absolute-percent-border",
+    "absolute-percent-stretch",
+    "relative-percent-basic",
+    "absolute-percent-flex",
+    "absolute-percent-grid",
+    "absolute-percent-grid-area",
+    "absolute-block-auto-static",
+    "absolute-block-auto-percent",
+    "absolute-block-auto-trailing",
+    "absolute-block-auto-floats",
     "mixed-block-flex-grid",
 )
 

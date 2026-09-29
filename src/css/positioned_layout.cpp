@@ -158,6 +158,8 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     constraints.containing_height = containing_height;
     constraints.available = {AvailableSpace::definite(containing_width),
         AvailableSpace::definite(containing_height)};
+    constraints.content_based_width = child.style.box.size.width.kind()
+        == LengthKind::Auto && !(left && right);
     if (left && right && child.style.box.size.width.kind() == LengthKind::Auto) {
         constraints.known_width = std::max(Unit{0}, checked(
             static_cast<double>(containing_width) - *left - *right

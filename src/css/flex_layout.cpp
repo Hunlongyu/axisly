@@ -496,7 +496,18 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     const Unit cross_size = row ? *inner_height : *inner_width;
     if (lines.size() == 1) lines.front().cross = cross_size;
     double cross_free = lines.size() == 1 ? 0 : static_cast<double>(cross_size) - used_cross;
-    const auto align_lines = node.style.align_content.value_or(ContentAlignment{});
+    auto align_lines = node.style.align_content.value_or(ContentAlignment{});
+    const bool wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
+        || node.style.flex_wrap == FlexWrap::BalanceReverse;
+    // Start/End follow the cross axis of the writing mode. FlexStart/FlexEnd
+    // follow the line stacking direction, which wrap-reverse flips.
+    if (wrap_reverse) {
+        if (align_lines.position == ContentPosition::Start) {
+            align_lines.position = ContentPosition::End;
+        } else if (align_lines.position == ContentPosition::End) {
+            align_lines.position = ContentPosition::Start;
+        }
+    }
     if (lines.size() > 1 && align_lines.position == ContentPosition::Stretch && cross_free > 0) {
         for (auto& line : lines) line.cross = checked(
             static_cast<double>(line.cross) + cross_free / lines.size(), node.id);
@@ -624,8 +635,6 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     result.size = candidate;
     result.nodes.push_back(make_layout(node, candidate, box));
     if (!lines.empty()) {
-        const bool wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
-            || node.style.flex_wrap == FlexWrap::BalanceReverse;
         const auto& first_line = wrap_reverse ? lines.back() : lines.front();
         if (!first_line.items.empty()) {
             std::size_t selected = first_line.items.front();

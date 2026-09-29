@@ -30,7 +30,7 @@
 | `inset` | 四边 Length／Percent／Auto／Calc | 部分：四边偏移、双边拉伸、绝对定位自动 margin 与 RTL 冲突求解；复杂百分比未完整 | P4 | 已建：absolute-auto-margins、absolute-rtl-overconstraint；待建：percent-inset |
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；复杂容器固有尺寸与循环百分比未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width；待建：intrinsic-size |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height |
-| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；自动尺寸和复杂重排未完整 | P1 | 待建：max-size-reflow |
+| `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance；待建：max-size-reflow |
 | `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选及最小／最大尺寸；Block／Flex／Grid 的单轴指定值和自动内容宽度、border／content box 已差分；替换元素和复杂 min/max 组合未完整 | P1 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box；待建：ratio-replaced |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；clear／浮动等复杂组合未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
@@ -44,8 +44,8 @@
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；循环百分比未完整 | P2/P3 | 已建：flex-row-grow；待建：percent-gap |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐已接入；RTL 组合未验收 | P4 | 已建：block-legacy-text-align |
 | `flex_direction` | Row／RowReverse／Column／ColumnReverse | 部分：四种轴映射已接入；复杂尺寸交互未验收 | P2 | 已建：flex-row-grow；待建：flex-reverse-column |
-| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；复杂组合未验收 | P2 | 已建：flex-balance-lines；待建：wrap-reverse |
-| `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines |
+| `flex_wrap` | NoWrap／Wrap／WrapReverse／Balance／BalanceReverse | 部分：五种换行策略已接入；Flex 自动尺寸被 max 限制时按最终主轴尺寸重新分行；复杂组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-wrap、flex-auto-max-width-wrap-reverse、flex-auto-max-width-balance-reverse |
+| `flex_line_count` | balance 等多行算法的最少行数 | 部分：平衡分行及自动尺寸受限后的重新分行已接入；边界组合未验收 | P2 | 已建：flex-balance-lines、flex-auto-max-width-balance |
 | `flex_basis` | Dimension 的 flex 初始主轴尺寸 | 部分：数值、百分比及固有关键字可探测；嵌套与循环未完整 | P2 | 已建：flex-intrinsic-basis |
 | `flex_grow` | 非负弹性增长系数 | 部分：增长、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-row-grow、flex-small-grow-factors、flex-grow-max-freeze |
 | `flex_shrink` | 非负收缩系数，按基准尺寸缩放 | 部分：缩放、系数总和小于 1 与 min/max 冻结；复杂组合覆盖不足 | P2 | 已建：flex-small-shrink-factor、flex-shrink-min-freeze |
@@ -127,6 +127,8 @@
 | `grid-ratio-width`／`grid-ratio-height`／`grid-ratio-auto-width` | Grid 容器指定单轴及自动宽度的纵横比与项目拉伸 |
 | `block-ratio-content-box`／`flex-ratio-content-box`／`grid-ratio-content-box` | 纵横比按 content box 转换并加回内边距，区分 border-box 尺寸 |
 | `flex-auto-content-width`／`grid-auto-content-width` | 根 Flex／Grid 在可用空间确定但自身宽度为 auto 时按内容确定宽度 |
+| `flex-auto-max-width-wrap`／`flex-auto-max-height-wrap` | 自动主轴尺寸受 max 限制后，在行向和列向按最终尺寸重新分行 |
+| `flex-auto-max-width-wrap-reverse`／`flex-auto-max-width-balance`／`flex-auto-max-width-balance-reverse` | 反向换行和平衡分行在自动主轴尺寸受限后重新分行 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -149,8 +151,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、一百零七组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这一百零七组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、一百一十二组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这一百一十二组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

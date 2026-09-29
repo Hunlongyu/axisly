@@ -48,6 +48,54 @@ struct FlexLine {
     bool has_baseline{};
 };
 
+std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
+    bool row, std::optional<Unit> available, Unit gap, FlexWrap wrap,
+    std::uint16_t requested_lines) {
+    std::vector<FlexLine> lines(1);
+    const bool balanced = wrap == FlexWrap::Balance
+        || wrap == FlexWrap::BalanceReverse;
+    if (balanced && !items.empty()) {
+        std::vector<Unit> outer_sizes;
+        outer_sizes.reserve(items.size());
+        for (const auto& item : items) {
+            Unit hypothetical = item.maximum ? std::min(item.base, *item.maximum)
+                : item.base;
+            hypothetical = std::max(hypothetical, item.minimum);
+            outer_sizes.push_back(checked(static_cast<double>(hypothetical)
+                + axis(item.margin, row, true, true)
+                + axis(item.margin, row, true, false), item.id));
+        }
+        const auto counts = balanced_line_counts(outer_sizes,
+            available.value_or(std::numeric_limits<Unit>::infinity()),
+            gap, requested_lines, 25'000'000);
+        lines.clear();
+        std::size_t next = 0;
+        for (const auto count : counts) {
+            FlexLine line;
+            for (std::size_t i = 0; i < count; ++i) line.items.push_back(next++);
+            lines.push_back(std::move(line));
+        }
+    } else {
+        double estimated_main = 0;
+        for (std::size_t i = 0; i < items.size(); ++i) {
+            const auto& item = items[i];
+            const auto outer = static_cast<double>(item.base)
+                + axis(item.margin, row, true, true)
+                + axis(item.margin, row, true, false);
+            if (wrap != FlexWrap::NoWrap && available
+                && !lines.back().items.empty()
+                && estimated_main + gap + outer > *available) {
+                lines.emplace_back();
+                estimated_main = 0;
+            }
+            if (!lines.back().items.empty()) estimated_main += gap;
+            estimated_main += outer;
+            lines.back().items.push_back(i);
+        }
+    }
+    return lines;
+}
+
 Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId node) {
     const auto numeric = value.resolve_numeric(basis);
     if (!numeric) return 0; // Cyclic percentage gaps resolve to zero.
@@ -161,8 +209,6 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
 
 Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                       const ResolvedBox& box, std::size_t depth) {
-    const bool balanced = node.style.flex_wrap == FlexWrap::Balance
-        || node.style.flex_wrap == FlexWrap::BalanceReverse;
     const bool row = is_row(node.style.flex_direction);
     const bool main_reverse = row
         ? (node.style.flex_direction == FlexDirection::RowReverse)
@@ -310,44 +356,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto});
     }
 
-    std::vector<FlexLine> lines(1);
-    if (balanced && !items.empty()) {
-        std::vector<Unit> outer_sizes;
-        outer_sizes.reserve(items.size());
-        for (const auto& item : items) {
-            Unit hypothetical = item.maximum ? std::min(item.base, *item.maximum) : item.base;
-            hypothetical = std::max(hypothetical, item.minimum);
-            outer_sizes.push_back(checked(static_cast<double>(hypothetical)
-                + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false), item.id));
-        }
-        const auto counts = balanced_line_counts(outer_sizes,
-            main_available.value_or(std::numeric_limits<Unit>::infinity()),
-            main_gap, node.style.flex_line_count, 25'000'000);
-        lines.clear();
-        std::size_t next = 0;
-        for (const auto count : counts) {
-            FlexLine line;
-            for (std::size_t i = 0; i < count; ++i) line.items.push_back(next++);
-            lines.push_back(std::move(line));
-        }
-    } else {
-        double estimated_main = 0;
-        for (std::size_t i = 0; i < items.size(); ++i) {
-            const auto& item = items[i];
-            const auto outer = static_cast<double>(item.base)
-                + axis(item.margin, row, true, true) + axis(item.margin, row, true, false);
-            if (node.style.flex_wrap != FlexWrap::NoWrap && main_available
-                && !lines.back().items.empty()
-                && estimated_main + main_gap + outer > *main_available) {
-                lines.emplace_back();
-                estimated_main = 0;
-            }
-            if (!lines.back().items.empty()) estimated_main += main_gap;
-            estimated_main += outer;
-            lines.back().items.push_back(i);
-        }
-    }
+    auto lines = collect_flex_lines(items, row, main_available, main_gap,
+        node.style.flex_wrap, node.style.flex_line_count);
     if (!main_available) {
         double desired = 0;
         for (const auto& line : lines) {
@@ -369,6 +379,11 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             border_height = constrain_axis(checked(static_cast<double>(inner)
                 + *deco_height, node.id), box.minimum.height, box.maximum.height);
             inner_height = std::max(Unit{0}, *border_height - *deco_height);
+        }
+        const Unit constrained_main = row ? *inner_width : *inner_height;
+        if (constrained_main < inner && node.style.flex_wrap != FlexWrap::NoWrap) {
+            lines = collect_flex_lines(items, row, constrained_main, main_gap,
+                node.style.flex_wrap, node.style.flex_line_count);
         }
     }
     const Unit main_size = row ? *inner_width : *inner_height;

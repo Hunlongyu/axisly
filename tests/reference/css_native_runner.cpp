@@ -1400,6 +1400,35 @@ void container_size_case(std::string_view name) {
         {{id, root}, {id + 1, child}});
 }
 
+void flex_auto_max_wrap_case(bool row, FlexWrap wrap, std::string_view name,
+                             int id) {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Flex;
+    root_style.flex_wrap = wrap;
+    if (wrap == FlexWrap::Balance || wrap == FlexWrap::BalanceReverse) {
+        root_style.flex_line_count = 2;
+    }
+    if (row) root_style.box.max_size.width = Length::length(60);
+    else {
+        root_style.flex_direction = FlexDirection::Column;
+        root_style.box.max_size.height = Length::length(40);
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<IdentifiedNode> nodes{{id, root}};
+    for (int index = 0; index < 3; ++index) {
+        Style child_style;
+        child_style.box.size = {Length::length(30),
+            Length::length(row ? 10.0f : 30.0f)};
+        const auto child = tree.create_node(child_style);
+        tree.append_child(root, child);
+        nodes.emplace_back(id + index + 1, child);
+    }
+    print(name.data(), tree.compute(root, {AvailableSpace::definite(100),
+        row ? AvailableSpace::max_content() : AvailableSpace::definite(100)}),
+        nodes);
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1463,6 +1492,17 @@ int main(int argc, char** argv) {
             || name == "grid-ratio-content-box"
             || name == "flex-auto-content-width"
             || name == "grid-auto-content-width") container_size_case(name);
+        else if (name == "flex-auto-max-width-wrap") {
+            flex_auto_max_wrap_case(true, FlexWrap::Wrap, name, 1530);
+        } else if (name == "flex-auto-max-height-wrap") {
+            flex_auto_max_wrap_case(false, FlexWrap::Wrap, name, 1540);
+        } else if (name == "flex-auto-max-width-wrap-reverse") {
+            flex_auto_max_wrap_case(true, FlexWrap::WrapReverse, name, 1550);
+        } else if (name == "flex-auto-max-width-balance") {
+            flex_auto_max_wrap_case(true, FlexWrap::Balance, name, 1560);
+        } else if (name == "flex-auto-max-width-balance-reverse") {
+            flex_auto_max_wrap_case(true, FlexWrap::BalanceReverse, name, 1570);
+        }
         else if (name == "block-adjacent-margins") block_adjacent_margins();
         else if (name == "grid-content-alignment") grid_content_alignment();
         else if (name == "flex-intrinsic-basis") flex_intrinsic_basis();

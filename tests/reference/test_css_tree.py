@@ -114,6 +114,11 @@ CASES = (
     "grid-ratio-content-box",
     "flex-auto-content-width",
     "grid-auto-content-width",
+    "flex-auto-max-width-wrap",
+    "flex-auto-max-height-wrap",
+    "flex-auto-max-width-wrap-reverse",
+    "flex-auto-max-width-balance",
+    "flex-auto-max-width-balance-reverse",
     "mixed-block-flex-grid",
 )
 

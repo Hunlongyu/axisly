@@ -570,17 +570,26 @@ void self_alignment_direction_case(std::string_view name) {
 }
 
 void leaf_intrinsic_ratio_case(std::string_view name) {
-    const bool replaced = name == "block-replaced-ratio";
+    const bool replaced = name.find("-replaced-ratio") != std::string_view::npos;
+    const bool block_replaced = name == "block-replaced-ratio";
+    const bool flex_replaced = name.starts_with("flex-replaced-");
+    const bool grid_replaced = name.starts_with("grid-replaced-");
+    const bool grid_fixed = name.ends_with("-fixed");
+    const bool grid_start = name.ends_with("-start");
     const bool max_height = name == "leaf-intrinsic-ratio-max-height";
-    const bool max_width = name == "leaf-intrinsic-ratio-max-width";
-    const int id = replaced ? 2010 : max_height ? 1990 : max_width ? 2000 : 1980;
+    const bool max_width = name.ends_with("max-width");
+    const int id = block_replaced ? 2010 : grid_replaced
+        ? (grid_fixed ? 2050 : grid_start ? 2060 : max_width ? 2070 : 2030)
+        : flex_replaced ? (max_width ? 2040 : 2020)
+        : max_height ? 1990 : max_width ? 2000 : 1980;
     LayoutTree tree;
     Style style;
     style.box.aspect_ratio = 2.0f;
     if (max_height) style.box.max_size.height = Length::length(15);
     if (max_width) style.box.max_size.width = Length::length(30);
+    if (grid_start) style.justify_self = ItemAlignment{ItemPosition::Start};
     if (replaced) {
-        style.display = Display::Block;
+        if (block_replaced) style.display = Display::Block;
         style.box.replaced = true;
     }
     const auto measured = tree.create_node(style, [](const MeasureRequest& request) {
@@ -597,8 +606,13 @@ void leaf_intrinsic_ratio_case(std::string_view name) {
         return;
     }
     Style root_style;
-    root_style.display = Display::Block;
+    root_style.display = block_replaced ? Display::Block
+        : grid_replaced ? Display::Grid : Display::Flex;
     root_style.box.size = {Length::length(100), Length::length(100)};
+    if (grid_fixed) {
+        root_style.grid.template_columns = {TrackSizing::fixed(100)};
+        root_style.grid.template_rows = {TrackSizing::fixed(100)};
+    }
     const auto root = tree.create_node(root_style);
     tree.append_child(root, measured);
     print(name.data(), tree.compute(root,
@@ -2000,7 +2014,14 @@ int main(int argc, char** argv) {
         else if (name == "leaf-intrinsic-ratio"
             || name == "leaf-intrinsic-ratio-max-height"
             || name == "leaf-intrinsic-ratio-max-width"
-            || name == "block-replaced-ratio") leaf_intrinsic_ratio_case(name);
+            || name == "block-replaced-ratio"
+            || name == "flex-replaced-ratio"
+            || name == "grid-replaced-ratio"
+            || name == "flex-replaced-ratio-max-width"
+            || name == "grid-replaced-ratio-fixed"
+            || name == "grid-replaced-ratio-start"
+            || name == "grid-replaced-ratio-max-width")
+            leaf_intrinsic_ratio_case(name);
         else if (name == "grid-row-dense-holes") grid_row_dense_holes();
         else if (name == "grid-named-line-occurrences") grid_named_line_occurrences();
         else if (name == "block-parent-child-margins") block_parent_child_margins();

@@ -442,9 +442,23 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto scrolls = [](Overflow overflow) {
             return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
         };
+        const auto horizontal = get(id).style.justify_self.value_or(
+            node.style.justify_items.value_or(ItemAlignment{}));
+        const bool stretched_ratio = inner_height && child_box.aspect_ratio
+            && get(id).style.box.size.width.kind() == LengthKind::Auto
+            && horizontal.position == ItemPosition::Stretch
+            && !child_box.preferred.width;
         contributions.push_back({placements[i], minimum_contribution,
             min_fragment.size, max_fragment.size, edges(child_box.margin, id),
-            scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y)});
+            scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y),
+            stretched_ratio ? std::optional<ResolvedBox>(child_box) : std::nullopt});
+    }
+    if (inner_height && std::any_of(contributions.begin(), contributions.end(),
+        [](const ItemContribution& item) { return item.stretched_ratio_box.has_value(); })) {
+        auto measured_rows = track_rows;
+        size_axis(measured_rows, contributions, false, inner_height,
+            constraints.available.height.kind, node.id);
+        apply_cross_axis_ratio_contributions(measured_rows, contributions, node.id);
     }
     size_axis(track_columns, contributions, true, inner_width,
         constraints.available.width.kind, node.id);
@@ -565,20 +579,23 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto horizontal = child.style.justify_self.value_or(node.style.justify_items.value_or(
             ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
         const auto vertical = child.style.align_self.value_or(node.style.align_items.value_or(
-            ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
+            ItemAlignment{resolved.aspect_ratio ? ItemPosition::Start
+                : ItemPosition::Stretch, AlignmentSafety::Unsafe}));
         if (horizontal.position == ItemPosition::Stretch
             && child_box.size.width.kind() == LengthKind::Auto
             && resolved.margin.left.kind != EdgeKind::Auto
             && resolved.margin.right.kind != EdgeKind::Auto) {
-            final.known_width = std::max(Unit{0}, checked(
-                static_cast<double>(cell_width) - margin.left - margin.right, id));
+            final.known_width = constrain_axis(std::max(Unit{0}, checked(
+                static_cast<double>(cell_width) - margin.left - margin.right, id)),
+                resolved.minimum.width, resolved.maximum.width);
         }
         if (vertical.position == ItemPosition::Stretch
             && child_box.size.height.kind() == LengthKind::Auto
             && resolved.margin.top.kind != EdgeKind::Auto
             && resolved.margin.bottom.kind != EdgeKind::Auto) {
-            final.known_height = std::max(Unit{0}, checked(
-                static_cast<double>(cell_height) - margin.top - margin.bottom, id));
+            final.known_height = constrain_axis(std::max(Unit{0}, checked(
+                static_cast<double>(cell_height) - margin.top - margin.bottom, id)),
+                resolved.minimum.height, resolved.maximum.height);
         }
         auto child_fragment = layout(id, final, depth + 1);
         if (vertical.position == ItemPosition::Baseline

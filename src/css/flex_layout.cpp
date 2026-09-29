@@ -322,6 +322,33 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 basis = limit ? std::max(minimum, std::min(maximum, *limit)) : maximum;
             }
         }
+        const auto cross_alignment = child.style.align_self.value_or(
+            node.style.align_items.value_or(ItemAlignment{}));
+        const auto cross_preferred = axis(child_box.preferred, row, false);
+        const auto main_preferred = axis(child_box.preferred, row, true);
+        const auto& cross_size_style = row
+            ? child.style.box.size.height : child.style.box.size.width;
+        const bool cross_auto_margin = (row
+            ? child_box.margin.top.kind == EdgeKind::Auto
+                || child_box.margin.bottom.kind == EdgeKind::Auto
+            : child_box.margin.left.kind == EdgeKind::Auto
+                || child_box.margin.right.kind == EdgeKind::Auto);
+        if (child_box.aspect_ratio && cross_available
+            && !main_preferred && !cross_preferred
+            && cross_size_style.kind() == LengthKind::Auto
+            && (flex_basis == LengthKind::Auto || flex_basis == LengthKind::Content)
+            && node.style.flex_wrap == FlexWrap::NoWrap
+            && cross_alignment.position == ItemPosition::Stretch
+            && !cross_auto_margin) {
+            const Unit stretched_cross = std::max(Unit{0}, checked(
+                static_cast<double>(*cross_available)
+                    - axis(margin, row, false, true)
+                    - axis(margin, row, false, false), id));
+            const auto transferred = transfer_aspect_ratio(row
+                ? ResolvedDimensions{std::nullopt, stretched_cross}
+                : ResolvedDimensions{stretched_cross, std::nullopt}, child_box);
+            basis = axis(transferred, row, true).value_or(basis);
+        }
         auto minimum = axis(child_box.minimum, row, true);
         if (!minimum) {
             const auto overflow = row ? child.style.overflow_x : child.style.overflow_y;

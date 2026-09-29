@@ -25,6 +25,7 @@ struct ItemContribution {
     Size minimum_contribution{}, min_content{}, max_content{};
     Insets margin{};
     bool scrolls_x{}, scrolls_y{};
+    std::optional<ResolvedBox> stretched_ratio_box;
 };
 
 struct TrackState {
@@ -70,6 +71,8 @@ void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
     const Placement& placement, const TrackAxis& axis, Unit min_content, bool columns);
 void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
     bool columns, std::optional<Unit> available, AvailableKind query, NodeId id);
+void apply_cross_axis_ratio_contributions(const TrackAxis& rows,
+    std::vector<ItemContribution>& items, NodeId id);
 void align_tracks(TrackAxis& axis, Unit available, ContentAlignment alignment, NodeId id);
 
 } // namespace axisly::css::detail

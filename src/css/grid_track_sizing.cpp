@@ -170,6 +170,29 @@ Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
         ? min_content : Unit{0};
 }
 
+void apply_cross_axis_ratio_contributions(const TrackAxis& rows,
+    std::vector<ItemContribution>& items, NodeId id) {
+    for (auto& item : items) {
+        if (!item.stretched_ratio_box) continue;
+        const auto& box = *item.stretched_ratio_box;
+        const Unit row_span = rows.span(item.placement.row_start,
+            item.placement.row_end);
+        const Unit available_height = std::max(Unit{0}, checked(
+            static_cast<double>(row_span) - item.margin.top
+                - item.margin.bottom, id));
+        const auto derived = transfer_aspect_ratio(
+            {std::nullopt, available_height}, box).width;
+        if (!derived) continue;
+        const Unit width = constrain_axis(*derived,
+            box.minimum.width, box.maximum.width);
+        for (auto* value : {&item.minimum_contribution.width,
+            &item.min_content.width, &item.max_content.width}) {
+            *value = std::max(constrain_axis(*value,
+                box.minimum.width, box.maximum.width), width);
+        }
+    }
+}
+
 void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
                bool columns, std::optional<Unit> available, AvailableKind query,
                NodeId id) {

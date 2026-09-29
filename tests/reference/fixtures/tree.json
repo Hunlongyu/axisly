@@ -1360,6 +1360,54 @@
         {"id": 2010, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 100}}},
         {"id": 2011, "parent": 0, "style": {"display": "Block", "item_is_replaced": true, "aspect_ratio": 2}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
       ]
+    },
+    {
+      "name": "flex-replaced-ratio",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2020, "parent": null, "style": {"display": "Flex", "size": {"width": 100, "height": 100}}},
+        {"id": 2021, "parent": 0, "style": {"item_is_replaced": true, "aspect_ratio": 2}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "grid-replaced-ratio",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2030, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}}},
+        {"id": 2031, "parent": 0, "style": {"item_is_replaced": true, "aspect_ratio": 2}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "flex-replaced-ratio-max-width",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2040, "parent": null, "style": {"display": "Flex", "size": {"width": 100, "height": 100}}},
+        {"id": 2041, "parent": 0, "style": {"item_is_replaced": true, "aspect_ratio": 2, "max_size": {"width": 30}}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "grid-replaced-ratio-fixed",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2050, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}, "grid_template_columns": "100px", "grid_template_rows": "100px"}},
+        {"id": 2051, "parent": 0, "style": {"item_is_replaced": true, "aspect_ratio": 2}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "grid-replaced-ratio-start",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2060, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}}},
+        {"id": 2061, "parent": 0, "style": {"item_is_replaced": true, "aspect_ratio": 2, "justify_self": "Start"}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "grid-replaced-ratio-max-width",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2070, "parent": null, "style": {"display": "Grid", "size": {"width": 100, "height": 100}}},
+        {"id": 2071, "parent": 0, "style": {"item_is_replaced": true, "aspect_ratio": 2, "max_size": {"width": 30}}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
     }
   ]
 }

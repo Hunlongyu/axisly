@@ -438,11 +438,17 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 min_fragment.size.width, true),
             grid_item_minimum(get(id), child_box, placements[i], track_rows,
                 min_fragment.size.height, false)};
+        const auto scrolls = [](Overflow overflow) {
+            return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
+        };
         contributions.push_back({placements[i], minimum_contribution,
-            min_fragment.size, max_fragment.size, edges(child_box.margin, id)});
+            min_fragment.size, max_fragment.size, edges(child_box.margin, id),
+            scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y)});
     }
-    size_axis(track_columns, contributions, true, inner_width, node.id);
-    size_axis(track_rows, contributions, false, inner_height, node.id);
+    size_axis(track_columns, contributions, true, inner_width,
+        constraints.available.width.kind, node.id);
+    size_axis(track_rows, contributions, false, inner_height,
+        constraints.available.height.kind, node.id);
     const Unit measured_width = track_columns.offsets.empty() ? 0
         : track_columns.offsets.back();
     const Unit measured_height = track_rows.offsets.empty() ? 0
@@ -463,13 +469,15 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
             min_column, max_column, inner_width, column_gap, node.id);
         collapse_auto_fit(track_columns, columns, placements, true);
-        size_axis(track_columns, contributions, true, inner_width, node.id);
+        size_axis(track_columns, contributions, true, inner_width,
+            constraints.available.width.kind, node.id);
     }
     if (intrinsic_height && *inner_height != measured_height) {
         track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
             min_row, max_row, inner_height, row_gap, node.id);
         collapse_auto_fit(track_rows, rows, placements, false);
-        size_axis(track_rows, contributions, false, inner_height, node.id);
+        size_axis(track_rows, contributions, false, inner_height,
+            constraints.available.height.kind, node.id);
     }
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);

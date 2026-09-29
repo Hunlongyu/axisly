@@ -77,6 +77,13 @@ CASES = (
     "grid-spanning-flex-minimum",
     "grid-spanning-auto-minimum",
     "grid-spanning-scroll-minimum",
+    "grid-fr-small-min-query",
+    "grid-fr-small-max-query",
+    "grid-fr-weighted-min-query",
+    "grid-fr-weighted-max-query",
+    "grid-auto-min-query",
+    "grid-auto-max-query",
+    "grid-max-track-min-query",
     "mixed-block-flex-grid",
 )
 

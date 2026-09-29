@@ -190,6 +190,22 @@ class TreeReferenceTests(unittest.TestCase):
                                            1141: [0, 0, 80, 20]},
             "grid-spanning-scroll-minimum": {1150: [0, 0, 40, 20],
                                              1151: [0, 0, 40, 20]},
+            "grid-fr-small-min-query": {1160: [0, 0, 32, 20],
+                                        1161: [0, 0, 32, 20]},
+            "grid-fr-small-max-query": {1170: [0, 0, 40, 20],
+                                        1171: [0, 0, 40, 20]},
+            "grid-fr-weighted-min-query": {1180: [0, 0, 80, 20],
+                                           1181: [0, 0, 80, 20]},
+            "grid-fr-weighted-max-query": {1190: [0, 0, 100, 20],
+                                           1191: [0, 0, 100, 20]},
+            "grid-auto-min-query": {1200: [0, 0, 40, 20],
+                                    1201: [0, 0, 20, 20],
+                                    1202: [20, 0, 20, 20]},
+            "grid-auto-max-query": {1210: [0, 0, 140, 20],
+                                    1211: [0, 0, 70, 20],
+                                    1212: [70, 0, 70, 20]},
+            "grid-max-track-min-query": {1220: [0, 0, 70, 20],
+                                         1221: [0, 0, 70, 20]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

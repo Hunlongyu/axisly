@@ -24,6 +24,7 @@ struct ItemContribution {
     Placement placement;
     Size minimum_contribution{}, min_content{}, max_content{};
     Insets margin{};
+    bool scrolls_x{}, scrolls_y{};
 };
 
 struct TrackState {
@@ -67,7 +68,7 @@ void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
 [[nodiscard]] Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
     const Placement& placement, const TrackAxis& axis, Unit min_content, bool columns);
 void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
-    bool columns, std::optional<Unit> available, NodeId id);
+    bool columns, std::optional<Unit> available, AvailableKind query, NodeId id);
 void align_tracks(TrackAxis& axis, Unit available, ContentAlignment alignment, NodeId id);
 
 } // namespace axisly::css::detail

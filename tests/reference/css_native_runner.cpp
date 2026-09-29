@@ -1137,6 +1137,86 @@ void grid_spanning_minimum(GridSpanningCase scenario) {
         {{id, root}, {id + 1, child}});
 }
 
+void grid_intrinsic_query(std::string_view name) {
+    const bool automatic = name == "grid-auto-min-query"
+        || name == "grid-auto-max-query";
+    const bool minimum = name == "grid-fr-small-min-query"
+        || name == "grid-fr-weighted-min-query"
+        || name == "grid-auto-min-query";
+    const bool small = name == "grid-fr-small-min-query"
+        || name == "grid-fr-small-max-query";
+    const int id = automatic ? (minimum ? 1200 : 1210)
+        : small ? (minimum ? 1160 : 1170) : (minimum ? 1180 : 1190);
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size.height = Length::length(20);
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    root_style.grid.template_columns = automatic
+        ? std::vector<TemplateTrack>{TrackSizing::automatic(), TrackSizing::automatic()}
+        : small
+            ? std::vector<TemplateTrack>{TrackSizing::fraction(0.2f),
+                TrackSizing::fraction(0.2f)}
+            : std::vector<TemplateTrack>{TrackSizing::fraction(0.5f),
+                TrackSizing::fraction(1)};
+    const auto root = tree.create_node(root_style);
+    const auto available = minimum ? AvailableSpace::min_content()
+        : AvailableSpace::max_content();
+    if (automatic) {
+        std::vector<IdentifiedNode> nodes{{id, root}};
+        for (int column = 1; column <= 2; ++column) {
+            Style child_style;
+            child_style.grid.column = {GridLine::index(static_cast<std::int16_t>(column)),
+                GridLine::span(1)};
+            const auto child = tree.create_node(child_style,
+                [](const MeasureRequest& request) {
+                    const Unit intrinsic = request.available_width.kind
+                        == AvailableKind::MinContent ? 20.0f : 70.0f;
+                    return Measurement{{request.known_content_width.value_or(intrinsic),
+                        request.known_content_height.value_or(10.0f)}, {}, {},
+                        Size{70, 10}};
+                });
+            tree.append_child(root, child);
+            nodes.emplace_back(id + column, child);
+        }
+        print(name.data(), tree.compute(root, {available, AvailableSpace::definite(20)}), nodes);
+    } else {
+        Style child_style;
+        child_style.grid.column = {GridLine::index(1), GridLine::span(2)};
+        const auto child = tree.create_node(child_style,
+            [](const MeasureRequest& request) {
+                const Unit intrinsic = request.available_width.kind
+                    == AvailableKind::MinContent ? 80.0f : 100.0f;
+                return Measurement{{request.known_content_width.value_or(intrinsic),
+                    request.known_content_height.value_or(10.0f)}, {}, {},
+                    Size{100, 10}};
+            });
+        tree.append_child(root, child);
+        print(name.data(), tree.compute(root, {available, AvailableSpace::definite(20)}),
+            {{id, root}, {id + 1, child}});
+    }
+}
+
+void grid_max_track_min_query() {
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size.height = Length::length(20);
+    root_style.grid.template_columns = {TrackSizing::max_content()};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    const auto child = tree.create_node({}, [](const MeasureRequest& request) {
+        const Unit intrinsic = request.available_width.kind == AvailableKind::MinContent
+            ? 20.0f : 70.0f;
+        return Measurement{{request.known_content_width.value_or(intrinsic),
+            request.known_content_height.value_or(10.0f)}, {}, {}, Size{70, 10}};
+    });
+    tree.append_child(root, child);
+    print("grid-max-track-min-query", tree.compute(root,
+        {AvailableSpace::min_content(), AvailableSpace::definite(20)}),
+        {{1220, root}, {1221, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1248,6 +1328,13 @@ int main(int argc, char** argv) {
             grid_spanning_minimum(GridSpanningCase::Automatic);
         else if (name == "grid-spanning-scroll-minimum")
             grid_spanning_minimum(GridSpanningCase::Scrolling);
+        else if (name == "grid-fr-small-min-query"
+            || name == "grid-fr-small-max-query"
+            || name == "grid-fr-weighted-min-query"
+            || name == "grid-fr-weighted-max-query"
+            || name == "grid-auto-min-query"
+            || name == "grid-auto-max-query") grid_intrinsic_query(name);
+        else if (name == "grid-max-track-min-query") grid_max_track_min_query();
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

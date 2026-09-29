@@ -176,6 +176,13 @@ add_test(NAME axisly.reference.scrollbar_matrix COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}")
 set_tests_properties(axisly.reference.scrollbar_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
+add_test(NAME axisly.reference.ratio_scrollbar_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_ratio_matrix.py"
+    --scrollbar
+    --axisly "$<TARGET_FILE:axisly_ratio_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.ratio_scrollbar_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
 add_test(NAME axisly.reference.flex_matrix COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_flex_matrix.py"
     --axisly "$<TARGET_FILE:axisly_flex_matrix_native>"

@@ -61,6 +61,12 @@
 | `grid_column` | 起止线、负索引、span、名称 | 部分：负索引、具名 span、隐式线与绝对区域；双 span 采用起始 span，孤立具名 span 化为一条轨道，起止反向／相同线规则已差分；列轴端点矩阵覆盖四种自动流与固定／拉伸项目，更多固有尺寸组合未完整 | P3 | 已建：grid-implicit-negative-lines、grid-named-line-occurrences、grid-line-reverse-column／negative／named、grid-line-equal-column、grid-line-both-spans、grid-line-named-span-start-auto／auto-end、test_grid_line_matrix.py |
 | `dummy` | Rust 泛型编译占位字段 | 内部字段 | — | 无需用例 |
 
+纵横比与滚动条的交叉输入另见 `test_ratio_matrix.py --scrollbar`：
+648 组差分覆盖三种父布局、三种子布局、双轴单独指定尺寸、两种
+`box_sizing`、无约束／最小宽度／最小高度、LTR／RTL 和三种滚动轴组合。
+独立断言固定无额外约束时的四种宽高结果；滚动条只缩小内容空间，
+不改变指定尺寸按纵横比推导的外盒尺寸。更深层尺寸循环仍属部分支持。
+
 ## 跨字段验收轴
 
 单字段用例只能证明输入可表达。每个阶段还需覆盖有限／未定空间、零尺寸、

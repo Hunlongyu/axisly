@@ -45,6 +45,7 @@ struct LayoutTree::Impl {
     detail::CacheMap cache;
     std::size_t cached_layouts{};
     LayoutResult published;
+    std::optional<std::pair<NodeId, AvailableSize>> published_key;
     bool computing{};
 
     explicit Impl(TreeLimits requested) : limits(requested) {
@@ -73,9 +74,11 @@ struct LayoutTree::Impl {
         cache.erase(entry);
     }
     void invalidate_path(std::optional<NodeId> start) {
+        published_key.reset();
         for (auto id = start; id; id = get(*id).parent) erase_cache(*id);
     }
     void invalidate_subtree(NodeId root) {
+        published_key.reset();
         std::vector<NodeId> pending{root};
         while (!pending.empty()) {
             const auto id = pending.back();
@@ -166,6 +169,7 @@ void LayoutTree::detach(NodeId child) {
 void LayoutTree::remove(NodeId node) {
     impl_->mutable_guard();
     impl_->get(node);
+    impl_->published_key.reset();
     detach(node);
     std::vector<NodeId> pending{node};
     while (!pending.empty()) {
@@ -186,6 +190,14 @@ void LayoutTree::mark_dirty(NodeId node) {
 const LayoutResult& LayoutTree::compute(NodeId root, AvailableSize available) & {
     impl_->mutable_guard();
     validate_available(available);
+    if (impl_->published_key == std::pair{root, available}) {
+        impl_->published.measurement_count = 0;
+        impl_->published.layout_count = 0;
+        impl_->published.cache_hits = 1;
+        impl_->published.cache_hit = true;
+        return impl_->published;
+    }
+    impl_->published_key.reset();
     struct Guard {
         bool& computing;
         explicit Guard(bool& value) : computing(value) { computing = true; }
@@ -206,6 +218,7 @@ const LayoutResult& LayoutTree::compute(NodeId root, AvailableSize available) & 
         }
     }
     impl_->published = std::move(candidate);
+    if (impl_->published.succeeded()) impl_->published_key = std::pair{root, available};
     return impl_->published;
 }
 

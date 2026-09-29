@@ -5,6 +5,43 @@
 #include <variant>
 #include <vector>
 
+bool css_consumer_valid() {
+    namespace css = axisly::css;
+    css::LayoutTree tree;
+    css::Style grid_style;
+    grid_style.display = css::Display::Grid;
+    grid_style.box.size = {css::Length::length(200), css::Length::length(60)};
+    grid_style.grid.template_columns = {css::TrackSizing::fixed(200)};
+    grid_style.grid.template_rows = {css::TrackSizing::fixed(60)};
+    const auto root = tree.create_node(grid_style);
+    css::Style flex_style;
+    flex_style.display = css::Display::Flex;
+    const auto flex = tree.create_node(flex_style);
+    tree.append_child(root, flex);
+    css::Style block_style;
+    block_style.display = css::Display::Block;
+    axisly::Unit text_width = 20;
+    const auto leaf = tree.create_node(block_style,
+        [&](const css::MeasureRequest& request) {
+            return css::Measurement{{request.known_content_width.value_or(text_width), 10}, {}, {}};
+        });
+    tree.append_child(flex, leaf);
+    const css::AvailableSize available{css::AvailableSpace::definite(200),
+        css::AvailableSpace::definite(60)};
+    const auto& first = tree.compute(root, available);
+    if (!first.succeeded() || first.size != axisly::Size{200, 60}
+        || first.nodes.size() != 3 || !first.find(leaf)) return false;
+    const auto* storage = first.nodes.data();
+    const auto& reused = tree.compute(root, available);
+    if (!reused.cache_hit || reused.measurement_count != 0
+        || reused.nodes.data() != storage) return false;
+    text_width = 25;
+    tree.mark_dirty(leaf);
+    const auto& changed = tree.compute(root, available);
+    return changed.succeeded() && !changed.cache_hit
+        && changed.measurement_count > 0 && changed.nodes.size() == 3;
+}
+
 int main() {
     const auto track = axisly::Track::range(axisly::Track::fixed(100), axisly::Track::weighted(2));
     const auto& range = std::get<axisly::RangeTrack>(track.definition());
@@ -87,7 +124,7 @@ int main() {
     (void)measurements.measure(7, {{}, {}, {100, 100}});
     (void)measurements.measure(7, {{}, {}, {100, 100}});
     const bool measurement_cache_valid = measurements.measurement_count() == 1 && measurements.hit_count() == 1 && standalone_calls == 1;
-    return advanced_valid && measurement_cache_valid && snapped.succeeded()
+    return css_consumer_valid() && advanced_valid && measurement_cache_valid && snapped.succeeded()
             && first_valid && hit_valid && !changed.cache_hit && cached_calls == 4
             && track.kind() == axisly::TrackKind::Range
             && std::get<axisly::FixedTrack>(range.minimum).size == 100

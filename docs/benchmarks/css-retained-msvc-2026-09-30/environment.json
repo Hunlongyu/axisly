@@ -1,0 +1,14 @@
+{
+  "date": "2026-09-30",
+  "platform": "Windows 11 Pro 10.0.26200 x64",
+  "processor": "Intel Core i7-11700K, 16 logical processors",
+  "memory_kib": 66940804,
+  "compiler": "MSVC 19.51.36257.0",
+  "cmake_preset": "benchmark-release",
+  "git_base_before_changes": "c267c813102b0c460f0a92da07830bf88071089c",
+  "run": "20 iterations per batch, 9 alternating batches per profile, sequential timing and allocation executables",
+  "timing_executable_sha256": "A2E9290E2C2D0DBF79D3A21737A3A1DEAB3C07840D8193F5751CC89D44A59A1F",
+  "allocation_executable_sha256": "8D6C99A5A0CC3B0CC7CEAFAB8596D5A4EDC2E3FDD578D28DF9A5D0E88FC2EA9A",
+  "cpu_affinity_pinned": false,
+  "note": "Executable hashes identify the exact binaries built from this worktree's uncommitted benchmark and CSS published-result changes. The allocation probe replaces C++ new/delete only in the allocation executable."
+}

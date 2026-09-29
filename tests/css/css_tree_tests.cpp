@@ -219,9 +219,11 @@ void cache_and_dirty() {
     const auto initial = tree.compute(root, space);
     require(initial.succeeded() && initial.measurement_count == 2
         && first_calls == 1 && second_calls == 1, "Initial layout must measure both leaves");
+    const auto* published_nodes = tree.compute(root, space).nodes.data();
     const auto reused = tree.compute(root, space);
-    require(reused.cache_hit && reused.layout_count == 0 && reused.measurement_count == 0,
-        "Unchanged tree must reuse its cached root result");
+    require(reused.cache_hit && reused.layout_count == 0 && reused.measurement_count == 0
+        && tree.compute(root, space).nodes.data() == published_nodes,
+        "Unchanged tree must reuse its published result storage");
     tree.mark_dirty(first);
     const auto refreshed = tree.compute(root, space);
     require(refreshed.succeeded() && !refreshed.cache_hit && refreshed.cache_hits >= 1

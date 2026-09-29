@@ -35,7 +35,29 @@ target_compile_definitions(axisly_retained_bench PRIVATE
 set_target_properties(axisly_retained_bench PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 axisly_enable_warnings(axisly_retained_bench)
 
+foreach(target IN ITEMS axisly_css_retained_bench axisly_css_retained_allocations)
+    add_executable(${target} css_retained.cpp)
+    target_link_libraries(${target} PRIVATE axisly::axisly)
+    target_compile_definitions(${target} PRIVATE
+        AXISLY_BENCH_VERSION="${PROJECT_VERSION}" AXISLY_BENCH_CONFIG="$<CONFIG>")
+    set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+    axisly_enable_warnings(${target})
+endforeach()
+target_sources(axisly_css_retained_allocations PRIVATE allocation_probe.cpp)
+target_compile_definitions(axisly_css_retained_allocations PRIVATE AXISLY_COUNT_ALLOCATIONS=1)
+
 if(AXISLY_BUILD_TESTS)
+    add_test(NAME axisly.css_retained_bench.geometry_and_smoke
+        COMMAND axisly_css_retained_bench --smoke)
+    add_test(NAME axisly.css_retained_bench.allocations_smoke
+        COMMAND axisly_css_retained_allocations --smoke)
+    add_test(NAME axisly.css_retained_bench.reject_zero
+        COMMAND axisly_css_retained_bench --iterations 0)
+    set_tests_properties(axisly.css_retained_bench.reject_zero PROPERTIES WILL_FAIL TRUE)
+    set_tests_properties(axisly.css_retained_bench.geometry_and_smoke
+        axisly.css_retained_bench.allocations_smoke
+        axisly.css_retained_bench.reject_zero PROPERTIES LABELS benchmark TIMEOUT 120)
     add_test(NAME axisly.retained_bench.geometry_and_smoke COMMAND axisly_retained_bench --smoke)
     add_test(NAME axisly.retained_bench.reject_zero COMMAND axisly_retained_bench --iterations 0)
     add_test(NAME axisly.retained_bench.reject_unknown COMMAND axisly_retained_bench --invalid)

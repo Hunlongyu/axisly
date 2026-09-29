@@ -97,6 +97,16 @@ target_link_libraries(axisly_ratio_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_ratio_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_ratio_matrix_native)
 
+add_executable(axisly_item_alignment_matrix_native item_alignment_matrix_native.cpp)
+target_link_libraries(axisly_item_alignment_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_item_alignment_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_item_alignment_matrix_native)
+
+add_executable(axisly_baseline_matrix_native baseline_matrix_native.cpp)
+target_link_libraries(axisly_baseline_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_baseline_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_baseline_matrix_native)
+
 add_test(NAME axisly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
     --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
     --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/failures")
@@ -243,6 +253,18 @@ add_test(NAME axisly.reference.ratio_matrix COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}"
     --details)
 set_tests_properties(axisly.reference.ratio_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.item_alignment_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_item_alignment_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_item_alignment_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.item_alignment_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_test(NAME axisly.reference.baseline_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_baseline_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_baseline_matrix_native>"
+    --taffy "${taffy_tree_output}")
+set_tests_properties(axisly.reference.baseline_matrix PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.calc COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/test_calc.py"

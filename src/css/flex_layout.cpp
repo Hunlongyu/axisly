@@ -154,20 +154,16 @@ Distribution distribute(Unit free, std::size_t count, ContentAlignment alignment
 
 ContentAlignment alignment_fallback(ContentAlignment alignment,
                                     double free, std::size_t count) {
-    if (count <= 1 || free <= 0) {
-        switch (alignment.position) {
-        case ContentPosition::Stretch:
-        case ContentPosition::SpaceBetween:
-            alignment.position = ContentPosition::FlexStart;
-            alignment.safety = AlignmentSafety::Safe;
-            break;
-        case ContentPosition::SpaceAround:
-        case ContentPosition::SpaceEvenly:
-            alignment.position = ContentPosition::Center;
-            alignment.safety = AlignmentSafety::Safe;
-            break;
-        default: break;
-        }
+    if ((alignment.position == ContentPosition::Stretch && free <= 0)
+        || (alignment.position == ContentPosition::SpaceBetween
+            && (count <= 1 || free <= 0))) {
+        alignment.position = ContentPosition::FlexStart;
+        alignment.safety = AlignmentSafety::Safe;
+    } else if ((alignment.position == ContentPosition::SpaceAround
+                || alignment.position == ContentPosition::SpaceEvenly)
+               && (count <= 1 || free <= 0)) {
+        alignment.position = ContentPosition::Center;
+        alignment.safety = AlignmentSafety::Safe;
     }
     if (free <= 0 && alignment.safety == AlignmentSafety::Safe) {
         alignment.position = ContentPosition::Start;
@@ -671,8 +667,11 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         inner_width = std::max(Unit{0}, *border_width - *deco_width);
     }
     const Unit cross_size = row ? *inner_height : *inner_width;
-    if (lines.size() == 1) lines.front().cross = cross_size;
-    double cross_free = lines.size() == 1 ? 0 : static_cast<double>(cross_size) - used_cross;
+    const bool wraps = node.style.flex_wrap != FlexWrap::NoWrap;
+    // A wrapped container can have one line. Its cross size still comes from
+    // the items; align-content then distributes the remaining space.
+    if (!wraps && lines.size() == 1) lines.front().cross = cross_size;
+    double cross_free = wraps ? static_cast<double>(cross_size) - used_cross : 0;
     auto align_lines = alignment_fallback(
         node.style.align_content.value_or(ContentAlignment{}),
         cross_free, lines.size());
@@ -687,7 +686,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             align_lines.position = ContentPosition::Start;
         }
     }
-    if (lines.size() > 1 && align_lines.position == ContentPosition::Stretch && cross_free > 0) {
+    if (align_lines.position == ContentPosition::Stretch && cross_free > 0) {
         for (auto& line : lines) line.cross = checked(
             static_cast<double>(line.cross) + cross_free / lines.size(), node.id);
         cross_free = 0;
@@ -754,20 +753,35 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 && !item.auto_cross_start && !item.auto_cross_end) {
                 const Unit baseline = child_baseline(fragment, child_style)
                     .value_or(item.cross);
-                cross_offset = checked(static_cast<double>(line.baseline_ascent)
-                    - baseline, item.id);
+                cross_offset = cross_reverse
+                    ? checked(static_cast<double>(line.baseline_descent)
+                        + baseline - item.cross, item.id)
+                    : checked(static_cast<double>(line.baseline_ascent)
+                        - baseline, item.id);
             }
             if (!(item.auto_cross_start || item.auto_cross_end)
                 && !(row && line.has_baseline
                     && alignment.position == ItemPosition::Baseline)
                 && !(alignment.safety == AlignmentSafety::Safe && cross_remain < 0)) {
-                const auto edge = item_edge(alignment.position, !row,
-                    node.style.box.direction, child_style.box.direction,
-                    cross_reverse, cross_reverse);
-                if (edge == ItemEdge::End) {
-                    cross_offset = checked(cross_margin_start + cross_remain, item.id);
-                } else if (edge == ItemEdge::Center) {
-                    cross_offset = checked(cross_margin_start + cross_remain / 2, item.id);
+                if (!row && alignment.position == ItemPosition::Baseline) {
+                    // With horizontal writing, a column item's baseline is
+                    // placed as a cross-axis start edge. Taffy chooses the
+                    // physical edge from wrapping and RTL independently;
+                    // converting it after line reversal preserves that edge.
+                    const bool physical_end = wrap_reverse
+                        != (node.style.box.direction == Direction::Rtl && !wraps);
+                    if (cross_reverse != physical_end) {
+                        cross_offset = checked(cross_margin_start + cross_remain, item.id);
+                    }
+                } else {
+                    const auto edge = item_edge(alignment.position, !row,
+                        node.style.box.direction, child_style.box.direction,
+                        cross_reverse, cross_reverse);
+                    if (edge == ItemEdge::End) {
+                        cross_offset = checked(cross_margin_start + cross_remain, item.id);
+                    } else if (edge == ItemEdge::Center) {
+                        cross_offset = checked(cross_margin_start + cross_remain / 2, item.id);
+                    }
                 }
             }
             const Unit main_start_margin = axis(item.margin, row, true, !main_reverse)

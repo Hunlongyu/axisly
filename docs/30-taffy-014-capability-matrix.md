@@ -11,7 +11,7 @@
 
 **状态**：`部分`表示新 CSS 树或旧 Grid 入口已覆盖部分取值和组合，
 绝不表示 CSS 语义等效；`未支持`表示缺少对应行为；`内部字段`不构成布局能力。
-本表记录 2026-09-29 的工作树现状。测试列中 `已建` 是 Taffy 参考输入；
+本表记录 2026-09-30 的工作树现状。测试列中 `已建` 是 Taffy 参考输入；
 其中列于末尾“原生树差分”的用例同时通过 Axisly 矩形对照。
 
 | Style 字段 | Taffy 0.14 输入与关键取值 | Axisly 现状 | 阶段 | 参考用例 |
@@ -36,10 +36,10 @@
 | `padding` | 四边 Length／Percent／Calc | 部分：未定包含块宽度时按零解析布局边值，calc 整体保持未定而归零，同时保留尺寸百分比的未定状态；Block 自身宽度确定后重新解析用于子项排布，带 calc 内边距的确定宽度 Block 嵌套树已差分；自动宽度 Block/Flex 子项的百分比内边距保持未定，Grid 按网格区域宽度解析；嵌套 Block 的后续子项排布与叶子局部可滚动范围分别验收；更多百分比循环未完整 | P1 | 已建：flex-row-grow、root-block／flex／grid-padding-percent、calc-leaf-content-box／indefinite／partial-basis、calc-block-child、nested-percent-block／flex／grid、nested-percent-depth-block／flex／grid |
 | `border` | 四边 Length／Percent／Calc | 部分：固定数值、叶子 calc 及根容器未定宽度的百分比边框已差分；Block 用确定后的边框作为子项和溢出坐标原点；嵌套循环未完整 | P1 | 已建：content-box-and-negative-margin、root-block／flex／grid-border-percent、calc-leaf-content-box／partial-basis |
 | `align_items` | 交叉／块轴项目默认对齐，含基线与安全值 | 部分：Flex/Grid 常用位置、stretch、同一行基线及嵌套容器首基线；跨行反向换行、Grid 首行选择、滚动项目基线钳制及 Grid 安全对齐在溢出时回退起始边已差分，其他复杂组合未验收 | P2/P3 | 已建：flex-baseline、grid-baseline、flex-wrap-reverse-baseline、grid-first-row-baseline、flex-scroll-baseline、grid-scroll-baseline、grid-align-safe／unsafe-overflow |
-| `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 常用位置、stretch 与行基线；Flex 的 start／end／self-start／self-end 区分容器方向、项目方向和反向换行；固定交叉尺寸项目在反向换行时按 flex-start 对齐；复杂组合未验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline；待建：align-self-full |
+| `align_self` | 单项目交叉／块轴覆盖值 | 部分：Flex/Grid 的九种关键字及七种安全位置、容器与项目 LTR／RTL、确定／越界／自动尺寸已按两个轴差分；Flex 单条反向换行的交叉轴尺寸与列向基线物理边、双项目基线组到行底的距离已修正；多层嵌套与自动边距组合仍需验收 | P2/P3 | 已建：flex-self-ltr-rtl、flex-self-rtl-ltr、flex-wrap-reverse-physical-row／column、flex-wrap-reverse-baseline、test_item_alignment_matrix.py、test_baseline_matrix.py |
 | `justify_items` | Grid 子项内联轴默认对齐 | 部分：Grid 默认 End 与单项 Start 覆盖、SafeCenter／Center 在轨道小于项目时的位置已差分；非拉伸的嵌套 Grid 在自动轨道与弹性轨道中按区域可用空间和固有贡献确定尺寸；其他安全值与复杂组合未完整 | P3 | 已建：grid-justify-items-end、grid-justify-safe／unsafe-overflow、test_mixed_nested.py |
-| `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 常用位置与 stretch，self-start／self-end 按项目自身方向解析；基线未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr；待建：justify-self-full |
-| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；Block 将正常流子项作为单组垂直对齐，含安全回退及浮动，同时其子树建立独立格式化上下文；作为祖先浮动旁的 Block 项目时，Taffy 仍允许它的盒与浮动重叠；Flex 的 Start／End 在反向换行时按书写方向对齐，FlexStart／FlexEnd 按行堆叠方向对齐；复杂组合未验收 | P2/P3/P4 | 已建：grid-content-alignment、648 组 Flex 方向／换行／对齐组合差分、block-align-matrix |
+| `justify_self` | Grid 单项目内联轴覆盖值 | 部分：Grid 九种关键字及七种安全位置已与确定／越界／自动尺寸、容器与项目方向组合差分；self-start／self-end 按项目方向解析，多项目基线及嵌套组合仍未完整 | P3 | 已建：grid-self-ltr-rtl、grid-self-rtl-ltr、test_item_alignment_matrix.py |
+| `align_content` | 行／轨道整体交叉轴分布，含 space-* 与安全值 | 部分：Flex 多行与 Grid 固定轨道分布；Flex 即使只有一条换行后的行，也先保留其内容交叉尺寸，再应用 stretch；Block 将正常流子项作为单组垂直对齐，含安全回退及浮动，同时其子树建立独立格式化上下文；作为祖先浮动旁的 Block 项目时，Taffy 仍允许它的盒与浮动重叠；Flex 的 Start／End 在反向换行时按书写方向对齐，FlexStart／FlexEnd 按行堆叠方向对齐；复杂组合未验收 | P2/P3/P4 | 已建：grid-content-alignment、648 组 Flex 方向／换行／对齐组合差分、block-align-matrix、test_item_alignment_matrix.py |
 | `justify_content` | 主／内联轴整体分布，含 space-* 与安全值 | 部分：Flex 与 Grid 固定轨道分布；复杂组合未验收 | P2/P3 | 已建：grid-content-alignment |
 | `gap` | 双轴 Length／Percent／Calc | 部分：Flex/Grid 双轴间隙；Flex 自动容器固有尺寸阶段以零为 `calc` 间隙百分比基准，保留固定长度项，尺寸确定后重算主轴分配；Grid 自动容器先按零间隙确定轨道尺寸，再重算偏移；Flex 未定交叉轴百分比行距保持为零；Grid 自动重复计数使用确定／最大／最小尺寸作为百分比间隙基准，复杂嵌套循环未完整 | P2/P3 | 已建：flex-row-grow、flex-auto-percent-gap、grid-auto-percent-gap、flex-auto-cross-percent-gap、grid-auto-row-percent-gap、calc-flex-gap-basis／auto-gap、calc-grid-gap-item／auto-gap、repeat-gap-fixed／max／min-fill |
 | `text_align` | Auto／LegacyLeft／LegacyRight／LegacyCenter，Block 的传统内联对齐 | 部分：Block 子项 Legacy 对齐及 RTL 下 Left／Right／Center 的物理位置已差分；自动边距与嵌套组合未完整 | P4 | 已建：block-legacy-text-align、block-legacy-rtl-left／right／center |
@@ -216,6 +216,16 @@ Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不
 平衡策略分别设置最少一、二、三行。该测试比较每个
 节点的矩形、盒边、滚动条与溢出，项目尺寸固定。自动尺寸的平衡换行
 额外核对按最少行数重算最大内容宽度后的容器尺寸。
+`test_item_alignment_matrix.py` 组合 Flex 四种方向、无换行与反向换行，
+以及 Grid 内联／块轴，共 10 种轴模式；分别遍历九种项目对齐关键字、
+七种安全位置、容器与项目 LTR／RTL、确定尺寸下的空间充足／越界和
+自动交叉尺寸，共 1,920 组。比较每个节点的矩形、盒边和局部滚动溢出，
+Grid 另比较轨道及占用线号。反向换行即使仅有一条行，行高仍来自
+项目的外在交叉尺寸；`align-content: stretch` 随后扩展该行。
+`test_baseline_matrix.py` 使用带首基线的两项测量叶子，组合四种方向、
+三种换行、容器与项目方向、宽裕／主轴紧张／交叉轴紧张空间以及四种
+基线覆盖关系，共 576 组。反向换行的行内基线组依据各项目到行底的
+最大距离定位；这两组测试固定的是 Taffy 0.14.0 的可观察行为。
 `test_flex_bounds.py` 在确定父级空间、`max-content`、`min-content` 三种
 查询下，分别组合四种主轴方向、五种换行、五组项目主轴尺寸与盒边配置、
 LTR／RTL，以及明确尺寸、自动尺寸、自动尺寸受最大／最小主轴尺寸约束、

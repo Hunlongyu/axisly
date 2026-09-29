@@ -401,6 +401,14 @@ Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId id) {
     return *numeric;
 }
 
+Unit fit_content_item_size(Unit minimum, Unit maximum, Unit area,
+                           Unit before_margin, Unit after_margin, NodeId id) {
+    const double available = std::max(0.0, static_cast<double>(area)
+        - before_margin - after_margin);
+    return checked(std::max<double>(minimum,
+        std::min<double>(std::max(minimum, maximum), available)), id);
+}
+
 Unit align_offset(Unit free, ItemAlignment alignment, bool horizontal,
     Direction container_direction, Direction item_direction, NodeId id) {
     if (alignment.safety == AlignmentSafety::Safe && free < 0) return 0;
@@ -505,6 +513,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     collapse_auto_fit(track_rows, rows, placements, false);
     std::vector<ItemContribution> contributions;
     contributions.reserve(node.children.size());
+    std::vector<std::optional<std::size_t>> contribution_indices(node.children.size());
     for (std::size_t i = 0; i < node.children.size(); ++i) {
         if (placements[i].hidden) continue;
         const auto id = node.children[i];
@@ -534,6 +543,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             && get(id).style.box.size.width.kind() == LengthKind::Auto
             && horizontal.position == ItemPosition::Stretch
             && !child_box.preferred.width;
+        contribution_indices[i] = contributions.size();
         contributions.push_back({placements[i], minimum_contribution,
             min_fragment.size, max_fragment.size, edges(child_box.margin, id),
             scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y),
@@ -675,12 +685,21 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto vertical = child.style.align_self.value_or(node.style.align_items.value_or(
             ItemAlignment{resolved.aspect_ratio ? ItemPosition::Start
                 : ItemPosition::Stretch, AlignmentSafety::Unsafe}));
+        const auto& contribution = contributions[contribution_indices[i].value()];
+        const bool intrinsic_grid_item = child.style.display == Display::Grid;
         if (horizontal.position == ItemPosition::Stretch
             && child_box.size.width.kind() == LengthKind::Auto
             && resolved.margin.left.kind != EdgeKind::Auto
             && resolved.margin.right.kind != EdgeKind::Auto) {
             final.known_width = constrain_axis(std::max(Unit{0}, checked(
                 static_cast<double>(cell_width) - margin.left - margin.right, id)),
+                resolved.minimum.width, resolved.maximum.width);
+        } else if (child_box.size.width.kind() == LengthKind::Auto
+                   && !resolved.preferred.width
+                   && intrinsic_grid_item) {
+            final.known_width = constrain_axis(fit_content_item_size(
+                contribution.min_content.width, contribution.max_content.width,
+                cell_width, margin.left, margin.right, id),
                 resolved.minimum.width, resolved.maximum.width);
         }
         if (vertical.position == ItemPosition::Stretch
@@ -689,6 +708,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             && resolved.margin.bottom.kind != EdgeKind::Auto) {
             final.known_height = constrain_axis(std::max(Unit{0}, checked(
                 static_cast<double>(cell_height) - margin.top - margin.bottom, id)),
+                resolved.minimum.height, resolved.maximum.height);
+        } else if (child_box.size.height.kind() == LengthKind::Auto
+                   && !resolved.preferred.height
+                   && intrinsic_grid_item) {
+            final.known_height = constrain_axis(fit_content_item_size(
+                contribution.min_content.height, contribution.max_content.height,
+                cell_height, margin.top, margin.bottom, id),
                 resolved.minimum.height, resolved.maximum.height);
         }
         auto child_fragment = layout(id, final, depth + 1);

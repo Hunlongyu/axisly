@@ -18,6 +18,10 @@ constexpr std::array directions{
 constexpr std::array wraps{
     FlexWrap::NoWrap, FlexWrap::Wrap, FlexWrap::WrapReverse,
 };
+constexpr std::array flows{
+    GridAutoFlow::Row, GridAutoFlow::Column,
+    GridAutoFlow::RowDense, GridAutoFlow::ColumnDense,
+};
 
 MeasureFunction measured(Size minimum, Size preferred) {
     return [=](const MeasureRequest& request) {
@@ -30,7 +34,8 @@ MeasureFunction measured(Size minimum, Size preferred) {
     };
 }
 
-void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
+void run_case(std::size_t scenario, std::size_t root_kind,
+              std::size_t direction, std::size_t wrap,
               std::size_t nested_kind, std::size_t nested_direction,
               std::size_t variant, std::size_t rtl) {
     const bool row = direction < 2;
@@ -39,6 +44,20 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     root_style.flex_direction = directions[direction];
     root_style.flex_wrap = wraps[wrap];
     root_style.align_items = {ItemPosition::Start};
+    if (root_kind == 1) {
+        root_style.display = Display::Grid;
+        root_style.grid.auto_flow = flows[direction];
+        root_style.justify_items = {ItemPosition::Start};
+        const auto auto_track = TrackSizing::automatic();
+        const auto fr_track = TrackSizing::fraction(1);
+        const auto mixed_track = TrackSizing::minmax(
+            TrackBreadth::min_content(), TrackBreadth::fraction(1));
+        root_style.grid.template_columns = wrap == 0
+            ? std::vector<TemplateTrack>{auto_track, auto_track}
+            : wrap == 1 ? std::vector<TemplateTrack>{fr_track, fr_track}
+            : std::vector<TemplateTrack>{mixed_track, TrackSizing::max_content()};
+        root_style.grid.template_rows = {auto_track, auto_track};
+    }
     root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
     root_style.box.padding = {Length::length(3), Length::length(3),
         Length::length(3), Length::length(3)};
@@ -84,9 +103,10 @@ void run_case(std::size_t scenario, std::size_t direction, std::size_t wrap,
     const auto measured_child = tree.create_node({}, measured({12, 9}, {28, 16}));
     tree.append_child(root, measured_child);
 
-    const auto prefix = scenario == 0 ? "flex-nested-"
-        : scenario == 1 ? "flex-nested-max-" : "flex-nested-min-";
-    const auto name = prefix + std::to_string(direction) + '-'
+    const auto prefix = scenario == 0 ? "mixed-nested-"
+        : scenario == 1 ? "mixed-nested-max-" : "mixed-nested-min-";
+    const auto name = prefix + std::to_string(root_kind) + '-'
+        + std::to_string(direction) + '-'
         + std::to_string(wrap) + '-' + std::to_string(nested_kind)
         + '-' + std::to_string(nested_direction)
         + '-' + std::to_string(variant) + '-' + std::to_string(rtl);
@@ -113,6 +133,7 @@ int main(int argc, char** argv) {
             : mode == "--min-content" ? 2 : 0;
         std::cout << "{\"protocol\":\"AXISLY_FLEX_NESTED_V1\",\"cases\":[";
         bool first = true;
+        for (std::size_t root_kind = 0; root_kind < 2; ++root_kind)
         for (std::size_t direction = 0; direction < directions.size(); ++direction)
         for (std::size_t wrap = 0; wrap < wraps.size(); ++wrap)
         for (std::size_t nested_kind = 0; nested_kind < 2; ++nested_kind)
@@ -121,7 +142,7 @@ int main(int argc, char** argv) {
         for (std::size_t rtl = 0; rtl < 2; ++rtl) {
             if (!first) std::cout << ',';
             first = false;
-            run_case(scenario, direction, wrap, nested_kind,
+            run_case(scenario, root_kind, direction, wrap, nested_kind,
                 nested_direction, variant, rtl);
         }
         std::cout << "]}\n";

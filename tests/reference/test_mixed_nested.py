@@ -1,4 +1,4 @@
-"""Measured leaves inside nested Flex and Grid containers against Taffy 0.14."""
+"""Measured leaves in mixed Flex/Grid trees against pinned Taffy 0.14."""
 
 import argparse
 import itertools
@@ -10,21 +10,32 @@ from test_flex_matrix import compare
 
 DIRECTIONS = ("Row", "RowReverse", "Column", "ColumnReverse")
 WRAPS = ("NoWrap", "Wrap", "WrapReverse")
+FLOWS = ("Row", "Column", "RowDense", "ColumnDense")
 
 
 def make_cases(scenario):
-    for direction, wrap, nested_kind, nested_direction, variant, rtl in itertools.product(
-        range(4), range(3), range(2), range(2), range(2), range(2)
+    for root_kind, direction, wrap, nested_kind, nested_direction, variant, rtl in itertools.product(
+        range(2), range(4), range(3), range(2), range(2), range(2), range(2)
     ):
         row = direction < 2
         width, height = (90, 80) if row else (80, 90)
         root = {
-            "display": "Flex", "flex_direction": DIRECTIONS[direction],
+            "display": "Flex" if root_kind == 0 else "Grid",
             "flex_wrap": WRAPS[wrap], "align_items": "Start",
             "direction": "Rtl" if rtl else "Ltr",
             "padding": {"left": 3, "top": 3, "right": 3, "bottom": 3},
             "gap": {"width": 4, "height": 6},
         }
+        if root_kind == 0:
+            root["flex_direction"] = DIRECTIONS[direction]
+        else:
+            root["grid_auto_flow"] = FLOWS[direction]
+            root["justify_items"] = "Start"
+            root["grid_template_columns"] = (
+                "auto auto" if wrap == 0 else "1fr 1fr" if wrap == 1
+                else "minmax(min-content, 1fr) max-content"
+            )
+            root["grid_template_rows"] = "auto auto"
         if scenario == "definite":
             root["size"] = {"width": width, "height": height}
         nested = {
@@ -53,10 +64,10 @@ def make_cases(scenario):
             {"id": 6, "parent": 0, "style": {},
              "measure": {"minimum": [12, 9], "preferred": [28, 16]}},
         ]
-        prefix = {"definite": "flex-nested", "max-content": "flex-nested-max",
-                  "min-content": "flex-nested-min"}[scenario]
+        prefix = {"definite": "mixed-nested", "max-content": "mixed-nested-max",
+                  "min-content": "mixed-nested-min"}[scenario]
         available = [width, height] if scenario == "definite" else [scenario, scenario]
-        yield {"name": f"{prefix}-{direction}-{wrap}-{nested_kind}-"
+        yield {"name": f"{prefix}-{root_kind}-{direction}-{wrap}-{nested_kind}-"
                        f"{nested_direction}-{variant}-{rtl}",
                "available": available, "nodes": nodes}
 
@@ -79,7 +90,7 @@ def main():
     ).stdout)
     assert oracle["taffy"] == "0.14.0"
     assert native["protocol"] == "AXISLY_FLEX_NESTED_V1"
-    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 192
+    assert len(oracle["cases"]) == len(native["cases"]) == len(cases) == 384
     failures = []
     for actual, expected in zip(native["cases"], oracle["cases"], strict=True):
         try:

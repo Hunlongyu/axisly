@@ -1070,6 +1070,39 @@ void grid_intrinsic_growth(bool capped) {
         {{id, root}, {id + 1, first}, {id + 2, second}});
 }
 
+enum class GridMinimumCase { Visible, Scrolling, ExplicitMinimum };
+
+void grid_automatic_minimum(GridMinimumCase scenario) {
+    LayoutTree tree;
+    const bool scrolling = scenario != GridMinimumCase::Visible;
+    const bool explicit_minimum = scenario == GridMinimumCase::ExplicitMinimum;
+    const Unit width = explicit_minimum ? 10.0f : 40.0f;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.size = {Length::length(width), Length::length(20)};
+    root_style.grid.template_columns = {TrackSizing::fraction(1)};
+    root_style.grid.template_rows = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(root_style);
+    Style child_style;
+    if (scrolling) {
+        child_style.overflow_x = Overflow::Hidden;
+        child_style.overflow_y = Overflow::Hidden;
+    }
+    if (explicit_minimum) child_style.box.min_size.width = Length::length(20);
+    const auto child = tree.create_node(child_style, [](const MeasureRequest& request) {
+        return Measurement{{request.known_content_width.value_or(80.0f),
+            request.known_content_height.value_or(10.0f)}, {}, {}, Size{80, 10}};
+    });
+    tree.append_child(root, child);
+    const int id = explicit_minimum ? 1120 : scrolling ? 1110 : 1100;
+    const char* name = explicit_minimum ? "grid-scroll-explicit-minimum"
+        : scrolling ? "grid-scroll-automatic-minimum"
+        : "grid-visible-automatic-minimum";
+    print(name,
+        tree.compute(root, {AvailableSpace::definite(width), AvailableSpace::definite(20)}),
+        {{id, root}, {id + 1, child}});
+}
+
 void mixed_tree() {
     LayoutTree tree;
     Style root_style;
@@ -1169,6 +1202,12 @@ int main(int argc, char** argv) {
         else if (name == "grid-span-order-long-first") grid_span_order(true);
         else if (name == "grid-equal-intrinsic-growth") grid_intrinsic_growth(false);
         else if (name == "grid-capped-intrinsic-growth") grid_intrinsic_growth(true);
+        else if (name == "grid-visible-automatic-minimum")
+            grid_automatic_minimum(GridMinimumCase::Visible);
+        else if (name == "grid-scroll-automatic-minimum")
+            grid_automatic_minimum(GridMinimumCase::Scrolling);
+        else if (name == "grid-scroll-explicit-minimum")
+            grid_automatic_minimum(GridMinimumCase::ExplicitMinimum);
         else if (name == "mixed-block-flex-grid") mixed_tree();
         else throw std::invalid_argument("Unknown CSS fixture");
         return 0;

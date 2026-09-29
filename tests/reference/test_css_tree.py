@@ -71,6 +71,9 @@ CASES = (
     "grid-span-order-long-first",
     "grid-equal-intrinsic-growth",
     "grid-capped-intrinsic-growth",
+    "grid-visible-automatic-minimum",
+    "grid-scroll-automatic-minimum",
+    "grid-scroll-explicit-minimum",
     "mixed-block-flex-grid",
 )
 

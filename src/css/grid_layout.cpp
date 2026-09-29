@@ -25,7 +25,7 @@ struct ItemContribution {
     NodeId id;
     std::size_t source{};
     Placement placement;
-    Size minimum{}, preferred{};
+    Size minimum_contribution{}, min_content{}, max_content{};
     Insets margin{};
 };
 struct TrackState {
@@ -487,6 +487,28 @@ double grow_intrinsic_tracks(TrackAxis& axis, std::optional<Unit> available,
     return std::max(0.0, free - distributed);
 }
 
+Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
+                       const Placement& placement, const TrackAxis& axis,
+                       Unit min_content, bool columns) {
+    const auto preferred = columns ? box.preferred.width : box.preferred.height;
+    if (preferred) return *preferred;
+    const auto minimum = columns ? box.minimum.width : box.minimum.height;
+    if (minimum) return *minimum;
+    const auto overflow = columns ? child.style.overflow_x : child.style.overflow_y;
+    if (overflow == Overflow::Hidden || overflow == Overflow::Scroll) return 0;
+    const auto start = columns ? placement.column_start : placement.row_start;
+    const auto end = columns ? placement.column_end : placement.row_end;
+    bool spans_auto_minimum = false;
+    bool spans_flexible_track = false;
+    for (auto index = start; index < end; ++index) {
+        const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+        spans_auto_minimum |= track.style.minimum.kind() == TrackBreadthKind::Auto;
+        spans_flexible_track |= track.flex > 0;
+    }
+    return spans_auto_minimum && (end - start == 1 || !spans_flexible_track)
+        ? min_content : Unit{0};
+}
+
 void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
                bool columns, std::optional<Unit> available, NodeId id) {
     const auto range = [&](const ItemContribution& item) {
@@ -494,10 +516,15 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             ? std::pair{item.placement.column_start, item.placement.column_end}
             : std::pair{item.placement.row_start, item.placement.row_end};
     };
-    const auto contribution = [&](const ItemContribution& item, bool preferred) {
+    enum class ContributionKind { Minimum, MinContent, MaxContent };
+    const auto contribution = [&](const ItemContribution& item,
+                                  ContributionKind kind) {
+        const auto& size = kind == ContributionKind::Minimum
+            ? item.minimum_contribution
+            : kind == ContributionKind::MinContent
+                ? item.min_content : item.max_content;
         const Unit content = columns
-            ? (preferred ? item.preferred.width : item.minimum.width)
-            : (preferred ? item.preferred.height : item.minimum.height);
+            ? size.width : size.height;
         const double margin = columns
             ? static_cast<double>(item.margin.left) + item.margin.right
             : static_cast<double>(item.margin.top) + item.margin.bottom;
@@ -536,12 +563,14 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
         const auto count = end - start;
         if (count != 1) continue;
         auto& track = axis.tracks[static_cast<std::size_t>(start - axis.origin)];
-        const auto minimum = contribution(item, false);
-        const auto preferred = contribution(item, true);
+        const auto minimum = contribution(item, ContributionKind::MinContent);
+        const auto preferred = contribution(item, ContributionKind::MaxContent);
         if (track.intrinsic_min) {
             const auto kind = track.style.minimum.kind();
             track.size = std::max(track.size,
-                kind == TrackBreadthKind::MaxContent ? preferred : minimum);
+                kind == TrackBreadthKind::MaxContent ? preferred
+                    : kind == TrackBreadthKind::Auto
+                        ? contribution(item, ContributionKind::Minimum) : minimum);
         }
         if (track.intrinsic_max) {
             const auto kind = track.style.maximum.kind();
@@ -563,7 +592,7 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             occupied += track.size;
             if (track.intrinsic_min) ++growable;
         }
-        const double deficit = contribution(item, false) - occupied;
+        const double deficit = contribution(item, ContributionKind::MinContent) - occupied;
         if (deficit > 0 && growable) {
             const Unit share = checked(deficit / growable, id);
             for (auto index = start; index < end; ++index) {
@@ -581,7 +610,8 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             preferred_occupied += std::max(track.size, track.preferred);
             if (track.intrinsic_max || track.flex > 0) ++preferred_growable;
         }
-        const double preferred_deficit = contribution(item, true) - preferred_occupied;
+        const double preferred_deficit = contribution(item, ContributionKind::MaxContent)
+            - preferred_occupied;
         if (preferred_deficit > 0 && preferred_growable) {
             const Unit share = checked(preferred_deficit / preferred_growable, id);
             for (auto index = start; index < end; ++index) {
@@ -833,8 +863,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto min_fragment = layout(id, intrinsic, depth + 1);
         intrinsic.available = {AvailableSpace::max_content(), AvailableSpace::max_content()};
         const auto max_fragment = layout(id, intrinsic, depth + 1);
-        contributions.push_back({id, i, placements[i], min_fragment.size, max_fragment.size,
-            edges(child_box.margin, id)});
+        const Size minimum_contribution{
+            grid_item_minimum(get(id), child_box, placements[i], track_columns,
+                min_fragment.size.width, true),
+            grid_item_minimum(get(id), child_box, placements[i], track_rows,
+                min_fragment.size.height, false)};
+        contributions.push_back({id, i, placements[i], minimum_contribution,
+            min_fragment.size, max_fragment.size, edges(child_box.margin, id)});
     }
     size_axis(track_columns, contributions, true, inner_width, node.id);
     size_axis(track_rows, contributions, false, inner_height, node.id);

@@ -1,0 +1,112 @@
+#include "css_reference_output.hpp"
+
+#include <array>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace {
+using namespace axisly;
+using namespace axisly::css;
+
+std::vector<TemplateTrack> tracks(std::size_t index) {
+    switch (index) {
+    case 0: return {TrackSizing::fraction(1), TrackSizing::fraction(2),
+        TrackSizing::fraction(1)};
+    case 1: return {TrackSizing::automatic(), TrackSizing::fraction(1),
+        TrackSizing::automatic()};
+    case 2: return {
+        TrackSizing::minmax(TrackBreadth::length(10), TrackBreadth::fraction(1)),
+        TrackSizing::fit_content_length(45), TrackSizing::fraction(2)};
+    case 3: return {TrackSizing::fixed(30), TrackSizing::min_content(),
+        TrackSizing::fraction(1)};
+    case 4: return {TrackSizing::fraction(0.2F), TrackSizing::fraction(0),
+        TrackSizing::fraction(0.5F)};
+    default: throw std::invalid_argument("Unknown three-track template");
+    }
+}
+
+GridPlacement placement(int start, int end) {
+    return {GridLine::index(static_cast<std::int16_t>(start)),
+        GridLine::index(static_cast<std::int16_t>(end))};
+}
+
+void run_case(std::size_t scenario, std::size_t track,
+              std::size_t axis, std::size_t rtl) {
+    const bool columns = axis == 0;
+    LayoutTree tree;
+    Style root_style;
+    root_style.display = Display::Grid;
+    root_style.box.direction = rtl ? Direction::Rtl : Direction::Ltr;
+    if (scenario == 0) {
+        root_style.box.size = {Length::length(columns ? 160.0F : 100.0F),
+            Length::length(columns ? 100.0F : 140.0F)};
+    }
+    root_style.box.padding = {Length::length(5), Length::length(5),
+        Length::length(5), Length::length(5)};
+    root_style.gap = {Length::length(4), Length::length(6)};
+    root_style.justify_items = {ItemPosition::Start};
+    root_style.align_items = {ItemPosition::Start};
+    if (columns) {
+        root_style.grid.template_columns = tracks(track);
+        root_style.grid.template_rows = {TrackSizing::fixed(40), TrackSizing::fixed(40)};
+    } else {
+        root_style.grid.template_rows = tracks(track);
+        root_style.grid.template_columns = {TrackSizing::fixed(40), TrackSizing::fixed(40)};
+    }
+    const auto root = tree.create_node(root_style);
+    std::vector<reference::IdentifiedNode> nodes{{1, root}};
+    constexpr std::array main_sizes{80.0F, 75.0F, 30.0F, 22.0F};
+    constexpr std::array cross_sizes{20.0F, 25.0F, 15.0F, 15.0F};
+    constexpr std::array main_places{
+        std::array{1, 3}, std::array{2, 4},
+        std::array{1, 2}, std::array{3, 4},
+    };
+    constexpr std::array cross_places{
+        std::array{1, 2}, std::array{2, 3},
+        std::array{2, 3}, std::array{1, 2},
+    };
+    for (std::size_t index = 0; index < main_sizes.size(); ++index) {
+        Style child;
+        child.box.size = {Length::length(columns ? main_sizes[index] : cross_sizes[index]),
+            Length::length(columns ? cross_sizes[index] : main_sizes[index])};
+        const auto main = placement(main_places[index][0], main_places[index][1]);
+        const auto cross = placement(cross_places[index][0], cross_places[index][1]);
+        child.grid.column = columns ? main : cross;
+        child.grid.row = columns ? cross : main;
+        const auto id = tree.create_node(child);
+        tree.append_child(root, id);
+        nodes.emplace_back(static_cast<int>(index) + 2, id);
+    }
+    const auto available = scenario == 0
+        ? AvailableSize{AvailableSpace::definite(columns ? 160.0F : 100.0F),
+            AvailableSpace::definite(columns ? 100.0F : 140.0F)}
+        : scenario == 1
+            ? AvailableSize{AvailableSpace::max_content(), AvailableSpace::max_content()}
+            : AvailableSize{AvailableSpace::min_content(), AvailableSpace::min_content()};
+    const auto name = "grid-triple-span-" + std::to_string(scenario) + '-'
+        + std::to_string(track) + '-' + std::to_string(axis) + '-'
+        + std::to_string(rtl);
+    reference::write_case(std::cout, name, tree.compute(root, available), nodes);
+}
+} // namespace
+
+int main() {
+    try {
+        std::cout << "{\"protocol\":\"AXISLY_GRID_TRIPLE_SPAN_V1\",\"cases\":[";
+        bool first = true;
+        for (std::size_t scenario = 0; scenario < 3; ++scenario)
+        for (std::size_t track = 0; track < 5; ++track)
+        for (std::size_t axis = 0; axis < 2; ++axis)
+        for (std::size_t rtl = 0; rtl < 2; ++rtl) {
+            if (!first) std::cout << ',';
+            first = false;
+            run_case(scenario, track, axis, rtl);
+        }
+        std::cout << "]}\n";
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return 1;
+    }
+}

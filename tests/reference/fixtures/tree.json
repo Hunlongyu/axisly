@@ -1331,6 +1331,35 @@
         {"id": 1973, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "FlexStart"}},
         {"id": 1974, "parent": 0, "style": {"size": {"width": 20, "height": 20}, "align_self": "FlexEnd"}}
       ]
+    },
+    {
+      "name": "leaf-intrinsic-ratio",
+      "available": ["max-content", "max-content"],
+      "nodes": [
+        {"id": 1980, "parent": null, "style": {"aspect_ratio": 2}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "leaf-intrinsic-ratio-max-height",
+      "available": ["max-content", "max-content"],
+      "nodes": [
+        {"id": 1990, "parent": null, "style": {"aspect_ratio": 2, "max_size": {"height": 15}}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "leaf-intrinsic-ratio-max-width",
+      "available": ["max-content", "max-content"],
+      "nodes": [
+        {"id": 2000, "parent": null, "style": {"aspect_ratio": 2, "max_size": {"width": 30}}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
+    },
+    {
+      "name": "block-replaced-ratio",
+      "available": [100, 100],
+      "nodes": [
+        {"id": 2010, "parent": null, "style": {"display": "Block", "size": {"width": 100, "height": 100}}},
+        {"id": 2011, "parent": 0, "style": {"display": "Block", "item_is_replaced": true, "aspect_ratio": 2}, "measure": {"minimum": [20, 10], "preferred": [40, 10]}}
+      ]
     }
   ]
 }

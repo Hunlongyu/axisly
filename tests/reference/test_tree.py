@@ -430,6 +430,11 @@ class TreeReferenceTests(unittest.TestCase):
                                                   1972: [80, 20, 20, 20],
                                                   1973: [80, 40, 20, 20],
                                                   1974: [0, 60, 20, 20]},
+            "leaf-intrinsic-ratio": {1980: [0, 0, 40, 20]},
+            "leaf-intrinsic-ratio-max-height": {1990: [0, 0, 40, 20]},
+            "leaf-intrinsic-ratio-max-width": {2000: [0, 0, 30, 15]},
+            "block-replaced-ratio": {2010: [0, 0, 100, 100],
+                                     2011: [0, 0, 40, 20]},
         }
         for source, result in zip(fixture["cases"], output["cases"]):
             self.assertEqual(len(source["nodes"]), len(result["nodes"]))

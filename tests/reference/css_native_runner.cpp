@@ -569,6 +569,43 @@ void self_alignment_direction_case(std::string_view name) {
         {AvailableSpace::definite(100), AvailableSpace::definite(100)}), nodes);
 }
 
+void leaf_intrinsic_ratio_case(std::string_view name) {
+    const bool replaced = name == "block-replaced-ratio";
+    const bool max_height = name == "leaf-intrinsic-ratio-max-height";
+    const bool max_width = name == "leaf-intrinsic-ratio-max-width";
+    const int id = replaced ? 2010 : max_height ? 1990 : max_width ? 2000 : 1980;
+    LayoutTree tree;
+    Style style;
+    style.box.aspect_ratio = 2.0f;
+    if (max_height) style.box.max_size.height = Length::length(15);
+    if (max_width) style.box.max_size.width = Length::length(30);
+    if (replaced) {
+        style.display = Display::Block;
+        style.box.replaced = true;
+    }
+    const auto measured = tree.create_node(style, [](const MeasureRequest& request) {
+        const Unit width = request.known_content_width.value_or(
+            request.available_width.kind == AvailableKind::MinContent
+                ? 20.0f : 40.0f);
+        const Unit height = request.known_content_height.value_or(10.0f);
+        return Measurement{{width, height}, {}, {}, Size{40, 10}};
+    });
+    if (!replaced) {
+        print(name.data(), tree.compute(measured,
+            {AvailableSpace::max_content(), AvailableSpace::max_content()}),
+            {{id, measured}});
+        return;
+    }
+    Style root_style;
+    root_style.display = Display::Block;
+    root_style.box.size = {Length::length(100), Length::length(100)};
+    const auto root = tree.create_node(root_style);
+    tree.append_child(root, measured);
+    print(name.data(), tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::definite(100)}),
+        {{id, root}, {id + 1, measured}});
+}
+
 void flex_wrap_reverse_physical_case(std::string_view name) {
     const bool row = name.ends_with("row");
     const int id = row ? 1960 : 1970;
@@ -1960,6 +1997,10 @@ int main(int argc, char** argv) {
         else if (name == "flex-wrap-reverse-physical-row"
             || name == "flex-wrap-reverse-physical-column")
             flex_wrap_reverse_physical_case(name);
+        else if (name == "leaf-intrinsic-ratio"
+            || name == "leaf-intrinsic-ratio-max-height"
+            || name == "leaf-intrinsic-ratio-max-width"
+            || name == "block-replaced-ratio") leaf_intrinsic_ratio_case(name);
         else if (name == "grid-row-dense-holes") grid_row_dense_holes();
         else if (name == "grid-named-line-occurrences") grid_named_line_occurrences();
         else if (name == "block-parent-child-margins") block_parent_child_margins();

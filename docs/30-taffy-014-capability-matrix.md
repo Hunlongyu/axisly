@@ -18,7 +18,7 @@
 | --- | --- | --- | --- | --- |
 | `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：新树均可调度；各算法尚未完整 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned |
 | `item_is_table` | Block 子项表格标记；Taffy 未实现 Table 布局 | 部分：标记使 Block 子项不拉伸自动宽度并阻断父子边距折叠；复杂内在尺寸未完整 | P4 | 已建：block-table-intrinsic、block-table-margin-boundary |
-| `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；纵横比与跨算法组合未完整 | P1 | 已建：block-replaced-intrinsic |
+| `item_is_replaced` | 替换元素的固有尺寸规则 | 部分：Block 测量叶子的自动宽度采用固有尺寸；叶子测量后的纵横比与约束已差分，跨算法组合未完整 | P1 | 已建：block-replaced-intrinsic、block-replaced-ratio |
 | `box_sizing` | BorderBox／ContentBox | 部分：盒尺寸与 Flex 差分已覆盖 | P1 | 已建：content-box-and-negative-margin |
 | `direction` | Ltr／Rtl 的内联方向与 Grid 列方向 | 部分：Block/Flex/Grid 已接入基本方向规则；Grid/Flex 的 self-start／self-end 按项目自身方向解析，混合树未验收 | P1/P4 | 已建：rtl-block-child、grid-self-ltr-rtl、flex-self-rtl-ltr；待建：rtl-mixed |
 | `overflow` | x/y：Visible／Clip／Hidden／Scroll；0.14.0 无 Auto 变体 | 部分：Flex 与 Grid 单轨道自动最小尺寸依赖 overflow；新树输出节点局部可滚动溢出矩形，含滚动容器边界、RTL 与宿主报告的内容范围；复杂轴向与嵌套组合未完整 | P4 | 已建：overflow-scroll-padding、overflow-rtl-origin、overflow-hidden-boundary、overflow-unreachable、overflow-absolute-padding、grid-scroll-automatic-minimum |
@@ -31,7 +31,7 @@
 | `size` | 双轴 Dimension：Length／Percent／Auto／固有关键字／Calc | 部分：叶子固有尺寸与约束、Block 自动宽度的 min-content／max-content 子树查询、Flex/Grid 根容器的自动内容宽度已接入；复杂容器固有尺寸与循环百分比未完整 | P1 | 已建：flex-row-grow、block-min-content-width、block-max-content-width、flex-auto-content-width、grid-auto-content-width；待建：intrinsic-size |
 | `min_size` | 双轴 Length／Percent／Auto／Calc | 部分：Block/Flex/Grid 的已知尺寸先约束再排子项，Flex/Grid 自动高度受限后重排；跨轴与百分比循环未完整 | P1 | 已建：block-min-width-before-children、flex-min-width-before-children、grid-min-width-before-tracks、flex-auto-min-height、grid-auto-min-height |
 | `max_size` | 双轴 Length／Percent／Auto／Calc | 部分：已知尺寸在三算法排子项前约束；Flex 自动主轴尺寸受上限压缩后重算普通与平衡换行；其他自动尺寸及复杂重排未完整 | P1/P2 | 已建：flex-auto-max-width-wrap、flex-auto-max-height-wrap、flex-auto-max-width-balance；待建：max-size-reflow |
-| `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选及最小／最大尺寸；Block／Flex／Grid 的单轴指定值和自动内容宽度、border／content box 已差分；替换元素和复杂 min/max 组合未完整 | P1 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box；待建：ratio-replaced |
+| `aspect_ratio` | 可选宽高比 | 部分：共用盒层传递首选与最小尺寸，不将最大尺寸沿宽高比推导；Block／Flex／Grid 的单轴指定值、叶子固有测量后的高度下限和自动内容宽度、border／content box 已差分；跨算法复杂 min/max 组合未完整 | P1 | 已建：block-ratio-width、block-ratio-auto-width、flex-ratio-height、grid-ratio-content-box、leaf-intrinsic-ratio-max-height、block-replaced-ratio；待建：ratio-replaced-cross-algorithm |
 | `margin` | 四边 Length／Percent／Auto／Calc，允许负值 | 部分：Flex/Grid/Block 自动 margin 与 Block 父子、相邻及空盒连锁折叠；clear／浮动等复杂组合未完整 | P1/P4 | 已建：content-box-and-negative-margin、block-adjacent-margins、block-parent-child-margins、block-empty-margin-chain、grid-auto-margins |
 | `padding` | 四边 Length／Percent／Calc | 部分：共享盒模型解析；百分比未定组合未完整 | P1 | 已建：flex-row-grow；待建：percent-padding |
 | `border` | 四边 Length／Percent／Calc | 部分：共享盒模型解析，差分覆盖固定数值 | P1 | 已建：content-box-and-negative-margin |
@@ -146,6 +146,8 @@
 | `grid-self-ltr-rtl`／`grid-self-rtl-ltr` | Grid 项目自身方向与容器方向不同时，self-start／self-end 在内联轴反转 |
 | `flex-self-ltr-rtl`／`flex-self-rtl-ltr` | Flex 列向项目自身方向与容器方向不同时，self-start／self-end 在交叉轴反转 |
 | `flex-wrap-reverse-physical-row`／`flex-wrap-reverse-physical-column` | Flex 反向换行时 start／end 仍按书写方向，flex-start／flex-end 跟随反向交叉轴 |
+| `leaf-intrinsic-ratio`／`leaf-intrinsic-ratio-max-height`／`leaf-intrinsic-ratio-max-width` | 叶子固有测量后按比例提高高度；宽度上限影响比例高度，Taffy 0.14 的最终比例高度可超过显式高度上限 |
+| `block-replaced-ratio` | 替换 Block 测量叶子的固有宽度与比例高度 |
 
 这些是参考工具的固定输入，预期来自 **Taffy 0.14.0 的锁定实现**。
 后续若依据 CSS 规范、WPT 或浏览器补用例，必须在此注明规范版本／WPT 路径，
@@ -168,8 +170,8 @@
 重复节点 ID、非有限值以及超出限制的用例都报错。输出仅是固定版本
 Taffy 的参考结果；Axisly 尚未支持的 Block／Flex／CSS Grid 功能不计作通过。
 
-目前有 44 字段清单、一百五十二组可重放参考输入、独立树形工具及旧 Grid
-差分回归；这一百五十二组的矩形、盒边、滚动条及节点局部可滚动溢出
+目前有 44 字段清单、一百五十六组可重放参考输入、独立树形工具及旧 Grid
+差分回归；这一百五十六组的矩形、盒边、滚动条及节点局部可滚动溢出
 同时经过新原生树差分。
 差分脚本将 Taffy 的父相对矩形换算为 Axisly 公共 API 使用的根相对矩形。
 轨道尺寸、放置范围、

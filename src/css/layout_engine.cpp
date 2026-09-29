@@ -328,6 +328,11 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
         height ? *height : checked(static_cast<double>(measured.content_size.height) + *decoration_height, node.id),
     };
     candidate = constrain_size(candidate, box);
+    if (box.aspect_ratio) {
+        candidate.height = std::max(candidate.height,
+            checked(static_cast<double>(candidate.width) / *box.aspect_ratio,
+                node.id));
+    }
     Fragment fragment;
     fragment.size = candidate;
     fragment.nodes.push_back(make_layout(node, candidate, box,

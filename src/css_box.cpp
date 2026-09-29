@@ -153,7 +153,6 @@ ResolvedBox resolve_box(const BoxStyle& style,
     result.maximum = convert(style.max_size);
     result.preferred = transfer_aspect_ratio(result.preferred, result);
     result.minimum = transfer_aspect_ratio(result.minimum, result);
-    result.maximum = transfer_aspect_ratio(result.maximum, result);
     return result;
 }
 

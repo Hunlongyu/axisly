@@ -9,6 +9,12 @@
 
 namespace axisly::css::detail {
 
+// The explicit grid starts at origin-zero line 0. Each direction may extend
+// by 10,000 tracks; explicit tracks consume the positive direction's budget.
+inline constexpr std::int32_t grid_track_limit = 10'000;
+inline constexpr std::int32_t grid_minimum_line = -grid_track_limit;
+inline constexpr std::int32_t grid_maximum_line = grid_track_limit;
+
 struct AxisPlacement {
     std::optional<std::int32_t> start;
     std::int32_t span{1};
@@ -67,6 +73,25 @@ struct ExpandedTemplate {
     std::vector<std::vector<std::string>> line_names;
     std::vector<bool> auto_fit;
 };
+
+struct GridExtent {
+    std::int32_t row_start{}, row_end{};
+    std::int32_t column_start{}, column_end{};
+};
+
+[[nodiscard]] ExpandedTemplate expand_grid_template(
+    const std::vector<TemplateTrack>& components,
+    const std::vector<std::vector<std::string>>& line_names,
+    std::optional<Unit> available, Unit gap, bool minimum_strategy, NodeId id);
+void apply_grid_template_areas(const GridStyle& style,
+    ExpandedTemplate& rows, ExpandedTemplate& columns);
+[[nodiscard]] AxisPlacement resolve_grid_placement(const GridPlacement& value,
+    const ExpandedTemplate& axis);
+[[nodiscard]] AxisEstimate estimate_grid_axis(const GridPlacement& value,
+    std::int32_t explicit_count);
+[[nodiscard]] GridExtent place_grid_items(std::vector<Placement>& placements,
+    std::int32_t explicit_rows, std::int32_t explicit_columns,
+    GridAutoFlow flow, NodeId id);
 
 [[nodiscard]] TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
     const std::vector<TrackSizing>& auto_tracks, std::int32_t minimum_line,

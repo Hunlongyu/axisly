@@ -41,6 +41,8 @@ add_library(axisly STATIC
     src/css/block_float_context.cpp
     src/css/flex_layout.cpp
     src/css/grid_layout.cpp
+    src/css/grid_template.cpp
+    src/css/grid_placement.cpp
     src/css/grid_item_sizing.cpp
     src/css/grid_track_sizing.cpp
     src/css/positioned_layout.cpp

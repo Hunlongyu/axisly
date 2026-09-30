@@ -225,6 +225,69 @@ void automatic_repetition() {
         && minimum.find(children.back())->border_box.x == 93,
         "Minimum width and percentage gap must produce four tracks and expand the container");
 }
+
+void overlarge_grid() {
+    LayoutTree tree;
+    Style grid;
+    grid.display = Display::Grid;
+    grid.box.size = {Length::length(30), Length::length(10)};
+    grid.grid.template_columns = {GridRepeat{RepeatKind::Count, 65535,
+        {TrackSizing::fixed(1), TrackSizing::fixed(2), TrackSizing::fixed(3)}, {}},
+        TrackSizing::fixed(99)};
+    grid.grid.template_rows = {TrackSizing::fixed(1)};
+    const auto root = tree.create_node(grid);
+    Style item;
+    item.box.size = {Length::length(1), Length::length(1)};
+    item.grid.column = {GridLine::index(32767), GridLine::span(65535)};
+    const auto child = tree.create_node(item);
+    tree.append_child(root, child);
+    const AvailableSize available{AvailableSpace::max_content(),
+        AvailableSpace::max_content()};
+    const auto& repeated = tree.compute(root, available);
+    require(repeated.succeeded(), "Overlarge explicit repetitions must be truncated");
+    const auto& repeated_tracks = repeated.grid_tracks.front();
+    require(repeated_tracks.explicit_columns == 10000
+        && repeated_tracks.columns.size() == 10000
+        && repeated_tracks.columns[0] == 1 && repeated_tracks.columns[1] == 2
+        && repeated_tracks.columns[2] == 3 && repeated_tracks.columns.back() == 1,
+        "Explicit truncation must preserve the source-order track pattern");
+    require(repeated_tracks.items.front().column_start == 9999
+        && repeated_tracks.items.front().column_end == 10000,
+        "An out-of-grid item must retain one track at the positive boundary");
+
+    grid.grid.template_columns = {TrackSizing::fixed(1)};
+    grid.grid.template_rows = {TrackSizing::fixed(1)};
+    grid.grid.auto_columns = {TrackSizing::fixed(1)};
+    grid.grid.auto_rows = {TrackSizing::fixed(1)};
+    item.grid.column = {GridLine::index(-32768), GridLine::index(32767)};
+    item.grid.row = item.grid.column;
+    tree.set_style(root, grid);
+    tree.set_style(child, item);
+    const auto& implicit = tree.compute(root, available);
+    require(implicit.succeeded(), "Both directions of the implicit grid must be supported");
+    const auto& implicit_tracks = implicit.grid_tracks.front();
+    require(implicit_tracks.column_origin == -10000 && implicit_tracks.row_origin == -10000
+        && implicit_tracks.columns.size() == 20000 && implicit_tracks.rows.size() == 20000
+        && implicit_tracks.items.front().column_start == -10000
+        && implicit_tracks.items.front().column_end == 10000
+        && implicit_tracks.items.front().row_start == -10000
+        && implicit_tracks.items.front().row_end == 10000,
+        "Grid limits apply separately on each side of the explicit origin");
+
+    grid.box.size.width = Length::length(50000);
+    grid.grid.template_columns = {GridRepeat{RepeatKind::Count, 9999,
+        {TrackSizing::fixed(1)}, {}}, GridRepeat{RepeatKind::AutoFill, 1,
+        {TrackSizing::fixed(0), TrackSizing::fixed(9)}, {}}, TrackSizing::fixed(99)};
+    item.grid.column = {};
+    item.grid.row = {};
+    tree.set_style(root, grid);
+    tree.set_style(child, item);
+    const auto& automatic = tree.compute(root, available);
+    require(automatic.succeeded()
+        && automatic.grid_tracks.front().explicit_columns == 10000
+        && automatic.grid_tracks.front().columns.back() == 0,
+        "An auto-repeat may be clipped partway through its track list after the prefix");
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -237,6 +300,7 @@ int main(int argc, char** argv) {
         else if (name == "span_and_fit_content") span_and_fit_content();
         else if (name == "named_lines_and_areas") named_lines_and_areas();
         else if (name == "automatic_repetition") automatic_repetition();
+        else if (name == "overlarge_grid") overlarge_grid();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

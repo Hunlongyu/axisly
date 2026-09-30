@@ -13,7 +13,7 @@ TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
     axis.origin = std::min<std::int32_t>(0, minimum_line);
     axis.gap = gap;
     const auto finish = std::max<std::int32_t>(static_cast<std::int32_t>(explicit_tracks.size()), maximum_line);
-    if (finish - axis.origin > 10'000) {
+    if (axis.origin < grid_minimum_line || finish > grid_maximum_line) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "Grid track limit exceeded");
     }
     for (auto index = axis.origin; index < finish; ++index) {

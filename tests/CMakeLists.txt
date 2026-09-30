@@ -31,7 +31,7 @@ add_executable(axisly_css_grid_tests css/css_grid_tests.cpp)
 target_link_libraries(axisly_css_grid_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_grid_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_css_grid_tests)
-foreach(behavior IN ITEMS tracks_and_placement implicit_and_negative_lines invalid_style span_and_fit_content named_lines_and_areas automatic_repetition)
+foreach(behavior IN ITEMS tracks_and_placement implicit_and_negative_lines invalid_style span_and_fit_content named_lines_and_areas automatic_repetition overlarge_grid)
     add_test(NAME axisly.css.grid.${behavior} COMMAND axisly_css_grid_tests ${behavior})
 endforeach()
 

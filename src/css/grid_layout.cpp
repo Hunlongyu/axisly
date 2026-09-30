@@ -631,9 +631,20 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto scrolls = [](Overflow overflow) {
             return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
         };
-        const bool ratio_from_rows = inner_height && child_box.aspect_ratio
+        const bool ratio_candidate = inner_height && child_box.aspect_ratio
             && get(id).style.box.size.width.kind() == LengthKind::Auto
             && !child_box.preferred.width;
+        // A stretched auto row has a used size, but it is still indefinite
+        // while computing the item's inline intrinsic contribution.
+        const bool ratio_from_rows = ratio_candidate && std::all_of(
+            track_rows.tracks.begin()
+                + (placements[i].row_start - track_rows.origin),
+            track_rows.tracks.begin()
+                + (placements[i].row_end - track_rows.origin),
+            [inner_height](const TrackState& track) {
+                return track.style.minimum.resolve_numeric(inner_height).has_value()
+                    && track.style.maximum.resolve_numeric(inner_height).has_value();
+            });
         contribution_indices[i] = contributions.size();
         contributions.push_back({placements[i], minimum_contribution,
             min_fragment.size, max_fragment.size, edges(child_box.margin, id),
@@ -748,14 +759,22 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         });
     if (intrinsic_columns) {
         if (measure_cross_dependent_contributions(false)) {
-            track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
-                min_column, max_column, initial_track_width, column_gap, node.id);
-            collapse_auto_fit(track_columns, columns, placements, true);
+            // Track base sizes grow monotonically across axis passes. A row
+            // estimate can increase an inline contribution, but cyclic
+            // percentages must not shrink an established intrinsic base.
+            // Definite space is redistributed from the updated contributions.
+            if (column_space.grid_space.kind == AvailableKind::Definite) {
+                track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+                    min_column, max_column, initial_track_width, column_gap, node.id);
+                collapse_auto_fit(track_columns, columns, placements, true);
+            }
             size_axis(track_columns, contributions, true, column_space, node.id);
             if (measure_cross_dependent_contributions(true)) {
-                track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
-                    min_row, max_row, initial_track_height, row_gap, node.id);
-                collapse_auto_fit(track_rows, rows, placements, false);
+                if (row_space.grid_space.kind == AvailableKind::Definite) {
+                    track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+                        min_row, max_row, initial_track_height, row_gap, node.id);
+                    collapse_auto_fit(track_rows, rows, placements, false);
+                }
                 size_axis(track_rows, contributions, false, row_space, node.id);
             }
         }

@@ -150,6 +150,38 @@ Release／Debug／MSVC ASan 各通过 296/296，包含 9,216 组混合树差分�
 [DirectWrite 逐批分配](benchmarks/css-retained-detail-2026-09-30/directwrite-allocations-raw.csv)、
 [环境与可执行文件哈希](benchmarks/css-retained-detail-2026-09-30/environment.json)。
 
+## 四层纵横比与百分比尺寸对照后
+
+本轮修正 Block 子项的已知尺寸与百分比包含块传递、根 Block 的已知宽度，
+以及 Grid 自动轨道对确定行高的纵横比传递。输入、后端、计时边界与上节
+相同，按 20 帧 × 9 批重新采样；下面的时间均为批次中位数，分配次数来自
+独立运行的 C++ 分配程序。
+
+| 后端／叶子 | 场景 | 上版 µs | 本版 µs | 上版 C++ 申请 | 本版 C++ 申请 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 合成／384 | 首次 | 8154.49 | 8222.41 | 40316 | 40188 |
+| 合成／384 | 单叶编辑 | 281.82 | 292.12 | 1731.9 | 1731.6 |
+| DirectWrite／96 | 首次 | 3680.68 | 4442.64 | 10604 | 10572 |
+
+合成／384 首次时间与上版接近，DirectWrite／96 本次首次时间上升约 20.7%；
+这组数据未固定 CPU 亲和性，不能单凭一次采样归因于算法。尺寸变化仍为
+0 次测量、根节点 1 次布局；输入不变仍复用已发布结果。Grid 的行确定性
+检查只在存在纵横比候选项时执行，避免增加普通项目的热路径工作。
+需要继续定位真实文字路径的耗时，并降低固有尺寸查询中的重复工作。
+
+本轮原始记录：[时间汇总](benchmarks/css-ratio-deep-2026-09-30/timing-summary.csv)、
+[逐批时间](benchmarks/css-ratio-deep-2026-09-30/timing-raw.csv)、
+[分配汇总](benchmarks/css-ratio-deep-2026-09-30/allocations-summary.csv)、
+[逐批分配](benchmarks/css-ratio-deep-2026-09-30/allocations-raw.csv)、
+[DirectWrite 时间汇总](benchmarks/css-ratio-deep-2026-09-30/directwrite-timing-summary.csv)、
+[DirectWrite 逐批时间](benchmarks/css-ratio-deep-2026-09-30/directwrite-timing-raw.csv)、
+[DirectWrite 分配汇总](benchmarks/css-ratio-deep-2026-09-30/directwrite-allocations-summary.csv)、
+[DirectWrite 逐批分配](benchmarks/css-ratio-deep-2026-09-30/directwrite-allocations-raw.csv)、
+[环境与可执行文件哈希](benchmarks/css-ratio-deep-2026-09-30/environment.json)。
+最终代码的参考 Release／Debug 各通过 345/345 项，MSVC ASan 通过
+344/344 项；GeeyoouUI Release／Debug／MSVC ASan 各通过 296/296 项，
+安装消费者通过 1/1 项，基准 smoke 通过 4/4 项。
+
 ## 验证范围
 
 初始基线的 Release、Debug 参考构建各通过 333/333 项；ASan 通过

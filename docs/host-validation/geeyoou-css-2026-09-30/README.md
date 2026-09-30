@@ -41,3 +41,10 @@ Release 的真实 Showcase 仍遍历 19 页 × 3 配置，并通过原生 CSS �
 与前两轮相同。[本轮验证记录](validation-detail.json)和
 [Showcase 摘要](showcase-detail-summary.json)保存了结果；实际跨显示器 DPI
 切换仍需单独验收。
+
+四层纵横比与百分比尺寸差分修正后，再次编译并运行 Release／Debug／
+MSVC ASan 宿主，各通过 296/296 项。Release Showcase 遍历 19 页 × 3
+配置，原生 CSS 混合页通过，`errors=0`；安装前缀的独立消费者通过 1/1。
+CSS 混合页截图 SHA-256 与之前相同。
+[本轮验证记录](validation-ratio-deep.json)和
+[Showcase 摘要](showcase-ratio-deep-summary.json)保存了结果。

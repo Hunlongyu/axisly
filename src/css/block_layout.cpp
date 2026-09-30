@@ -49,7 +49,17 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
             "Block decoration requires a definite containing inline size");
     }
-    const auto requested = requested_size(constraints, box);
+    auto requested = requested_size(constraints, box);
+    if (box.aspect_ratio && (constraints.known_width || constraints.known_height)) {
+        // Taffy transfers parent-known Block dimensions as border-box values.
+        // An auto width inferred from available space is not a known dimension.
+        auto ratio_box = box;
+        ratio_box.box_sizing = BoxSizing::BorderBox;
+        const auto derived = transfer_aspect_ratio(
+            {constraints.known_width, constraints.known_height}, ratio_box);
+        if (!requested.width) requested.width = derived.width;
+        if (!requested.height) requested.height = derived.height;
+    }
     const auto preferred_width = requested.width;
     const auto available_width = constraints.available.width.definite_value();
     const bool content_based_width = !preferred_width
@@ -75,13 +85,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const Unit content_width = std::max(Unit{0}, outer_width - *flow_decoration_width);
     // An intrinsic outer width provides space for placement, but it does not
     // turn the containing block into a definite percentage basis for children.
-    const std::optional<Unit> child_percentage_width =
-        (constraints.containing_width || preferred_width)
-            ? std::optional<Unit>(content_width) : std::nullopt;
+    // A content-based width is known only after intrinsic child measurement.
+    // Cyclic percentage child sizes remain unresolved for this layout pass.
+    const std::optional<Unit> child_percentage_width = !content_based_width
+        ? std::optional<Unit>(content_width) : std::nullopt;
     auto preferred_height = requested.height;
-    if (!preferred_height) {
-        preferred_height = transfer_aspect_ratio({outer_width, std::nullopt}, box).height;
-    }
     if (preferred_height) {
         *preferred_height = constrain_axis(*preferred_height,
             box.minimum.height, box.maximum.height);
@@ -164,8 +172,15 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             ? AvailableSpace::max_content()
             : AvailableSpace::definite(content_width);
         child_constraints.available.height = AvailableSpace::indefinite();
-        child_constraints.containing_width = child_percentage_width;
-        if (preferred_height) child_constraints.containing_height = content_height_basis;
+        // The item list resolves cyclic percentages before this width exists,
+        // while the child's own layout receives the computed containing block.
+        child_constraints.containing_width = content_width;
+        // A flex parent can supply a used cross size that is still indefinite
+        // for descendant percentages. A styled height remains a definite basis.
+        if (preferred_height
+            && (constraints.known_height_is_definite || box.preferred.height)) {
+            child_constraints.containing_height = content_height_basis;
+        }
         ResolvedBox child_box;
         try { child_box = resolve_layout_box(child, child_percentage_width,
             child_constraints.containing_height); }
@@ -173,13 +188,20 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, child_id, error.what());
         }
         const auto margin = edges(child_box.margin, child_id);
-        if (child.style.float_side == FloatSide::None
-            && !intrinsic_width
-            && child.style.box.size.width.kind() == LengthKind::Auto
-            && !child_box.preferred.width) {
-            child_constraints.known_width = std::max(Unit{0}, checked(
-                static_cast<double>(content_width) - margin.left - margin.right,
-                child_id));
+        const auto child_width_kind = child.style.box.size.width.kind();
+        const bool unresolved_normal_width = child_width_kind == LengthKind::Auto
+            || child_width_kind == LengthKind::Percent
+            || child_width_kind == LengthKind::Calc;
+        if (child.style.float_side == FloatSide::None && !intrinsic_width) {
+            if (child_box.preferred.width) {
+                child_constraints.known_width = constrain_axis(
+                    *child_box.preferred.width, child_box.minimum.width,
+                    child_box.maximum.width);
+            } else if (unresolved_normal_width) {
+                child_constraints.known_width = std::max(Unit{0}, checked(
+                    static_cast<double>(content_width) - margin.left - margin.right,
+                    child_id));
+            }
         }
         std::optional<FloatSlot> formatting_slot;
         if (child.style.float_side == FloatSide::None
@@ -203,8 +225,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 - context.origin_x, child_id);
             formatting_slot->y = checked(static_cast<double>(formatting_slot->y)
                 - context.origin_y, child_id);
-            if (child.style.box.size.width.kind() == LengthKind::Auto
-                && !child_box.preferred.width && !intrinsic_width) {
+            if (unresolved_normal_width && !child_box.preferred.width
+                && !intrinsic_width) {
                 child_constraints.known_width = formatting_slot->width;
             }
         }
@@ -239,6 +261,19 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 checked(static_cast<double>(context.origin_y) + y
                     + child_border.top + child_padding.top, child_id)};
             nested = layout(child_id, child_constraints, depth + 1, &child_context);
+        }
+        // Block item metadata is resolved when the parent's item list is
+        // formed. The child's own layout may use a later containing width,
+        // but it does not replace the parent's reported padding and border.
+        const auto item_padding = edges(child_box.padding, child_id);
+        const auto item_border = edges(child_box.border, child_id);
+        if (nested.nodes.front().padding != item_padding
+            || nested.nodes.front().border != item_border) {
+            const auto reported = make_layout(child, nested.size, child_box);
+            nested.nodes.front().padding = reported.padding;
+            nested.nodes.front().border = reported.border;
+            nested.nodes.front().content_box = reported.content_box;
+            nested.nodes.front().overflow_origin_border = reported.overflow_origin_border;
         }
         if (child.style.float_side != FloatSide::None) {
             const Unit outer_float_width = checked(static_cast<double>(nested.size.width)

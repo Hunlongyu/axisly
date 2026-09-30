@@ -47,7 +47,10 @@ Unit Engine::block_content_based_width(const LayoutNode& node,
             || child.style.position == Position::Absolute) continue;
 
         ResolvedBox child_box;
-        try { child_box = resolve_layout_box(child, available_width, std::nullopt); }
+        // An intrinsic-width probe has an available-space limit, but it does
+        // not establish a containing block for percentage child dimensions.
+        // The available width is used only to constrain the measurement.
+        try { child_box = resolve_layout_box(child, std::nullopt, std::nullopt); }
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, child_id, error.what());
         }
@@ -56,7 +59,7 @@ Unit Engine::block_content_based_width(const LayoutNode& node,
             + margin.right, child_id);
         Constraints child_constraints;
         child_constraints.content_based_width = true;
-        child_constraints.containing_width = available_width;
+        child_constraints.containing_width = std::nullopt;
         child_constraints.available.width = available_width
             ? AvailableSpace::definite(std::max(Unit{0}, *available_width
                 - horizontal_margin)) : available;

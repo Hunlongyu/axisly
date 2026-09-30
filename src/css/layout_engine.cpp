@@ -76,10 +76,12 @@ AvailableSpace subtract_decoration(AvailableSpace space, Unit amount) {
 
 ResolvedDimensions requested_size(const Constraints& constraints,
                                   const ResolvedBox& box) {
-    return transfer_aspect_ratio({
+    // Style dimensions have already applied content-box sizing in resolve_box.
+    // Parent-supplied dimensions have algorithm-specific ratio handling.
+    return {
         constraints.known_width ? constraints.known_width : box.preferred.width,
         constraints.known_height ? constraints.known_height : box.preferred.height,
-    }, box);
+    };
 }
 
 ResolvedBox resolve_layout_box(const LayoutNode& node,
@@ -217,6 +219,19 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
         constraints.available = available;
         constraints.containing_width = available.width.definite_value();
         constraints.containing_height = available.height.definite_value();
+        const auto& root_node = get(root);
+        if ((root_node.style.display == Display::Block
+                || root_node.style.display == Display::FlowRoot)
+            && available.width.kind == AvailableKind::Definite) {
+            const auto root_box = resolve_layout_box(root_node,
+                constraints.containing_width, constraints.containing_height);
+            if (!root_box.preferred.width) {
+                const auto margin = edges(root_box.margin, root);
+                constraints.known_width = std::max(Unit{0}, checked(
+                    static_cast<double>(available.width.value)
+                        - margin.left - margin.right, root));
+            }
+        }
         auto fragment = layout(root, constraints, 1);
         result.size = fragment.size;
         result.nodes = std::move(fragment.nodes);

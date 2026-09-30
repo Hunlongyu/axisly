@@ -43,12 +43,15 @@ struct FlexItem {
     bool main_size_is_definite{}, cross_size_is_definite{};
     bool scroll_container{};
     Constraints final_constraints;
+    double violation{};
+    bool frozen{};
 };
 
 
 struct FlexItemSizingInput {
     std::size_t source_index;
     ResolvedDimensions inner;
+    AvailableSize available_inner;
     AvailableKind main_query;
     bool main_size_is_definite, main_reverse, cross_reverse;
 };

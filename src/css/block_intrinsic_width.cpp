@@ -82,7 +82,7 @@ Unit Engine::block_content_based_width(const LayoutNode& node,
         }
         const auto child_width = child_constraints.known_width.value_or(Unit{0});
         const auto measured_width = child_constraints.known_width ? child_width
-            : layout_size(child_id, child_constraints, depth + 1).size.width;
+            : layout_size(child_id, child_constraints, depth + 1).width;
         const Unit outer_width = checked(std::max(0.0,
             static_cast<double>(std::max(measured_width,
                 child_box.horizontal_padding_border().value_or(Unit{0})))

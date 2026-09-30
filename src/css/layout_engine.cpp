@@ -7,9 +7,38 @@
 #include <utility>
 
 namespace axisly::css::detail {
+
+[[noreturn]] void layout_numeric_overflow(NodeId id) {
+    throw LayoutFailure(LayoutErrorCode::NumericOverflow, id, "CSS layout numeric overflow");
+}
+
+[[noreturn]] void unresolved_layout_edge(NodeId id) {
+    throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, id,
+        "CSS percentage edge has no definite containing inline size");
+}
+
 namespace {
 bool suppresses_baseline(Contain contain) noexcept {
     return contain == Contain::Layout || contain == Contain::Content;
+}
+
+LayoutCacheKey cache_key_for(const LayoutNode& node, Constraints key, FragmentDetail detail, std::size_t depth) {
+    key.detail = detail;
+    // Only percentage-dependent properties use the containing block in the key.
+    if (!node.box_depends_on_width) key.containing_width.reset();
+    if (!node.box_depends_on_height) key.containing_height.reset();
+    if (!key.known_width) key.known_width_is_definite = true;
+    if (!key.known_height) key.known_height_is_definite = true;
+    if ((node.children.empty() && key.known_width && key.known_height
+            && (!node.box_depends_on_width || key.containing_width))
+        || (!node.children.empty() && key.sizing_mode == SizingMode::Content
+            && (node.style.display == Display::Flex || node.style.display == Display::Grid))) {
+        if (key.known_width) key.available.width = AvailableSpace::definite(*key.known_width);
+        if (key.known_height) key.available.height = AvailableSpace::definite(*key.known_height);
+    }
+    // The same subtree can be computed from different roots. Reusing a
+    // shallower query must not bypass the tree's recursive depth budget.
+    return LayoutCacheKey::from(key, depth);
 }
 
 class ScopedDetail final {
@@ -25,11 +54,22 @@ private:
 };
 } // namespace
 
-Unit checked(double value, NodeId id) {
-    if (!std::isfinite(value) || std::abs(value) > std::numeric_limits<Unit>::max()) {
-        throw LayoutFailure(LayoutErrorCode::NumericOverflow, id, "CSS layout numeric overflow");
+void LayoutNode::reset_style_cache() {
+    resolved_box.reset();
+    const auto dependent = [](const Length& value) {
+        return value.kind() == LengthKind::Percent
+            || value.kind() == LengthKind::FitContentPercent
+            || value.kind() == LengthKind::Calc;
+    };
+    const auto& box = style.box;
+    box_depends_on_width = dependent(box.size.width) || dependent(box.min_size.width)
+        || dependent(box.max_size.width);
+    box_depends_on_height = dependent(box.size.height) || dependent(box.min_size.height)
+        || dependent(box.max_size.height);
+    for (const auto* edges : {&box.margin, &box.padding, &box.border}) {
+        box_depends_on_width |= dependent(edges->left) || dependent(edges->right)
+            || dependent(edges->top) || dependent(edges->bottom);
     }
-    return static_cast<Unit>(value);
 }
 
 MarginStrut MarginStrut::from(Unit value) {
@@ -45,35 +85,6 @@ Unit MarginStrut::resolve(NodeId node) const {
     return checked(static_cast<double>(positive) + negative, node);
 }
 
-Unit edge(const ResolvedEdge& value, NodeId id) {
-    if (value.kind == EdgeKind::Numeric) return value.value;
-    if (value.kind == EdgeKind::Auto) return 0;
-    throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, id,
-        "CSS percentage edge has no definite containing inline size");
-}
-
-Insets edges(const ResolvedEdges& values, NodeId id) {
-    return {edge(values.left, id), edge(values.top, id),
-            edge(values.right, id), edge(values.bottom, id)};
-}
-
-Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
-                  Unit first_border, Unit last_border) {
-    return std::max(Unit{0}, border_size - first_padding - last_padding - first_border - last_border);
-}
-
-Unit constrain_axis(Unit value, std::optional<Unit> minimum,
-                    std::optional<Unit> maximum) {
-    if (maximum) value = std::min(value, *maximum);
-    if (minimum) value = std::max(value, *minimum);
-    return value;
-}
-
-AvailableSpace subtract_decoration(AvailableSpace space, Unit amount) {
-    if (space.kind != AvailableKind::Definite) return space;
-    return AvailableSpace::definite(std::max(Unit{0}, space.value - amount));
-}
-
 ResolvedDimensions requested_size(const Constraints& constraints,
                                   const ResolvedBox& box) {
     // Style dimensions have already applied content-box sizing in resolve_box.
@@ -84,28 +95,14 @@ ResolvedDimensions requested_size(const Constraints& constraints,
     };
 }
 
-ResolvedBox resolve_layout_box(const LayoutNode& node,
+void update_layout_box_cache(const LayoutNode& node,
                                std::optional<Unit> containing_width,
                                std::optional<Unit> containing_height) {
+    const auto width_key = node.box_depends_on_width ? containing_width : std::nullopt;
+    const auto height_key = node.box_depends_on_height ? containing_height : std::nullopt;
     auto resolved = resolve_box(node.style.box, containing_width, containing_height,
         IndefiniteEdgeBasis::Zero);
-    // Taffy transfers a container's max-size through aspect-ratio. Its leaf
-    // algorithm retains independent maximum bounds, so keep that distinction
-    // at the node-resolution boundary.
-    if (!node.children.empty()) {
-        resolved.maximum = transfer_aspect_ratio(resolved.maximum, resolved);
-    }
-    resolved.scrollbar.width = node.style.overflow_y == Overflow::Scroll
-        ? node.style.scrollbar_width : Unit{0};
-    resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
-        ? node.style.scrollbar_width : Unit{0};
-    return resolved;
-}
-
-Unit content_origin_x(const ResolvedBox& box, Insets border,
-                      Insets padding, NodeId node) {
-    return checked(static_cast<double>(padding.left) + border.left
-        + (box.direction == Direction::Rtl ? box.scrollbar.width : 0), node);
+    node.resolved_box = LayoutNode::BoxCache{width_key, height_key, resolved};
 }
 
 NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& resolved,
@@ -141,16 +138,23 @@ void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& 
 }
 
 void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box) {
-    const auto reported = make_layout(node, fragment.size, box);
     auto& root = fragment.root_layout();
-    root.padding = reported.padding;
-    root.border = reported.border;
-    root.content_box = reported.content_box;
+    const auto padding = edges(box.padding, node.id);
+    const auto border = edges(box.border, node.id);
+    root.padding = padding;
+    root.border = border;
+    root.content_box = {content_origin_x(box, border, padding, node.id),
+        padding.top + border.top,
+        std::max(Unit{0}, content_axis(fragment.size.width,
+            padding.left, padding.right, border.left, border.right) - box.scrollbar.width),
+        std::max(Unit{0}, content_axis(fragment.size.height,
+            padding.top, padding.bottom, border.top, border.bottom) - box.scrollbar.height)};
     // The child's late flow resolution owns its overflow origin and baseline.
     // Item box reporting belongs to the parent's earlier sizing stage.
 }
 
 void translate(Fragment& fragment, Unit x, Unit y, NodeId node) {
+    if (x == 0 && y == 0) return;
     auto move = [&](NodeLayout& layout) {
         layout.border_box.x = checked(static_cast<double>(layout.border_box.x) + x, node);
         layout.border_box.y = checked(static_cast<double>(layout.border_box.y) + y, node);
@@ -158,62 +162,11 @@ void translate(Fragment& fragment, Unit x, Unit y, NodeId node) {
         layout.content_box.y = checked(static_cast<double>(layout.content_box.y) + y, node);
     };
     if (fragment.root) move(*fragment.root);
-    for (auto& layout : fragment.descendants) move(layout);
+    fragment.translate_descendants(x, y, node);
 }
 
-std::optional<Unit> child_baseline(const Fragment& fragment, const Style& style) {
-    if (!fragment.root) return std::nullopt;
-    const auto baseline = fragment.root_layout().first_baseline;
-    if (style.overflow_y == Overflow::Hidden || style.overflow_y == Overflow::Scroll) {
-        return std::clamp(baseline.value_or(fragment.size.height),
-            Unit{0}, fragment.size.height);
-    }
-    return baseline;
-}
-
-Engine::Engine(const std::unordered_map<std::uint64_t, LayoutNode>& nodes,
-               const CacheMap& cache,
-               const MeasurementCacheMap& measurement_cache, TreeLimits limits)
-    : nodes_(nodes), cache_(cache), measurement_cache_(measurement_cache),
-      limits_(limits) {}
-
-void Engine::stage(NodeId id, const Constraints& constraints, const Fragment& fragment) {
-    // Fragment caching is bounded because storing every nested subtree in a
-    // deep chain otherwise takes quadratic space.
-    constexpr std::size_t maximum_fragment_nodes = 512;
-    constexpr std::size_t entries_per_node = 8;
-    const auto count = fragment.node_count();
-    const auto existing = updates_.find(id.value);
-    std::optional<std::size_t> match_index;
-    if (existing != updates_.end()) {
-        for (std::size_t index = 0; index < existing->second.size(); ++index) {
-            if (existing->second[index].constraints == constraints) {
-                match_index = index;
-                break;
-            }
-        }
-    }
-    const auto old_count = match_index
-        ? existing->second[*match_index].fragment.node_count()
-        : existing != updates_.end() && existing->second.size() == entries_per_node
-            ? existing->second.front().fragment.node_count() : 0;
-    if (count > maximum_fragment_nodes
-        || count > limits_.maximum_cached_layouts - (pending_layouts_ - old_count)) return;
-    auto& entries = updates_[id.value];
-    if (match_index) {
-        entries[*match_index] = CacheEntry{constraints, fragment};
-    } else {
-        if (entries.size() == entries_per_node) entries.erase(entries.begin());
-        entries.push_back(CacheEntry{constraints, fragment});
-    }
-    pending_layouts_ = pending_layouts_ - old_count + count;
-}
-
-const LayoutNode& Engine::get(NodeId id) const {
-    const auto iterator = nodes_.find(id.value);
-    if (iterator == nodes_.end()) throw LayoutFailure(LayoutErrorCode::InvalidRoot, id, "CSS node is absent");
-    return iterator->second;
-}
+Engine::Engine(const LayoutNodes& nodes, TreeLimits limits, LayoutCache& cache)
+    : nodes_(nodes), cache_(cache), limits_(limits) {}
 
 bool Engine::has_float_subtree(NodeId id, std::size_t depth) {
     if (depth > limits_.maximum_depth) {
@@ -245,6 +198,7 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
         constraints.containing_width = available.width.definite_value();
         constraints.containing_height = available.height.definite_value();
         const auto& root_node = get(root);
+        cache_.reserve_hint(root_node.children.size() + 1);
         if (root_node.style.display == Display::Block
             || root_node.style.display == Display::FlowRoot) {
             const auto root_box = resolve_layout_box(root_node,
@@ -321,63 +275,29 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "CSS layout depth exceeded");
     }
     const auto& node = get(id);
-    constraints.detail = detail_;
-    if (!block_context) {
-        const auto lookup = [&](const CacheMap& source) -> const CacheEntry* {
-            const auto entries = source.find(id.value);
-            if (entries == source.end()) return nullptr;
-            if (const auto match = std::find_if(entries->second.begin(), entries->second.end(),
-                    [&](const CacheEntry& entry) { return entry.constraints == constraints; });
-                match != entries->second.end()) {
-                return &*match;
-            }
-            return nullptr;
-        };
-        const auto* hit = lookup(updates_);
-        if (!hit) hit = lookup(cache_);
+    const bool trivial_size = detail_ == FragmentDetail::Size
+        && ((constraints.known_width && constraints.known_height)
+            || (node.children.empty() && !node.measure));
+    const bool cacheable = !block_context && !trivial_size;
+    const auto cache_key = cache_key_for(node, constraints, detail_, depth);
+    if (cacheable) {
         // Query stages have distinct semantics: a full Grid layout can rerun
         // tracks after the size-query exit, changing its intrinsic result.
         // Cache only the requested stage, even when richer output exists.
-        if (hit) {
+        if (const auto* hit = cache_.find(node.cache, cache_key)) {
             ++hits_;
             if (depth == 1) root_hit_ = true;
-            return hit->fragment;
+            return *hit;
         }
     }
     ++layouts_;
     Fragment fragment;
     if (node.style.display == Display::None) {
         fragment = hidden(node, depth);
-        if (!block_context) stage(id, constraints, fragment);
+        if (cacheable) cache_.stage(node.cache, cache_key, fragment);
         return fragment;
     }
-    ResolvedBox box;
-    try {
-        box = resolve_layout_box(node, constraints.containing_width, constraints.containing_height);
-    } catch (const std::invalid_argument& error) {
-        throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
-    }
-    if (constraints.sizing_mode == SizingMode::Content) {
-        // Flex resolves its item size before asking the child for its content.
-        // Containers retain min/max constraints; measured leaves ignore them
-        // and defer aspect-ratio effects to the parent item calculation.
-        box.preferred = {};
-        if (node.children.empty()) {
-            box.minimum = {};
-            box.maximum = {};
-            box.aspect_ratio.reset();
-        }
-    }
-    if (constraints.ignore_preferred_width) box.preferred.width.reset();
-    if (constraints.ignore_preferred_height) box.preferred.height.reset();
-    if (constraints.ignore_min_max_width) {
-        box.minimum.width.reset();
-        box.maximum.width.reset();
-    }
-    if (constraints.ignore_min_max_height) {
-        box.minimum.height.reset();
-        box.maximum.height.reset();
-    }
+    auto box = query_box(node, constraints);
     if (node.children.empty()) {
         fragment = leaf(node, constraints, box);
         if (suppresses_baseline(node.style.contain)) {
@@ -405,7 +325,7 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
                 MarginStrut::from(margin.top), MarginStrut::from(margin.bottom),
                 through};
         }
-        if (!block_context) stage(id, constraints, fragment);
+        if (cacheable) cache_.stage(node.cache, cache_key, fragment);
         return fragment;
     }
     if (node.parent) {
@@ -431,7 +351,7 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         fragment.root_layout().first_baseline.reset();
         fragment.root_layout().last_baseline.reset();
     }
-    if (!block_context) stage(id, constraints, fragment);
+    if (cacheable) cache_.stage(node.cache, cache_key, fragment);
     return fragment;
 }
 
@@ -441,10 +361,86 @@ Fragment Engine::layout_sizing(NodeId id, Constraints constraints,
     return layout(id, constraints, depth);
 }
 
-Fragment Engine::layout_size(NodeId id, Constraints constraints,
+ResolvedBox Engine::query_box(const LayoutNode& node, const Constraints& constraints) const {
+    ResolvedBox box;
+    try {
+        box = resolve_layout_box(node, constraints.containing_width, constraints.containing_height);
+    } catch (const std::invalid_argument& error) {
+        throw LayoutFailure(LayoutErrorCode::InvalidStyle, node.id, error.what());
+    }
+    if (constraints.sizing_mode == SizingMode::Content) {
+        box.preferred = {};
+        if (node.children.empty()) {
+            box.minimum = {};
+            box.maximum = {};
+            box.aspect_ratio.reset();
+        }
+    }
+    if (constraints.ignore_preferred_width) box.preferred.width.reset();
+    if (constraints.ignore_preferred_height) box.preferred.height.reset();
+    if (constraints.ignore_min_max_width) {
+        box.minimum.width.reset();
+        box.maximum.width.reset();
+    }
+    if (constraints.ignore_min_max_height) {
+        box.minimum.height.reset();
+        box.maximum.height.reset();
+    }
+    return box;
+}
+
+Size Engine::layout_size(NodeId id, Constraints constraints,
                              std::size_t depth) {
+    if (depth > limits_.maximum_depth) {
+        throw LayoutFailure(LayoutErrorCode::LimitExceeded, id, "CSS layout depth exceeded");
+    }
+    const auto& node = get(id);
+    if (node.style.display == Display::None) return {};
+    const auto box = query_box(node, constraints);
+    auto requested = requested_size(constraints, box);
+    if (node.children.empty() && !node.measure) {
+        const bool stretch_width = !constraints.ignore_preferred_width
+            && node.style.box.size.width.kind() == LengthKind::Stretch;
+        const bool stretch_height = !constraints.ignore_preferred_height
+            && node.style.box.size.height.kind() == LengthKind::Stretch;
+        if (!requested.width && (!stretch_width || constraints.sizing_mode == SizingMode::Content)) {
+            requested.width = box.horizontal_decoration();
+        }
+        if (!requested.height && (!stretch_height || constraints.sizing_mode == SizingMode::Content)) {
+            requested.height = box.vertical_decoration();
+        }
+    }
+    if (requested.width && requested.height
+        && (node.children.empty() || node.style.display == Display::Flex
+            || node.style.display == Display::Grid)) {
+        ++layouts_;
+        auto size = constrain_size({*requested.width, *requested.height}, box);
+        if (node.children.empty() && box.aspect_ratio) {
+            size.height = std::max(size.height,
+                checked(static_cast<double>(size.width) / *box.aspect_ratio, id));
+        } else if (!node.children.empty() && node.style.display == Display::Grid
+            && constraints.preserve_known_grid_size) {
+            if (constraints.known_width) size.width = *constraints.known_width;
+            if (constraints.known_height) size.height = *constraints.known_height;
+        }
+        return size;
+    }
+    if (node.children.empty()) {
+        // Measurement caching already retains the expensive host work. A size
+        // query needs neither a second box resolution nor published geometry.
+        const auto key = cache_key_for(node, constraints, FragmentDetail::LeafSize, depth);
+        if (const auto* cached = cache_.find(node.cache, key)) {
+            ++hits_;
+            return cached->size;
+        }
+        ++layouts_;
+        Fragment sized;
+        sized.size = size_leaf(node, constraints, box, false).size;
+        cache_.stage(node.cache, key, sized);
+        return sized.size;
+    }
     ScopedDetail scope(detail_, FragmentDetail::Size);
-    return layout(id, constraints, depth);
+    return layout(id, constraints, depth).size;
 }
 
 std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
@@ -495,7 +491,7 @@ std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
             }
         }
         const auto fragment = layout_size(node.id, measured, depth);
-        return horizontal ? fragment.size.width : fragment.size.height;
+        return horizontal ? fragment.width : fragment.height;
     };
     if (kind == LengthKind::MinContent) return probe(AvailableSpace::min_content());
     if (kind == LengthKind::MaxContent) return probe(AvailableSpace::max_content());
@@ -532,17 +528,7 @@ std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
 Measurement Engine::measure(const LayoutNode& node, const MeasureRequest& request) {
     if (!node.measure) return {};
     validate_measure_request(request);
-    const auto lookup = [&](const MeasurementCacheMap& source) -> const Measurement* {
-        const auto entries = source.find(node.id.value);
-        if (entries == source.end()) return nullptr;
-        const auto match = std::find_if(entries->second.begin(), entries->second.end(),
-            [&](const MeasurementCacheEntry& entry) {
-                return entry.request == request;
-            });
-        return match == entries->second.end() ? nullptr : &match->result;
-    };
-    if (const auto* hit = lookup(measurement_updates_)) return *hit;
-    if (const auto* hit = lookup(measurement_cache_)) return *hit;
+    if (const auto* hit = cache_.find(node.cache, request)) return *hit;
     if (++measurements_ > limits_.maximum_measurements) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, node.id, "CSS measurement limit exceeded");
     }
@@ -551,16 +537,7 @@ Measurement Engine::measure(const LayoutNode& node, const MeasureRequest& reques
     catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidMeasurement, node.id, error.what());
     }
-    constexpr std::size_t entries_per_node = 16;
-    auto found = measurement_updates_.find(node.id.value);
-    if (found != measurement_updates_.end()
-        && found->second.size() == entries_per_node) {
-        found->second.erase(found->second.begin());
-        found->second.push_back({request, result});
-    } else if (pending_measurements_ < limits_.maximum_cached_measurements) {
-        measurement_updates_[node.id.value].push_back({request, result});
-        ++pending_measurements_;
-    }
+    cache_.stage(node.cache, request, result);
     return result;
 }
 
@@ -570,6 +547,7 @@ Fragment Engine::hidden(const LayoutNode& node, std::size_t depth) {
     }
     Fragment fragment;
     fragment.root = NodeLayout{node.id, node.parent};
+    if (detail_ == FragmentDetail::Full) fragment.reserve_children(node.children.size());
     for (const auto child : node.children) {
         auto nested = hidden(get(child), depth + 1);
         if (detail_ == FragmentDetail::Full) {

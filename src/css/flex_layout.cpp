@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iterator>
 #include <limits>
+#include <ranges>
 #include <utility>
 
 namespace axisly::css::detail {
@@ -23,7 +24,7 @@ void set_axis_margin(Insets& margin, bool row, bool main,
 
 
 struct FlexLine {
-    std::vector<std::size_t> items;
+    std::ranges::iota_view<std::size_t, std::size_t> items;
     Unit cross{};
     Unit baseline_ascent{}, baseline_descent{};
     bool has_baseline{};
@@ -36,6 +37,10 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
     bool row, std::optional<Unit> available, Unit gap, FlexWrap wrap,
     std::uint16_t requested_lines) {
     std::vector<FlexLine> lines(1);
+    if (wrap == FlexWrap::NoWrap) {
+        lines.front().items = std::views::iota(std::size_t{0}, items.size());
+        return lines;
+    }
     const bool balanced = wrap == FlexWrap::Balance
         || wrap == FlexWrap::BalanceReverse;
     if (balanced && !items.empty()) {
@@ -54,7 +59,8 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         std::size_t next = 0;
         for (const auto count : counts) {
             FlexLine line;
-            for (std::size_t i = 0; i < count; ++i) line.items.push_back(next++);
+            line.items = std::views::iota(next, next + count);
+            next += count;
             lines.push_back(std::move(line));
         }
     } else {
@@ -72,7 +78,7 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
             }
             if (!lines.back().items.empty()) estimated_main += gap;
             estimated_main += outer;
-            lines.back().items.push_back(i);
+            lines.back().items = std::views::iota(i - lines.back().items.size(), i + 1);
         }
     }
     return lines;
@@ -222,7 +228,6 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
     const bool growing = hypothetical_occupied < main_size;
     const bool shrinking = hypothetical_occupied > main_size;
     const bool exactly_sized = !growing && !shrinking;
-    std::vector<bool> frozen(line.items.size(), false);
     for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
         const auto index = line.items[slot];
         auto& item = items[index];
@@ -231,13 +236,13 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
             || (growing && item.base > hypothetical)
             || (shrinking && item.base < hypothetical);
         item.target = hypothetical;
-        frozen[slot] = inflexible;
+        item.frozen = inflexible;
     }
     if (exactly_sized) return;
     double initial_occupied = gutters;
     for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
         const auto& item = items[line.items[slot]];
-        initial_occupied += (frozen[slot] ? item.target : item.base)
+        initial_occupied += (item.frozen ? item.target : item.base)
             + flex_axis(item.margin, row, true, true)
             + flex_axis(item.margin, row, true, false);
     }
@@ -247,10 +252,10 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
         for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
             const auto index = line.items[slot];
             const auto& item = items[index];
-            occupied += (frozen[slot] ? item.target : item.base)
+            occupied += (item.frozen ? item.target : item.base)
                 + flex_axis(item.margin, row, true, true)
                 + flex_axis(item.margin, row, true, false);
-            if (!frozen[slot]) {
+            if (!item.frozen) {
                 raw_factor_sum += growing ? item.grow : item.shrink;
                 scaled_factor_sum += growing ? item.grow
                     : static_cast<double>(item.shrink) * item.inner_base;
@@ -266,11 +271,10 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
                 : std::max(free, scaled_initial);
         }
         double total_violation = 0;
-        std::vector<double> violations(line.items.size());
         for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
-            if (frozen[slot]) continue;
             const auto index = line.items[slot];
             auto& item = items[index];
+            if (item.frozen) continue;
             const double factor = growing ? item.grow
                 : static_cast<double>(item.shrink) * item.inner_base;
             const double ideal = static_cast<double>(item.base)
@@ -280,15 +284,16 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
             // Compare in the same precision as the unconstrained target.
             // Casting to Unit first can turn an unbounded item into a false
             // min/max violation and freeze it in the next pass.
-            violations[slot] = bounded - ideal;
-            total_violation += violations[slot];
+            item.violation = bounded - ideal;
+            total_violation += item.violation;
         }
         if (std::abs(total_violation) < 0.0001) break;
         for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
-            if (!frozen[slot]
-                && (total_violation > 0 ? violations[slot] > 0
-                                        : violations[slot] < 0)) {
-                frozen[slot] = true;
+            auto& item = items[line.items[slot]];
+            if (!item.frozen
+                && (total_violation > 0 ? item.violation > 0
+                                        : item.violation < 0)) {
+                item.frozen = true;
             }
         }
     }
@@ -296,27 +301,81 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
 
 } // namespace
 
-Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
-                      const ResolvedBox& box, std::size_t depth) {
-    const bool row = flex_is_row(node.style.flex_direction);
-    const bool reverse_direction = node.style.flex_direction == FlexDirection::RowReverse
+// Per-container state outlives each phase, while phase-local temporaries do
+// not remain on the recursive stack during unrelated child queries.
+class FlexLayout {
+public:
+    FlexLayout(Engine& engine_arg, const LayoutNode& node_arg,
+        const Constraints& constraints_arg, const ResolvedBox& box_arg, std::size_t depth_arg)
+        : engine(engine_arg), node(node_arg), constraints(constraints_arg), box(box_arg), depth(depth_arg) {}
+    [[nodiscard]] Fragment run();
+private:
+    Engine& engine;
+    const LayoutNode& node;
+    const Constraints& constraints;
+    const ResolvedBox& box;
+    std::size_t depth;
+    bool row{}, reverse_direction{}, main_reverse{}, cross_reverse{}, wrap_reverse{}, main_size_is_definite{};
+    std::optional<Unit> deco_width, deco_height, border_width, border_height, inner_width, inner_height;
+    std::optional<Unit> child_percentage_width, child_percentage_height, main_available, cross_available;
+    std::optional<Unit> known_main, line_available;
+    AvailableSize available_inner;
+    AvailableKind main_query{};
+    Unit main_gap{}, cross_gap{}, main_size{};
+    double used_cross{};
+    ResolvedDimensions child_layout_basis;
+    std::vector<Fragment> fragments;
+    std::vector<FlexItem> items;
+    std::vector<FlexLine> lines;
+    void initialize();
+    void collect_items();
+    void measure_lines();
+    void resolve_cross_size();
+    void layout_items();
+    [[nodiscard]] Fragment finish();
+    [[nodiscard]] Fragment size_result() const;
+};
+
+Fragment FlexLayout::run() {
+    initialize();
+    if (engine.detail_ == FragmentDetail::Size && border_width && border_height) return size_result();
+    collect_items();
+    measure_lines();
+    resolve_cross_size();
+    if (engine.detail_ == FragmentDetail::Size) return size_result();
+    layout_items();
+    return finish();
+}
+
+Fragment FlexLayout::size_result() const {
+    Fragment result;
+    result.size = constrain_size(Size{*border_width, *border_height}, box);
+    result.root = make_layout(node, result.size, box);
+    return result;
+}
+
+void FlexLayout::initialize() {
+    row = flex_is_row(node.style.flex_direction);
+    wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
+        || node.style.flex_wrap == FlexWrap::BalanceReverse;
+    reverse_direction = node.style.flex_direction == FlexDirection::RowReverse
         || node.style.flex_direction == FlexDirection::ColumnReverse;
-    const bool main_reverse = row
+    main_reverse = row
         ? (node.style.flex_direction == FlexDirection::RowReverse)
             != (node.style.box.direction == Direction::Rtl)
         : node.style.flex_direction == FlexDirection::ColumnReverse;
-    const bool cross_reverse = (node.style.flex_wrap == FlexWrap::WrapReverse
+    cross_reverse = (node.style.flex_wrap == FlexWrap::WrapReverse
         || node.style.flex_wrap == FlexWrap::BalanceReverse)
         != (!row && node.style.box.direction == Direction::Rtl);
-    const auto deco_width = box.horizontal_decoration();
-    const auto deco_height = box.vertical_decoration();
+    deco_width = box.horizontal_decoration();
+    deco_height = box.vertical_decoration();
     if (!deco_width || !deco_height) {
         throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
             "Flex decoration requires a definite containing inline size");
     }
     const auto requested = requested_size(constraints, box);
-    auto border_width = requested.width;
-    auto border_height = requested.height;
+    border_width = requested.width;
+    border_height = requested.height;
     if (border_width) {
         *border_width = constrain_axis(*border_width,
             box.minimum.width, box.maximum.width);
@@ -325,24 +384,30 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         *border_height = constrain_axis(*border_height,
             box.minimum.height, box.maximum.height);
     }
-    auto inner_width = border_width
+    inner_width = border_width
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *deco_width)) : std::nullopt;
-    auto inner_height = border_height
+    inner_height = border_height
         ? std::optional<Unit>(std::max(Unit{0}, *border_height - *deco_height)) : std::nullopt;
+    const auto container_margin = edges(box.margin, node.id);
+    available_inner = AvailableSize{
+        subtract_decoration(constraints.available.width, checked(
+            static_cast<double>(*deco_width) + container_margin.left + container_margin.right, node.id)),
+        subtract_decoration(constraints.available.height, checked(
+            static_cast<double>(*deco_height) + container_margin.top + container_margin.bottom, node.id))};
     // A content-sized Flex container can acquire a final size without making
     // its children's percentage basis definite in the intrinsic pass.
-    const auto child_percentage_width = inner_width;
-    const auto child_percentage_height = inner_height;
-    const auto main_available = row ? inner_width : inner_height;
-    const auto cross_available = row ? inner_height : inner_width;
-    const auto known_main = row ? constraints.known_width : constraints.known_height;
-    const bool main_size_is_definite = known_main
+    child_percentage_width = inner_width;
+    child_percentage_height = inner_height;
+    main_available = row ? inner_width : inner_height;
+    cross_available = row ? inner_height : inner_width;
+    known_main = row ? constraints.known_width : constraints.known_height;
+    main_size_is_definite = known_main
         ? (row ? constraints.known_width_is_definite
                : constraints.known_height_is_definite)
         : flex_axis(box.preferred, row, true).has_value();
     const auto outer_main_space = row ? constraints.available.width
         : constraints.available.height;
-    const auto main_query = outer_main_space.kind;
+    main_query = outer_main_space.kind;
     const bool ignore_main_bounds = row ? constraints.ignore_min_max_width
         : constraints.ignore_min_max_height;
     const auto line_maximum = flex_axis(ignore_main_bounds ? box.specified_maximum
@@ -351,7 +416,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         : box.minimum, row, true);
     // Line collection uses the parent's remaining space even when the
     // container will derive its own main size from those lines.
-    std::optional<Unit> line_available = main_available;
+    line_available = main_available;
     if (!line_available && main_query == AvailableKind::Definite) {
         const auto margin = edges(box.margin, node.id);
         const double outer_margin = row
@@ -373,37 +438,37 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             }
         }
     }
-    Unit main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
+    main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
         main_available, node.id);
-    const Unit cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
+    cross_gap = resolved_gap(row ? node.style.gap.height : node.style.gap.width,
         cross_available, node.id);
+}
 
-    std::vector<Fragment> fragments(node.children.size());
-    std::vector<FlexItem> items;
+void FlexLayout::collect_items() {
+    fragments.resize(engine.detail_ == FragmentDetail::Size ? 0 : node.children.size());
     items.reserve(node.children.size());
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto id = node.children[source];
-        const auto& child = get(id);
+        const auto& child = engine.get(id);
         if (child.style.display == Display::None) {
-            fragments[source] = hidden(child, depth + 1);
+            if (engine.detail_ != FragmentDetail::Size) fragments[source] = engine.hidden(child, depth + 1);
             continue;
         }
         if (child.style.position == Position::Absolute) {
             continue;
         }
-        items.push_back(prepare_flex_item(node, child, constraints,
-            {source, {inner_width, inner_height}, main_query,
+        items.push_back(engine.prepare_flex_item(node, child, constraints,
+            {source, {inner_width, inner_height}, available_inner, main_query,
                 main_size_is_definite, main_reverse, cross_reverse}, depth));
     }
 
-    std::vector<FlexLine> lines;
     const bool main_size_derived = known_main && !main_size_is_definite;
     if (!main_size_derived && !main_available && main_query == AvailableKind::MinContent
         && !line_available && node.style.flex_wrap != FlexWrap::NoWrap
         && !items.empty()) {
         lines.reserve(items.size());
         for (std::size_t index = 0; index < items.size(); ++index) {
-            lines.push_back(FlexLine{{index}});
+            lines.push_back(FlexLine{std::views::iota(index, index + 1)});
         }
     } else {
         lines = collect_flex_lines(items, row,
@@ -473,7 +538,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     // Measurement space is nonnegative. Alignment and flexible lengths use
     // the physical space, which can be negative when the gutter is larger
     // than the specified border box.
-    const Unit main_size = row ? *border_width - *deco_width
+    main_size = row ? *border_width - *deco_width
         : *border_height - *deco_height;
     if (!main_available) {
         main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
@@ -481,9 +546,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     }
     // The selected main size supplies a new child-layout percentage basis.
     // The cross basis and item box metadata retain their collection-stage values.
-    const ResolvedDimensions child_layout_basis{
+    child_layout_basis = ResolvedDimensions{
         row ? inner_width : child_percentage_width,
         row ? child_percentage_height : inner_height};
+}
+
+void FlexLayout::measure_lines() {
     for (auto& line : lines) {
         resolve_flexible_lengths(line, items, main_size, main_gap, row);
         for (const auto index : line.items) {
@@ -498,9 +566,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             final_constraints.containing_width = child_layout_basis.width;
             final_constraints.containing_height = child_layout_basis.height;
             final_constraints.available.width = inner_width
-                ? AvailableSpace::definite(*inner_width) : constraints.available.width;
+                ? AvailableSpace::definite(*inner_width) : available_inner.width;
             final_constraints.available.height = inner_height
-                ? AvailableSpace::definite(*inner_height) : constraints.available.height;
+                ? AvailableSpace::definite(*inner_height) : available_inner.height;
             auto& final_cross_space = row ? final_constraints.available.height
                 : final_constraints.available.width;
             final_cross_space = divided_flex_cross_space(node, final_cross_space, cross_available);
@@ -514,8 +582,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             final_cross_space = cross_space_for_item(final_cross_space,
                 cross_min, cross_max, cross_outer_margin,
                 CrossSpaceStage::Hypothetical, item.id);
-            const auto& cross_style = row ? get(item.id).style.box.size.height
-                : get(item.id).style.box.size.width;
+            const auto& cross_style = row ? engine.get(item.id).style.box.size.height
+                : engine.get(item.id).style.box.size.width;
             if (const auto keyword = sizing_keyword(cross_style,
                     cross_available ? std::optional<Unit>{*cross_available - cross_outer_margin} : std::nullopt,
                     cross_available); keyword && std::holds_alternative<AvailableSpace>(*keyword)) {
@@ -530,8 +598,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             const auto cross_preferred = flex_axis(item.box.preferred, row, false);
             Unit cross_measured = cross_preferred.value_or(Unit{0});
             if (!cross_preferred) {
-                const auto cross_probe = layout_size(item.id, final_constraints, depth + 1);
-                cross_measured = flex_axis(cross_probe.size, row, false);
+                const auto cross_probe = engine.layout_size(item.id, final_constraints, depth + 1);
+                cross_measured = flex_axis(cross_probe, row, false);
             }
             const auto decoration = row ? item.box.vertical_padding_border()
                 : item.box.horizontal_padding_border();
@@ -540,31 +608,39 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             if (row) final_constraints.known_height = cross_size;
             else final_constraints.known_width = cross_size;
             item.final_constraints = final_constraints;
-            fragments[item.source_index] = detail_ == FragmentDetail::Size
-                ? layout_sizing(item.id, final_constraints, depth + 1)
-                : layout(item.id, final_constraints, depth + 1);
-            item.target = flex_axis(fragments[item.source_index].size, row, true);
-            item.cross = flex_axis(fragments[item.source_index].size, row, false);
+            const auto& child = engine.get(item.id);
+            const auto alignment = child.style.align_self.value_or(
+                node.style.align_items.value_or(ItemAlignment{}));
+            const bool needs_baseline = row
+                && alignment.position == ItemPosition::Baseline
+                && !item.auto_cross_start && !item.auto_cross_end;
+            // Line collection consumes size and, for baseline alignment,
+            // baseline only. Full child geometry belongs to the used-size
+            // pass after the container's cross size and stretch are known.
+            Fragment baseline_fragment;
+            Size measured;
+            if (needs_baseline) {
+                baseline_fragment = engine.layout_sizing(item.id, final_constraints, depth + 1);
+                measured = baseline_fragment.size;
+            } else {
+                measured = engine.layout_size(item.id, final_constraints, depth + 1);
+            }
+            item.target = flex_axis(measured, row, true);
+            item.cross = flex_axis(measured, row, false);
             const Unit outer_cross = checked(static_cast<double>(item.cross)
                 + flex_axis(item.margin, row, false, true)
                 + flex_axis(item.margin, row, false, false), item.id);
             line.cross = std::max(line.cross, outer_cross);
-            if (row) {
-                const auto& child = get(item.id);
-                const auto alignment = child.style.align_self.value_or(
-                    node.style.align_items.value_or(ItemAlignment{}));
-                if (alignment.position == ItemPosition::Baseline
-                    && !item.auto_cross_start && !item.auto_cross_end) {
-                    const Unit baseline = child_baseline(
-                        fragments[item.source_index], child.style).value_or(item.cross);
-                    const Unit before = checked(static_cast<double>(item.margin.top)
-                        + baseline, item.id);
-                    const Unit after = checked(static_cast<double>(item.margin.bottom)
-                        + item.cross - baseline, item.id);
-                    line.baseline_ascent = std::max(line.baseline_ascent, before);
-                    line.baseline_descent = std::max(line.baseline_descent, after);
-                    line.has_baseline = true;
-                }
+            if (needs_baseline) {
+                const Unit baseline = child_baseline(
+                    baseline_fragment, child.style).value_or(item.cross);
+                const Unit before = checked(static_cast<double>(item.margin.top)
+                    + baseline, item.id);
+                const Unit after = checked(static_cast<double>(item.margin.bottom)
+                    + item.cross - baseline, item.id);
+                line.baseline_ascent = std::max(line.baseline_ascent, before);
+                line.baseline_descent = std::max(line.baseline_descent, after);
+                line.has_baseline = true;
             }
         }
         if (line.has_baseline) {
@@ -573,8 +649,10 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 node.id));
         }
     }
+}
 
-    double used_cross = lines.empty() ? 0 : static_cast<double>(lines.size() - 1) * cross_gap;
+void FlexLayout::resolve_cross_size() {
+    used_cross = lines.empty() ? 0 : static_cast<double>(lines.size() - 1) * cross_gap;
     for (const auto& line : lines) used_cross += line.cross;
     if (row && !border_height) {
         border_height = constrain_axis(checked(used_cross + *deco_height,
@@ -586,27 +664,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             node.id), box.minimum.width, box.maximum.width);
         inner_width = std::max(Unit{0}, *border_width - *deco_width);
     }
-    if (detail_ == FragmentDetail::Size) {
-        Fragment result;
-        result.size = constrain_size(Size{*border_width, *border_height}, box);
-        result.root = make_layout(node, result.size, box);
-        return result;
-    }
-    if (!cross_available) {
-        // The cross probe precedes the container's own content-based cross
-        // size. Perform the final child layout with that size available so
-        // nested trees can remeasure after the container is resolved.
-        const Unit outer_cross = row ? *border_height : *border_width;
-        for (const auto& line : lines) {
-            for (const auto index : line.items) {
-                const auto& item = items[index];
-                auto final = item.final_constraints;
-                if (row) final.available.height = AvailableSpace::definite(outer_cross);
-                else final.available.width = AvailableSpace::definite(outer_cross);
-                fragments[item.source_index] = layout(item.id, final, depth + 1);
-            }
-        }
-    }
+}
+
+void FlexLayout::layout_items() {
     const Unit cross_size = row ? *border_height - *deco_height
         : *border_width - *deco_width;
     const bool wraps = node.style.flex_wrap != FlexWrap::NoWrap;
@@ -617,8 +677,6 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     auto align_lines = alignment_fallback(
         node.style.align_content.value_or(ContentAlignment{}),
         cross_free, lines.size());
-    const bool wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
-        || node.style.flex_wrap == FlexWrap::BalanceReverse;
     // Start/End follow the cross flex_axis of the writing mode. FlexStart/FlexEnd
     // follow the line stacking direction, which wrap-reverse flips.
     if (wrap_reverse) {
@@ -658,13 +716,19 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         for (const auto index : line.items) {
             auto& item = items[index];
             auto& fragment = fragments[item.source_index];
-            const auto& child_style = get(item.id).style;
+            const auto& child_style = engine.get(item.id).style;
             const auto alignment = child_style.align_self.value_or(node.style.align_items.value_or(
                 ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
             const auto cross_kind = (row ? child_style.box.size.height : child_style.box.size.width)
                 .kind();
             Unit cross_margin_start = flex_axis(item.margin, row, false, !cross_reverse);
             Unit cross_margin_end = flex_axis(item.margin, row, false, cross_reverse);
+            Constraints used_constraints = item.final_constraints;
+            if (!cross_available) {
+                const auto used_space = AvailableSpace::definite(row ? *border_height : *border_width);
+                if (row) used_constraints.available.height = used_space;
+                else used_constraints.available.width = used_space;
+            }
             if ((cross_kind == LengthKind::Stretch
                 || (alignment.position == ItemPosition::Stretch && cross_kind == LengthKind::Auto))
                 && !item.auto_cross_start && !item.auto_cross_end) {
@@ -677,19 +741,16 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 const Unit target_cross = constrain_axis(stretched_cross,
                     flex_axis(item.box.specified_minimum, row, false),
                     flex_axis(item.box.specified_maximum, row, false));
-                Constraints stretched = item.final_constraints;
-                stretched.containing_width = child_layout_basis.width;
-                stretched.containing_height = child_layout_basis.height;
-                stretched.available.width = inner_width
+                used_constraints.available.width = inner_width
                     ? AvailableSpace::definite(*inner_width) : AvailableSpace::indefinite();
-                stretched.available.height = inner_height
+                used_constraints.available.height = inner_height
                     ? AvailableSpace::definite(*inner_height) : AvailableSpace::indefinite();
-                if (row) { stretched.known_width = item.target; stretched.known_height = target_cross; }
-                else { stretched.known_height = item.target; stretched.known_width = target_cross; }
-                fragment = layout(item.id, stretched, depth + 1);
-                item.cross = flex_axis(fragment.size, row, false);
+                if (row) { used_constraints.known_width = item.target; used_constraints.known_height = target_cross; }
+                else { used_constraints.known_height = item.target; used_constraints.known_width = target_cross; }
             }
-            publish_item_box(fragment, get(item.id), item.box);
+            fragment = engine.layout(item.id, used_constraints, depth + 1);
+            item.cross = flex_axis(fragment.size, row, false);
+            publish_item_box(fragment, engine.get(item.id), item.box);
             double cross_remain = static_cast<double>(line.cross) - item.cross
                 - cross_margin_start - cross_margin_end;
             if (item.auto_cross_start || item.auto_cross_end) {
@@ -766,7 +827,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     : checked(static_cast<double>(content_x) + cross_position, item.id),
                 row ? checked(static_cast<double>(content_y) + cross_position, item.id)
                     : checked(static_cast<double>(content_y) + main_position, item.id), item.id);
-            const auto [relative_x, relative_y] = relative_offset(get(item.id),
+            const auto [relative_x, relative_y] = relative_offset(engine.get(item.id),
                 Size{*inner_width, *inner_height}, node.style.box.direction, node.id);
             translate(fragment, relative_x, relative_y, item.id);
             main_cursor += main_start_margin + item.target + main_end_margin + main_gap
@@ -774,6 +835,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         }
         cross_cursor += line.cross + cross_gap + cross_distribution.extra_gap;
     }
+}
+
+Fragment FlexLayout::finish() {
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);
     Fragment result;
@@ -786,7 +850,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             if (row) {
                 for (const auto index : first_line.items) {
                     const auto& item = items[index];
-                    const auto& child_style = get(item.id).style;
+                    const auto& child_style = engine.get(item.id).style;
                     const auto alignment = child_style.align_self.value_or(
                         node.style.align_items.value_or(ItemAlignment{}));
                     if (alignment.position == ItemPosition::Baseline
@@ -799,7 +863,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 selected = first_line.items.back();
             }
             const auto& item = items[selected];
-            const auto& child_style = get(item.id).style;
+            const auto& child_style = engine.get(item.id).style;
             const auto& fragment = fragments[item.source_index];
             const Unit baseline = child_baseline(fragment, child_style)
                 .value_or(fragment.size.height);
@@ -808,14 +872,15 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     + baseline, node.id);
         }
     }
+    if (engine.detail_ == FragmentDetail::Full) result.reserve_children(fragments.size());
     for (std::size_t source = 0; source < fragments.size(); ++source) {
         const auto id = node.children[source];
-        if (get(id).style.position == Position::Absolute
-            && get(id).style.display != Display::None) {
-            fragments[source] = absolute(node, id, candidate, box, depth);
+        if (engine.get(id).style.position == Position::Absolute
+            && engine.get(id).style.display != Display::None) {
+            fragments[source] = engine.absolute(node, id, candidate, box, depth);
         }
         auto& fragment = fragments[source];
-        if (detail_ == FragmentDetail::Full) {
+        if (engine.detail_ == FragmentDetail::Full) {
             result.append_nodes(std::move(fragment));
             result.grid_tracks.insert(result.grid_tracks.end(),
                 std::make_move_iterator(fragment.grid_tracks.begin()),
@@ -823,6 +888,11 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         }
     }
     return result;
+}
+
+Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
+                      const ResolvedBox& box, std::size_t depth) {
+    return FlexLayout(*this, node, constraints, box, depth).run();
 }
 
 } // namespace axisly::css::detail

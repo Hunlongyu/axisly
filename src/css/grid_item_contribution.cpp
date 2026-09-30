@@ -90,7 +90,7 @@ GridAxisContribution Engine::grid_axis_contribution(NodeId id,
             (input.columns_axis ? constraints.available.height : constraints.available.width)
                 = AvailableSpace::definite(*cross_space);
         }
-        return layout_size(id, constraints, depth + 1).size;
+        return layout_size(id, constraints, depth + 1);
     };
     const Size minimum = query(AvailableSpace::min_content());
     const Size maximum = query(AvailableSpace::max_content());

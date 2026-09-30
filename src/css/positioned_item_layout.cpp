@@ -87,7 +87,7 @@ Fragment Engine::positioned_item(const LayoutNode& child,
         // a later Flex content layout has a different containing block.
         query.containing_width = input.area.width;
         query.containing_height = input.area.height;
-        return layout_size(child.id, query, depth + 1).size;
+        return layout_size(child.id, query, depth + 1);
     };
     const auto measure_keyword = [&](const KeywordSize& keyword, bool horizontal) {
         if (const auto* exact = std::get_if<Unit>(&keyword)) return *exact;
@@ -140,7 +140,7 @@ Fragment Engine::positioned_item(const LayoutNode& child,
     Size final_size;
     if (sizing.known.width && sizing.known.height) final_size = {*sizing.known.width, *sizing.known.height};
     else {
-        const auto measured = layout_size(child.id, constraints, depth + 1).size;
+        const auto measured = layout_size(child.id, constraints, depth + 1);
         final_size = sizing.clamp({sizing.known.width.value_or(measured.width),
             sizing.known.height.value_or(measured.height)});
     }

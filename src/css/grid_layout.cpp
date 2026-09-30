@@ -67,6 +67,16 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         *border_height = constrain_axis(*border_height,
             box.minimum.height, box.maximum.height);
     }
+    if (detail_ == FragmentDetail::Size && border_width && border_height) {
+        Fragment result;
+        result.size = constrain_size(Size{*border_width, *border_height}, box);
+        if (constraints.preserve_known_grid_size) {
+            if (constraints.known_width) result.size.width = *constraints.known_width;
+            if (constraints.known_height) result.size.height = *constraints.known_height;
+        }
+        result.root = make_layout(node, result.size, box);
+        return result;
+    }
     auto inner_width = border_width
         ? std::optional<Unit>(std::max(Unit{0}, *border_width - *decoration_width)) : std::nullopt;
     auto inner_height = border_height
@@ -582,6 +592,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             static_cast<double>(fragment.root_layout().border_box.y)
                 + baseline, node.id);
     }
+    if (detail_ == FragmentDetail::Full) result.reserve_children(fragments.size());
     for (auto& fragment : fragments) {
         if (detail_ == FragmentDetail::Full) {
             result.append_nodes(std::move(fragment));

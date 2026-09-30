@@ -376,6 +376,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     result.root_layout().margin.bottom = margins.bottom.resolve(node.id);
     result.block_margins = margins;
     if (detail_ == FragmentDetail::Size) return result;
+    if (detail_ == FragmentDetail::Full) result.reserve_children(node.children.size());
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto& child = get(node.children[source]);
         if (child.style.display == Display::None

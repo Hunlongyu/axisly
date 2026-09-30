@@ -2,9 +2,13 @@
 
 #include <axisly/css_tree.hpp>
 #include "layout_fragment.hpp"
+#include "layout_cache.hpp"
+#include "node_store.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
-#include <deque>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -16,84 +20,36 @@ struct GridAxisContribution;
 struct GridBaselineItem;
 struct Placement;
 
+
+[[nodiscard]] ResolvedDimensions requested_size(const Constraints& constraints,
+    const ResolvedBox& box);
+
 struct LayoutNode {
     NodeId id;
     Style style;
     MeasureFunction measure;
     std::optional<NodeId> parent;
     std::vector<NodeId> children;
+    bool box_depends_on_width{}, box_depends_on_height{};
+    struct BoxCache {
+        std::optional<Unit> width, height;
+        ResolvedBox box;
+    };
+    mutable std::optional<BoxCache> resolved_box;
+    mutable NodeCache cache;
+    void reset_style_cache();
 };
-
-enum class FragmentDetail { Size, Baseline, Full };
-enum class SizingMode { Inherent, Content };
-
-struct Constraints {
-    std::optional<Unit> known_width, known_height; // border-box
-    // A parent can supply a provisional item size for the child's own
-    // min/max resolution. Root Block sizing already resolves its bounds.
-    bool known_width_is_final{}, known_height_is_final{};
-    // A known size can come from a parent's content calculation. Flex must
-    // retain that distinction when collecting its own lines.
-    bool known_width_is_definite{true}, known_height_is_definite{true};
-    AvailableSize available;
-    std::optional<Unit> containing_width, containing_height;
-    bool ignore_preferred_width{}, ignore_preferred_height{};
-    bool ignore_min_max_width{}, ignore_min_max_height{};
-    bool content_based_width{};
-    bool preserve_known_grid_size{};
-    SizingMode sizing_mode{SizingMode::Inherent};
-    // Cache entries for intrinsic probes cannot stand in for published geometry.
-    FragmentDetail detail{FragmentDetail::Full};
-    bool operator==(const Constraints&) const = default;
-};
-
-[[nodiscard]] ResolvedDimensions requested_size(const Constraints& constraints,
-    const ResolvedBox& box);
-
-struct CacheEntry {
-    Constraints constraints;
-    Fragment fragment;
-};
-// Entries contain an inline root. Segmented storage avoids reserving large
-// unused roots when a per-node query list grows through different constraints.
-using CacheMap = std::unordered_map<std::uint64_t, std::deque<CacheEntry>>;
-
-struct MeasurementCacheEntry {
-    MeasureRequest request;
-    Measurement result;
-};
-using MeasurementCacheMap =
-    std::unordered_map<std::uint64_t, std::vector<MeasurementCacheEntry>>;
+using LayoutNodes = NodeStore<LayoutNode>;
 
 struct BlockContext;
 struct PositionedItemInput;
 struct FlexItem;
 struct FlexItemSizingInput;
-
-[[nodiscard]] Unit checked(double value, NodeId id);
-[[nodiscard]] Unit edge(const ResolvedEdge& value, NodeId id);
-[[nodiscard]] Insets edges(const ResolvedEdges& values, NodeId id);
-[[nodiscard]] Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
-                                Unit first_border, Unit last_border);
-[[nodiscard]] Unit constrain_axis(Unit value, std::optional<Unit> minimum,
-                                  std::optional<Unit> maximum);
-[[nodiscard]] AvailableSpace subtract_decoration(AvailableSpace space, Unit amount);
-[[nodiscard]] ResolvedBox resolve_layout_box(const LayoutNode& node,
-    std::optional<Unit> containing_width, std::optional<Unit> containing_height);
-[[nodiscard]] Unit content_origin_x(const ResolvedBox& box,
-    Insets border, Insets padding, NodeId node);
-void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box);
-void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box);
-[[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
-    const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
-    std::optional<Unit> last_baseline = std::nullopt);
-void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
-[[nodiscard]] std::optional<Unit> child_baseline(const Fragment& fragment,
-    const Style& style);
-void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
-    const std::unordered_map<std::uint64_t, LayoutNode>& nodes);
-[[nodiscard]] std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
-    Size containing, Direction containing_direction, NodeId parent);
+struct LeafSizingResult {
+    Size size;
+    Measurement measured;
+    bool has_content{};
+};
 
 class LayoutFailure final : public std::runtime_error {
 public:
@@ -103,43 +59,119 @@ public:
     NodeId node;
 };
 
-class Engine {
-public:
-    Engine(const std::unordered_map<std::uint64_t, LayoutNode>& nodes,
-           const CacheMap& cache, const MeasurementCacheMap& measurement_cache,
-           TreeLimits limits);
-    [[nodiscard]] LayoutResult compute(NodeId root, AvailableSize available);
-    [[nodiscard]] CacheMap take_updates() && { return std::move(updates_); }
-    [[nodiscard]] MeasurementCacheMap take_measurement_updates() && {
-        return std::move(measurement_updates_);
+[[noreturn]] void layout_numeric_overflow(NodeId id);
+[[noreturn]] void unresolved_layout_edge(NodeId id);
+
+[[nodiscard]] inline Unit checked(double value, NodeId id) {
+    if (!std::isfinite(value) || std::abs(value) > std::numeric_limits<Unit>::max()) {
+        layout_numeric_overflow(id);
     }
+    return static_cast<Unit>(value);
+}
+[[nodiscard]] inline Unit edge(const ResolvedEdge& value, NodeId id) {
+    if (value.kind == EdgeKind::Numeric) return value.value;
+    if (value.kind == EdgeKind::Auto) return 0;
+    unresolved_layout_edge(id);
+}
+[[nodiscard]] inline Insets edges(const ResolvedEdges& values, NodeId id) {
+    return {edge(values.left, id), edge(values.top, id),
+            edge(values.right, id), edge(values.bottom, id)};
+}
+[[nodiscard]] inline Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
+                  Unit first_border, Unit last_border) {
+    return std::max(Unit{0}, border_size - first_padding - last_padding - first_border - last_border);
+}
+[[nodiscard]] inline Unit constrain_axis(Unit value, std::optional<Unit> minimum,
+                    std::optional<Unit> maximum) {
+    if (maximum) value = std::min(value, *maximum);
+    if (minimum) value = std::max(value, *minimum);
+    return value;
+}
+[[nodiscard]] inline AvailableSpace subtract_decoration(AvailableSpace space, Unit amount) {
+    if (space.kind != AvailableKind::Definite) return space;
+    return AvailableSpace::definite(std::max(Unit{0}, space.value - amount));
+}
+void update_layout_box_cache(const LayoutNode& node,
+    std::optional<Unit> containing_width, std::optional<Unit> containing_height);
+[[nodiscard]] inline ResolvedBox resolve_layout_box(const LayoutNode& node,
+    std::optional<Unit> containing_width, std::optional<Unit> containing_height) {
+    const auto width_key = node.box_depends_on_width ? containing_width : std::nullopt;
+    const auto height_key = node.box_depends_on_height ? containing_height : std::nullopt;
+    if (!node.resolved_box || node.resolved_box->width != width_key
+        || node.resolved_box->height != height_key) {
+        update_layout_box_cache(node, containing_width, containing_height);
+    }
+    auto resolved = node.resolved_box->box;
+    // Maximum ratio transfer depends on whether the node is a container.
+    if (!node.children.empty()) resolved.maximum = transfer_aspect_ratio(resolved.maximum, resolved);
+    // Ratio bounds use padding/border decoration before scrollbars reserve
+    // content space. The cached box retains this pre-scrollbar state.
+    resolved.scrollbar.width = node.style.overflow_y == Overflow::Scroll
+        ? node.style.scrollbar_width : Unit{0};
+    resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
+        ? node.style.scrollbar_width : Unit{0};
+    return resolved;
+}
+[[nodiscard]] inline Unit content_origin_x(const ResolvedBox& box, Insets border,
+                      Insets padding, NodeId node) {
+    return checked(static_cast<double>(padding.left) + border.left
+        + (box.direction == Direction::Rtl ? box.scrollbar.width : 0), node);
+}
+void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box);
+void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box);
+[[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
+    const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
+    std::optional<Unit> last_baseline = std::nullopt);
+void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
+[[nodiscard]] inline std::optional<Unit> child_baseline(const Fragment& fragment, const Style& style) {
+    if (!fragment.root) return std::nullopt;
+    const auto baseline = fragment.root_layout().first_baseline;
+    if (style.overflow_y == Overflow::Hidden || style.overflow_y == Overflow::Scroll) {
+        return std::clamp(baseline.value_or(fragment.size.height),
+            Unit{0}, fragment.size.height);
+    }
+    return baseline;
+}
+void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
+    const LayoutNodes& nodes);
+[[nodiscard]] std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
+    Size containing, Direction containing_direction, NodeId parent);
+
+
+class Engine {
+    friend class FlexLayout;
+public:
+    Engine(const LayoutNodes& nodes, TreeLimits limits, LayoutCache& cache);
+    [[nodiscard]] LayoutResult compute(NodeId root, AvailableSize available);
+    void commit_caches() { cache_.commit(); }
 
 private:
-    const std::unordered_map<std::uint64_t, LayoutNode>& nodes_;
-    const CacheMap& cache_;
-    CacheMap updates_;
-    const MeasurementCacheMap& measurement_cache_;
-    MeasurementCacheMap measurement_updates_;
+    const LayoutNodes& nodes_;
+    CacheTransaction cache_;
     TreeLimits limits_;
     std::size_t measurements_{};
     std::size_t layouts_{};
     std::size_t hits_{};
-    std::size_t pending_layouts_{};
-    std::size_t pending_measurements_{};
     bool root_hit_{};
     FragmentDetail detail_{FragmentDetail::Full};
     std::unordered_map<std::uint64_t, bool> float_subtree_;
-    void stage(NodeId id, const Constraints& constraints, const Fragment& fragment);
-    [[nodiscard]] const LayoutNode& get(NodeId id) const;
+    [[nodiscard]] const LayoutNode& get(NodeId id) const {
+        const auto* node = nodes_.find(id.value);
+        if (!node) throw LayoutFailure(LayoutErrorCode::InvalidRoot, id, "CSS node is absent");
+        return *node;
+    }
     [[nodiscard]] bool has_float_subtree(NodeId id, std::size_t depth);
     [[nodiscard]] Fragment layout(NodeId id, Constraints constraints, std::size_t depth,
                                   BlockContext* block_context = nullptr);
     [[nodiscard]] Fragment layout_sizing(NodeId id, Constraints constraints,
                                          std::size_t depth);
-    [[nodiscard]] Fragment layout_size(NodeId id, Constraints constraints,
+    [[nodiscard]] Size layout_size(NodeId id, Constraints constraints,
                                        std::size_t depth);
+    [[nodiscard]] ResolvedBox query_box(const LayoutNode& node, const Constraints& constraints) const;
     [[nodiscard]] Fragment leaf(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box);
+    [[nodiscard]] LeafSizingResult size_leaf(const LayoutNode& node, const Constraints& constraints,
+                                             const ResolvedBox& box, bool include_content);
     [[nodiscard]] std::optional<Unit> intrinsic_container_size(const LayoutNode& node,
         const Constraints& constraints, const ResolvedBox& box,
         std::size_t depth, bool horizontal);

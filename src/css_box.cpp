@@ -13,15 +13,6 @@ void nonnegative_basis(std::optional<Unit> value) {
     }
 }
 
-Unit safe_add(Unit first, Unit second) {
-    const double sum = static_cast<double>(first) + second;
-    if (!std::isfinite(sum) || sum > std::numeric_limits<Unit>::max()
-        || sum < -std::numeric_limits<Unit>::max()) {
-        throw std::overflow_error("CSS box dimension exceeds Unit range");
-    }
-    return static_cast<Unit>(sum);
-}
-
 ResolvedEdge resolve_edge(const Length& value, std::optional<Unit> basis,
                           bool allow_auto, bool allow_negative,
                           IndefiniteEdgeBasis indefinite) {
@@ -56,14 +47,7 @@ std::optional<Unit> dimension(const Length& value, std::optional<Unit> basis,
     const auto numeric = value.resolve_numeric(basis);
     if (!numeric || !decoration) return std::nullopt;
     if (sizing == BoxSizing::BorderBox) return std::max(*numeric, *decoration);
-    return safe_add(std::max(*numeric, Unit{0}), *decoration);
-}
-
-std::optional<Unit> decoration(const ResolvedEdges& padding, const ResolvedEdges& border,
-                               bool horizontal) {
-    const auto first = horizontal ? padding.horizontal() : padding.vertical();
-    const auto second = horizontal ? border.horizontal() : border.vertical();
-    return first && second ? std::optional<Unit>(safe_add(*first, *second)) : std::nullopt;
+    return detail::add_box_extent(std::max(*numeric, Unit{0}), *decoration);
 }
 
 Unit safe_nonnegative(double value) {
@@ -75,45 +59,8 @@ Unit safe_nonnegative(double value) {
 
 } // namespace
 
-std::optional<Unit> ResolvedEdge::numeric() const noexcept {
-    return kind == EdgeKind::Numeric ? std::optional<Unit>(value) : std::nullopt;
-}
-
-std::optional<Unit> ResolvedEdges::horizontal() const {
-    const auto l = left.numeric();
-    const auto r = right.numeric();
-    return l && r ? std::optional<Unit>(safe_add(*l, *r)) : std::nullopt;
-}
-
-std::optional<Unit> ResolvedEdges::vertical() const {
-    const auto t = top.numeric();
-    const auto b = bottom.numeric();
-    return t && b ? std::optional<Unit>(safe_add(*t, *b)) : std::nullopt;
-}
-
-std::optional<Unit> ResolvedBox::horizontal_padding_border() const {
-    return decoration(padding, border, true);
-}
-
-std::optional<Unit> ResolvedBox::vertical_padding_border() const {
-    return decoration(padding, border, false);
-}
-
-std::optional<Unit> ResolvedBox::horizontal_decoration() const {
-    const auto value = horizontal_padding_border();
-    return value ? std::optional<Unit>(safe_add(*value, scrollbar.width)) : std::nullopt;
-}
-
-std::optional<Unit> ResolvedBox::vertical_decoration() const {
-    const auto value = vertical_padding_border();
-    return value ? std::optional<Unit>(safe_add(*value, scrollbar.height)) : std::nullopt;
-}
-
-ResolvedDimensions transfer_aspect_ratio(ResolvedDimensions size,
-                                         const ResolvedBox& box) {
-    if (!box.aspect_ratio || size.width.has_value() == size.height.has_value()) {
-        return size;
-    }
+ResolvedDimensions detail::transfer_definite_aspect_ratio(ResolvedDimensions size,
+                                                         const ResolvedBox& box) {
     const auto horizontal = box.horizontal_decoration();
     const auto vertical = box.vertical_decoration();
     if (!horizontal || !vertical) return size;
@@ -171,15 +118,4 @@ ResolvedBox resolve_box(const BoxStyle& style,
     return result;
 }
 
-Size constrain_size(Size candidate, const ResolvedBox& box) {
-    if (!std::isfinite(candidate.width) || !std::isfinite(candidate.height)
-        || candidate.width < 0 || candidate.height < 0) {
-        throw std::invalid_argument("Candidate border-box size must be finite and nonnegative");
-    }
-    if (box.maximum.width) candidate.width = std::min(candidate.width, *box.maximum.width);
-    if (box.maximum.height) candidate.height = std::min(candidate.height, *box.maximum.height);
-    if (box.minimum.width) candidate.width = std::max(candidate.width, *box.minimum.width);
-    if (box.minimum.height) candidate.height = std::max(candidate.height, *box.minimum.height);
-    return candidate;
-}
 } // namespace axisly::css

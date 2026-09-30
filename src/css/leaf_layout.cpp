@@ -25,8 +25,8 @@ AvailableSpace leaf_measurement_space(AvailableSpace available,
 
 } // namespace
 
-Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
-                      const ResolvedBox& box) {
+LeafSizingResult Engine::size_leaf(const LayoutNode& node, const Constraints& constraints,
+                                   const ResolvedBox& box, bool include_content) {
     const auto decoration_width = box.horizontal_decoration();
     const auto decoration_height = box.vertical_decoration();
     if (!decoration_width || !decoration_height) {
@@ -89,27 +89,39 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
         && !constraints.ignore_preferred_height) {
         height = intrinsic(node.style.box.size.height, false);
     }
+    if (!include_content && width && height) {
+        LeafSizingResult result{};
+        result.size = constrain_size(Size{*width, *height}, box);
+        if (box.aspect_ratio) {
+            result.size.height = std::max(result.size.height,
+                checked(static_cast<double>(result.size.width) / *box.aspect_ratio, node.id));
+        }
+        return result;
+    }
     // Style dimensions have already transferred through the ratio in
     // resolve_box. A parent-known leaf axis does not make the other axis
     // definite before measurement; the ratio floors the measured height
     // after min/max clamping instead.
-    MeasureRequest request;
-    request.known_content_width = width
-        ? std::optional<Unit>(std::max(Unit{0}, constrain_axis(*width,
-            box.minimum.width, box.maximum.width) - *decoration_width)) : std::nullopt;
-    request.known_content_height = height
-        ? std::optional<Unit>(std::max(Unit{0}, constrain_axis(*height,
-            box.minimum.height, box.maximum.height) - *decoration_height)) : std::nullopt;
-    const auto margin = edges(box.margin, node.id);
-    request.available_width = leaf_measurement_space(constraints.available.width,
-        width, box.minimum.width, box.maximum.width,
-        checked(static_cast<double>(margin.left) + margin.right, node.id),
-        *decoration_width, node.id);
-    request.available_height = leaf_measurement_space(constraints.available.height,
-        height, box.minimum.height, box.maximum.height,
-        checked(static_cast<double>(margin.top) + margin.bottom, node.id),
-        *decoration_height, node.id);
-    const auto measured = measure(node, request);
+    Measurement measured;
+    if (node.measure) {
+        MeasureRequest request;
+        request.known_content_width = width
+            ? std::optional<Unit>(std::max(Unit{0}, constrain_axis(*width,
+                box.minimum.width, box.maximum.width) - *decoration_width)) : std::nullopt;
+        request.known_content_height = height
+            ? std::optional<Unit>(std::max(Unit{0}, constrain_axis(*height,
+                box.minimum.height, box.maximum.height) - *decoration_height)) : std::nullopt;
+        const auto margin = edges(box.margin, node.id);
+        request.available_width = leaf_measurement_space(constraints.available.width,
+            width, box.minimum.width, box.maximum.width,
+            checked(static_cast<double>(margin.left) + margin.right, node.id),
+            *decoration_width, node.id);
+        request.available_height = leaf_measurement_space(constraints.available.height,
+            height, box.minimum.height, box.maximum.height,
+            checked(static_cast<double>(margin.top) + margin.bottom, node.id),
+            *decoration_height, node.id);
+        measured = measure(node, request);
+    }
     Size candidate{
         width ? *width : checked(static_cast<double>(measured.content_size.width) + *decoration_width, node.id),
         height ? *height : checked(static_cast<double>(measured.content_size.height) + *decoration_height, node.id),
@@ -120,10 +132,18 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
             checked(static_cast<double>(candidate.width) / *box.aspect_ratio,
                 node.id));
     }
+    return {candidate, measured, true};
+}
+
+Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
+                      const ResolvedBox& box) {
+    const auto [candidate, measured, has_content] = size_leaf(node, constraints, box,
+        detail_ != FragmentDetail::Size);
     Fragment fragment;
     fragment.size = candidate;
     fragment.root = make_layout(node, candidate, box,
         measured.first_baseline, measured.last_baseline);
+    if (!has_content) return fragment;
     // Intrinsic Block/Flex layout may leave percentage edges unresolved for
     // the reported box while measuring the leaf with a definite available
     // width. Taffy's leaf scrollable extent uses that later width.

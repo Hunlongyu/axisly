@@ -7,6 +7,8 @@
 #include <limits>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace {
 using namespace axisly;
@@ -50,6 +52,42 @@ void values() {
         (void)Calculation::scale(Calculation::length(std::numeric_limits<Unit>::max()), 2).resolve(0.0f);
     } catch (const std::overflow_error&) { overflow = true; }
     require(overflow, "Overflowing calculation must be rejected");
+}
+
+void value_ownership() {
+    require(Length::length(0.0f) == Length::length(-0.0f), "Signed zero lengths compare equal");
+    require(Length::percent(0.0f) == Length::percent(-0.0f), "Signed zero percentages compare equal");
+    auto original = Length::calc(Calculation::add(Calculation::length(5), Calculation::percent(0.5f)));
+    const auto equivalent = Length::calc(Calculation::add(Calculation::length(5), Calculation::percent(0.5f)));
+    require(original == equivalent, "Distinct equivalent calculation payloads compare equal");
+    auto alias = original;
+    original = Length::length(123);
+    require(alias.resolve_numeric(100) == 55, "A calculation copy owns its expression independently");
+    const auto& self = alias;
+    alias = self;
+    require(alias.resolve_numeric(100) == 55, "Self assignment retains the calculation");
+    auto moved = std::move(alias);
+    alias = Length::percent(0.25f);
+    require(moved == equivalent && alias.resolve_numeric(100) == 25,
+        "Moving a calculation transfers ownership and leaves the source assignable");
+    std::vector<Length> values;
+    for (int i = 0; i < 1000; ++i) {
+        values.push_back(i % 2 ? moved : Length::length(static_cast<Unit>(i)));
+    }
+    moved = Length::automatic();
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        require(values[i].resolve_numeric(100) == (i % 2 ? 55 : static_cast<Unit>(i)),
+            "Vector relocation preserves both numeric and calculation values");
+    }
+    values[0] = std::move(values[1]);
+    require(values[0] == equivalent, "Move assignment releases the old value and adopts the expression");
+    auto* self_move = &values[0];
+    values[0] = std::move(*self_move);
+    require(values[0] == equivalent, "Self move retains a valid calculation");
+    require(!values[0].resolve_numeric(std::nullopt), "Length calculations still require a definite basis");
+    values[0] = Length::calc(Calculation::length(7));
+    require(values[0].resolve_numeric(0) == 7 && values[3] == equivalent,
+        "Replacing one expression leaves the other aliases intact");
 }
 
 void box() {
@@ -120,6 +158,7 @@ int main(int argc, char** argv) {
         require(argc == 2, "Expected test case name");
         const std::string_view name = argv[1];
         if (name == "values") values();
+        else if (name == "value_ownership") value_ownership();
         else if (name == "box") box();
         else if (name == "measurement") measurement();
         else throw std::runtime_error("Unknown test case");

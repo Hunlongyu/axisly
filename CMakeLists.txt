@@ -35,6 +35,7 @@ add_library(axisly STATIC
     src/css_style.cpp
     src/css_tree.cpp
     src/css/layout_engine.cpp
+    src/css/layout_cache.cpp
     src/css/layout_fragment.cpp
     src/css/leaf_layout.cpp
     src/css/block_layout.cpp

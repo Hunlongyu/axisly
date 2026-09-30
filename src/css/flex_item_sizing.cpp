@@ -53,7 +53,8 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
     ResolvedBox child_box;
     try {
         child_box = resolve_layout_box(child, inner_width, inner_height);
-        if (!main_size_is_definite) {
+        if (!main_size_is_definite
+            && (row ? child.box_depends_on_width : child.box_depends_on_height)) {
             // Percentage dimensions use a definite main axis; percentage
             // edges continue to use the actual containing inline width.
             auto sizing_style = child.style.box;
@@ -122,9 +123,9 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
     child_constraints.containing_width = row ? std::nullopt : inner_width;
     child_constraints.containing_height = row ? inner_height : std::nullopt;
     child_constraints.available.width = inner_width
-        ? AvailableSpace::definite(*inner_width) : constraints.available.width;
+        ? AvailableSpace::definite(*inner_width) : input.available_inner.width;
     child_constraints.available.height = inner_height
-        ? AvailableSpace::definite(*inner_height) : constraints.available.height;
+        ? AvailableSpace::definite(*inner_height) : input.available_inner.height;
     const auto base_space = main_query == AvailableKind::MinContent
         ? AvailableSpace::min_content() : AvailableSpace::max_content();
     if (row) child_constraints.available.width = base_space;
@@ -153,8 +154,15 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
     }
     if (row) child_constraints.known_height = known_cross;
     else child_constraints.known_width = known_cross;
-    const auto base_layout = layout_size(id, child_constraints, depth + 1);
-    Unit basis = flex_axis(base_layout.size, row, true);
+    // Definite flex bases do not require an intrinsic measurement. Keep the
+    // content query lazy: only an unresolved basis or an intrinsic container
+    // contribution depends on it. Cross sizing happens after flex resolution.
+    std::optional<Size> base_size;
+    const auto content_size = [&]() -> Size {
+        if (!base_size) base_size = layout_size(id, child_constraints, depth + 1);
+        return *base_size;
+    };
+    std::optional<Unit> resolved_basis;
     const auto flex_basis = child.style.flex_basis.kind();
     bool basis_is_definite = false;
     const auto main_percentage_basis = main_size_is_definite ? main_available : std::nullopt;
@@ -166,16 +174,16 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
         auto query = child_constraints;
         if (row) query.available.width = main_space;
         else query.available.height = main_space;
-        return flex_axis(layout_size(id, query, depth + 1).size, row, true);
+        return flex_axis(layout_size(id, query, depth + 1), row, true);
     };
     const auto use_keyword = [&](const Length& style) {
         const auto keyword = sizing_keyword(style, stretch, main_percentage_basis);
         if (!keyword) return false;
         if (const auto exact = std::get_if<Unit>(&*keyword)) {
-            basis = *exact;
+            resolved_basis = *exact;
             basis_is_definite = true;
         } else {
-            basis = measure_main(std::get<AvailableSpace>(*keyword));
+            resolved_basis = measure_main(std::get<AvailableSpace>(*keyword));
         }
         return true;
     };
@@ -184,17 +192,17 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
         const auto resolved = child.style.flex_basis.resolve_numeric(main_percentage_basis);
         if (resolved) {
             basis_is_definite = true;
-            basis = child.style.box.box_sizing == BoxSizing::ContentBox
+            resolved_basis = child.style.box.box_sizing == BoxSizing::ContentBox
                 ? checked(static_cast<double>(std::max(*resolved, Unit{0})) + *main_decoration, id)
                 : std::max(*resolved, *main_decoration);
         } else if (main_preferred) {
-            basis = *main_preferred;
+            resolved_basis = *main_preferred;
             basis_is_definite = true;
         } else use_keyword(row ? child.style.box.size.width : child.style.box.size.height);
     } else if (flex_basis != LengthKind::Auto) {
         use_keyword(child.style.flex_basis);
     } else if (main_preferred) {
-        basis = *main_preferred;
+        resolved_basis = *main_preferred;
         basis_is_definite = true;
     } else {
         use_keyword(row ? child.style.box.size.width : child.style.box.size.height);
@@ -223,7 +231,7 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
         const auto transferred = transfer_aspect_ratio(row
             ? ResolvedDimensions{std::nullopt, stretched_cross}
             : ResolvedDimensions{stretched_cross, std::nullopt}, item_ratio_box);
-        basis = flex_axis(transferred, row, true).value_or(basis);
+        if (const auto value = flex_axis(transferred, row, true)) resolved_basis = *value;
         basis_is_definite = true;
     }
     auto minimum = flex_axis(child_box.specified_minimum, row, true);
@@ -243,7 +251,7 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
                 min_constraints.ignore_preferred_height = true;
             }
             const auto intrinsic = layout_size(id, min_constraints, depth + 1);
-            minimum = flex_axis(intrinsic.size, row, true);
+            minimum = flex_axis(intrinsic, row, true);
             if (const auto suggested = flex_axis(child_box.preferred, row, true)) {
                 minimum = std::min(*minimum, *suggested);
             }
@@ -262,12 +270,17 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
         || child.style.overflow_x == Overflow::Scroll
         || child.style.overflow_y == Overflow::Hidden
         || child.style.overflow_y == Overflow::Scroll;
-    basis = std::max(basis, *main_decoration);
+    const Unit basis = std::max(resolved_basis ? *resolved_basis
+        : flex_axis(content_size(), row, true), *main_decoration);
     FlexItem item{id, source, child_box, margin};
     item.base = basis;
     item.inner_base = checked(static_cast<double>(basis) - *main_decoration, id);
     item.main_decoration = *main_decoration;
-    item.content_main = flex_axis(base_layout.size, row, true);
+    const bool intrinsic_contribution = !main_available && !main_preferred
+        && (main_query == AvailableKind::MaxContent
+            || (main_query == AvailableKind::MinContent
+                && node.style.flex_wrap == FlexWrap::NoWrap));
+    item.content_main = intrinsic_contribution ? flex_axis(content_size(), row, true) : basis;
     if (child_box.aspect_ratio && known_cross) {
         const Unit transferred = row ? *known_cross * *child_box.aspect_ratio
             : *known_cross / *child_box.aspect_ratio;
@@ -282,7 +295,6 @@ FlexItem Engine::prepare_flex_item(const LayoutNode& node, const LayoutNode& chi
         child_box.maximum, child_box), row, true);
     item.grow = child.style.flex_grow;
     item.shrink = child.style.flex_shrink;
-    item.cross = flex_axis(base_layout.size, row, false);
     item.auto_main_start = (main_reverse ? margin_end : margin_start).kind == EdgeKind::Auto;
     item.auto_main_end = (main_reverse ? margin_start : margin_end).kind == EdgeKind::Auto;
     item.auto_cross_start = (cross_reverse ? cross_end : cross_start).kind == EdgeKind::Auto;

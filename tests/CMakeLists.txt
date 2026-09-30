@@ -7,7 +7,7 @@ add_executable(axisly_css_foundation_tests css/css_foundation_tests.cpp)
 target_link_libraries(axisly_css_foundation_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_foundation_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_css_foundation_tests)
-foreach(behavior IN ITEMS values box measurement)
+foreach(behavior IN ITEMS values value_ownership box measurement)
     add_test(NAME axisly.css.foundation.${behavior} COMMAND axisly_css_foundation_tests ${behavior})
 endforeach()
 
@@ -18,7 +18,9 @@ axisly_enable_warnings(axisly_css_tree_tests)
 foreach(behavior IN ITEMS leaf_and_block leaf_available_constraints topology_and_hidden
         intrinsic_queries rtl_root_coordinates intrinsic_container_invalidation
         errors_and_exception_atomicity cache_and_dirty inherited_float_invalidation
-        plain_block_single_measure multi_query_leaf_cache)
+        plain_block_single_measure multi_query_leaf_cache deep_flex_query_budget
+        node_storage_lifecycle cache_failure_rollback cached_subtree_depth_limit container_scrollbar_ratio_bounds
+        geometry_snapshot_lifetime)
     add_test(NAME axisly.css.tree.${behavior} COMMAND axisly_css_tree_tests ${behavior})
 endforeach()
 

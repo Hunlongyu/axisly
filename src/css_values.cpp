@@ -1,12 +1,22 @@
 #include <axisly/css_values.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
 #include <utility>
 
 namespace axisly::css {
+
+[[noreturn]] void detail::invalid_numeric_value(const char* message) {
+    throw std::invalid_argument(message);
+}
+
+[[noreturn]] void detail::numeric_value_overflow(const char* message) {
+    throw std::overflow_error(message);
+}
+
 namespace {
 Unit finite(Unit value) {
     if (!std::isfinite(value)) throw std::invalid_argument("CSS numeric value must be finite");
@@ -135,7 +145,29 @@ bool Calculation::operator==(const Calculation& other) const noexcept {
     return equals(equals, root_, other.root_);
 }
 
-Length::Length(LengthKind kind, Unit value) noexcept : kind_(kind), value_(value) {}
+struct alignas(16) Length::CalculationStorage {
+    std::atomic<std::size_t> references{1};
+    Calculation expression;
+
+    explicit CalculationStorage(Calculation value) noexcept : expression(std::move(value)) {}
+};
+
+Length::CalculationStorage* Length::calculation_storage() const noexcept {
+    return reinterpret_cast<CalculationStorage*>(static_cast<std::uintptr_t>(representation_ & ~kind_mask));
+}
+
+void Length::retain_calculation() const noexcept {
+    calculation_storage()->references.fetch_add(1, std::memory_order_relaxed);
+}
+
+void Length::release_calculation() const noexcept {
+    auto* storage = calculation_storage();
+    if (storage->references.fetch_sub(1, std::memory_order_acq_rel) == 1) delete storage;
+}
+
+std::optional<Unit> Length::resolve_calculation(std::optional<Unit> basis) const {
+    return calculation_storage()->expression.resolve(basis);
+}
 
 Length Length::length(Unit value) { return Length(LengthKind::Length, finite(value)); }
 Length Length::percent(Unit fraction) { return Length(LengthKind::Percent, finite(fraction)); }
@@ -148,47 +180,30 @@ Length Length::content() noexcept { return Length(LengthKind::Content); }
 Length Length::fit_content_length(Unit limit) { return Length(LengthKind::FitContentLength, finite(limit)); }
 Length Length::fit_content_percent(Unit fraction) { return Length(LengthKind::FitContentPercent, finite(fraction)); }
 Length Length::calc(Calculation expression) {
-    Length result(LengthKind::Calc);
-    result.calculation_ = std::move(expression);
+    auto* storage = new CalculationStorage(std::move(expression));
+    Length result(LengthKind::Auto);
+    result.representation_ = static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(storage))
+        | static_cast<std::uint64_t>(LengthKind::Calc);
     return result;
-}
-
-std::optional<Unit> Length::resolve_numeric(std::optional<Unit> basis) const {
-    validate_basis(basis);
-    switch (kind_) {
-    case LengthKind::Length: return value_;
-    case LengthKind::Percent:
-        return basis ? checked(static_cast<double>(value_) * *basis) : std::nullopt;
-    // Taffy's opaque calc callback is invoked only after its containing basis
-    // becomes definite, even when the expression contains only fixed lengths.
-    case LengthKind::Calc: return basis ? calculation_->resolve(basis) : std::nullopt;
-    default: return std::nullopt;
-    }
 }
 
 std::optional<Unit> Length::resolve_fit_content_limit(std::optional<Unit> basis) const {
     validate_basis(basis);
-    switch (kind_) {
-    case LengthKind::FitContentLength: return value_;
+    switch (kind()) {
+    case LengthKind::FitContentLength: return numeric_value();
     case LengthKind::FitContentPercent:
-        return basis ? checked(static_cast<double>(value_) * *basis) : std::nullopt;
+        return basis ? checked(static_cast<double>(numeric_value()) * *basis) : std::nullopt;
     default: return std::nullopt;
     }
 }
 
 bool Length::operator==(const Length& other) const noexcept {
-    return kind_ == other.kind_ && value_ == other.value_ && calculation_ == other.calculation_;
-}
-
-AvailableSpace AvailableSpace::definite(Unit value) {
-    if (finite(value) < 0) throw std::invalid_argument("Definite space must be nonnegative");
-    return {AvailableKind::Definite, value};
-}
-AvailableSpace AvailableSpace::indefinite() noexcept { return {AvailableKind::Indefinite, 0}; }
-AvailableSpace AvailableSpace::min_content() noexcept { return {AvailableKind::MinContent, 0}; }
-AvailableSpace AvailableSpace::max_content() noexcept { return {AvailableKind::MaxContent, 0}; }
-std::optional<Unit> AvailableSpace::definite_value() const noexcept {
-    return kind == AvailableKind::Definite ? std::optional<Unit>(value) : std::nullopt;
+    if (representation_ == other.representation_) return true;
+    if (kind() != other.kind()) return false;
+    if (kind() == LengthKind::Calc) {
+        return calculation_storage()->expression == other.calculation_storage()->expression;
+    }
+    return numeric_value() == other.numeric_value();
 }
 
 } // namespace axisly::css

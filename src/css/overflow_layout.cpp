@@ -1,7 +1,7 @@
 #include "layout_engine.hpp"
 
 #include <algorithm>
-#include <unordered_map>
+#include <limits>
 
 namespace axisly::css::detail {
 namespace {
@@ -33,17 +33,26 @@ void unite(Rect& destination, Unit left, Unit top, Unit edge_right,
 } // namespace
 
 void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
-    const std::unordered_map<std::uint64_t, LayoutNode>& nodes) {
-    std::unordered_map<std::uint64_t, std::size_t> index;
-    index.reserve(layouts.size());
+    const LayoutNodes& nodes) {
+    // Published fragments are in preorder. A depth stack recovers parent
+    // indices in linear time without allocating a hash node for each box.
+    constexpr auto no_parent = std::numeric_limits<std::size_t>::max();
+    std::vector<std::size_t> parents(layouts.size(), no_parent);
+    std::vector<const LayoutNode*> layout_nodes;
+    layout_nodes.reserve(layouts.size());
+    std::vector<std::size_t> ancestors;
     std::vector<Rect> inflow(layouts.size());
     std::vector<Rect> absolute(layouts.size());
     for (std::size_t i = 0; i < layouts.size(); ++i) {
-        index.emplace(layouts[i].node.value, i);
+        layout_nodes.push_back(nodes.find(layouts[i].node.value));
+        while (!ancestors.empty()
+            && layouts[ancestors.back()].node != layouts[i].parent) ancestors.pop_back();
+        if (!ancestors.empty()) parents[i] = ancestors.back();
+        ancestors.push_back(i);
     }
     for (std::size_t i = layouts.size(); i-- > 0;) {
         auto& layout = layouts[i];
-        const auto& node = nodes.at(layout.node.value);
+        const auto& node = *layout_nodes[i];
         if (node.style.display == Display::None) continue;
         if (!node.children.empty()) {
             if (scroll_container(node.style)) {
@@ -58,9 +67,10 @@ void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
                 right(absolute[i], node.id), bottom(absolute[i], node.id), node.id);
             layout.scrollable_overflow_rect = inflow[i];
         }
-        if (!layout.parent) continue;
-        auto& parent = layouts[index.at(layout.parent->value)];
-        const auto& parent_style = nodes.at(layout.parent->value).style;
+        const auto parent_index = parents[i];
+        if (parent_index == no_parent) continue;
+        auto& parent = layouts[parent_index];
+        const auto& parent_style = layout_nodes[parent_index]->style;
         if (parent_style.display == Display::None) continue;
         const bool clipped = scroll_container(node.style)
             || node.style.contain != Contain::None;
@@ -105,7 +115,6 @@ void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
             + child_bottom, node.id);
         if (scroll_container(parent_style)
             && (contribution_right <= 0 || contribution_bottom <= 0)) continue;
-        const auto parent_index = index.at(layout.parent->value);
         Rect& destination = node.style.position == Position::Absolute
             ? absolute[parent_index] : inflow[parent_index];
         unite(destination, contribution_left, contribution_top,

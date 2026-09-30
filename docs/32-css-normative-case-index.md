@@ -16,6 +16,21 @@ Axisly 的兼容路径在该输入上的结果相等；规范结论另行验收�
 
 ## WPT 移植界限与后续
 
+### BLOCK-PADDING-01：百分比 padding 的报告阶段
+
+[CSS 2.2 §8.4](https://www.w3.org/TR/CSS22/box.html#padding-properties)
+规定四边百分比 padding 均按包含块宽度解析。独立输入为 40px 宽的
+Block 根、100px 宽且四边 padding 10% 的子块，以及 10px 高的孙块。
+Axisly 与 Taffy 的流几何均为子块高度 18px、孙块 `[4,4,92,10]`。
+Taffy 0.14 的已发布 padding 元数据为 `[4,0,4,0]`：上下边在父块的
+早期项目列表中按未定高度解析。Axisly 保留此版本兼容输出。
+
+[`percentage_item_stages`](../tests/css/css_block_flow_tests.cpp) 分别断言
+流几何及兼容元数据；[浏览器重放](../tests/spec/block_percentage_padding_metadata.html)
+按规范断言 computed padding 为 `[4,4,4,4]`，Chrome 重放通过。
+[原始结果](reference-validation/taffy-upstream-2026-09-30/block-padding-browser.json)
+记录浏览器版本。兼容元数据差分不计作 CSS padding 规范通过。
+
 上表两条 WPT 用例已转成 Axisly 独立数值断言及锁定版 Taffy 树形输入。
 它们只覆盖原始 reftest 的布局几何部分。2026-09-30 的 Chrome 无头模式
 分别执行本地重放并报告 `PASS`；平台滚动条绘制和原始 reftest 的

@@ -1,4 +1,5 @@
-#include "layout_engine.hpp"
+#include "block_item_sizing.hpp"
+#include "block_flow_state.hpp"
 #include "block_float_context.hpp"
 
 #include <algorithm>
@@ -151,10 +152,29 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         return x;
     };
-    Unit cursor = 0;
-    MarginStrut pending_margin, leading_margin;
-    bool has_flow = false, has_nonempty_flow = false;
-    bool leading_open = true, leading_clear = false, placed_local_float = false;
+    const bool block_flow_parent = node.parent
+        && (get(*node.parent).style.display == Display::Block
+            || get(*node.parent).style.display == Display::FlowRoot);
+    const bool independent = node.style.display != Display::Block
+        || node.style.position == Position::Absolute
+        || node.style.item_is_table || node.style.box.replaced
+        || node.style.align_content.has_value()
+        || node.style.contain != Contain::None
+        || scroll_container(node.style.overflow_x)
+        || scroll_container(node.style.overflow_y)
+        || node.style.float_side != FloatSide::None;
+    const bool collapsible_top = block_flow_parent && !independent
+        && border.top == 0 && padding.top == 0;
+    const bool collapsible_bottom = block_flow_parent && !independent
+        && border.bottom == 0 && padding.bottom == 0 && !preferred_height;
+    BlockFlowState flow(collapsible_top);
+    if (!collapsible_top) context.commit_strut();
+    const auto clear_threshold = [&](ClearSide clear, NodeId child_id) -> std::optional<Unit> {
+        if (const auto value = floats.clear_threshold(clear)) {
+            return checked(static_cast<double>(*value) - context.origin_y, child_id);
+        }
+        return std::nullopt;
+    };
     for (std::size_t source = 0; source < node.children.size(); ++source) {
         const auto child_id = node.children[source];
         const auto& child = get(child_id);
@@ -163,77 +183,31 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             continue;
         }
         if (child.style.position == Position::Absolute) {
-            static_block_y[source] = checked(static_cast<double>(cursor)
-                + (has_flow ? pending_margin.resolve(child_id) : 0), child_id);
+            static_block_y[source] = flow.absolute_y(child_id);
             continue;
         }
-        Constraints child_constraints;
-        const bool intrinsic_width = child.style.item_is_table
-            || child.style.box.replaced;
-        child_constraints.available.width = intrinsic_width
-            ? AvailableSpace::max_content()
-            : AvailableSpace::definite(content_width);
-        child_constraints.available.height = AvailableSpace::indefinite();
-        // The item list resolves cyclic percentages before this width exists,
-        // while the child's own layout receives the computed containing block.
-        child_constraints.containing_width = content_width;
-        // A flex parent can supply a used cross size that is still indefinite
-        // for descendant percentages. A styled height remains a definite basis.
-        if (preferred_height
-            && (constraints.known_height_is_definite || box.preferred.height)) {
-            child_constraints.containing_height = content_height_basis;
-        }
-        ResolvedBox child_box;
-        try { child_box = resolve_layout_box(child, child_percentage_width,
-            child_constraints.containing_height); }
-        catch (const std::invalid_argument& error) {
-            throw LayoutFailure(LayoutErrorCode::InvalidStyle, child_id, error.what());
-        }
-        // The Block item list transfers max-size through aspect-ratio even
-        // for a measured leaf. The leaf algorithm itself retains independent
-        // maximum bounds, so this belongs to item resolution only.
-        child_box.maximum = transfer_aspect_ratio(child_box.maximum, child_box);
+        const auto height_basis = preferred_height
+            && (constraints.known_height_is_definite || box.preferred.height)
+            ? std::optional<Unit>{content_height_basis} : std::nullopt;
+        auto sizing = resolve_block_item(child,
+            {child_percentage_width, height_basis}, content_width);
+        auto& child_constraints = sizing.constraints;
+        const auto& child_box = sizing.box;
         const auto margin = edges(child_box.margin, child_id);
-        const auto child_width_kind = child.style.box.size.width.kind();
-        const bool unresolved_normal_width = child_width_kind == LengthKind::Auto
-            || child_width_kind == LengthKind::Percent
-            || child_width_kind == LengthKind::Calc;
-        if (child.style.float_side == FloatSide::None && !intrinsic_width) {
-            if (child_box.preferred.width) {
-                child_constraints.known_width = constrain_axis(
-                    *child_box.preferred.width, child_box.minimum.width,
-                    child_box.maximum.width);
-            } else if (unresolved_normal_width) {
-                const Unit stretch_width = std::max(Unit{0}, checked(
-                    static_cast<double>(content_width) - margin.left - margin.right,
-                    child_id));
-                child_constraints.known_width = constrain_axis(stretch_width,
-                    child_box.minimum.width, child_box.maximum.width);
-            }
-            if (child_box.preferred.height) {
-                child_constraints.known_height = constrain_axis(
-                    *child_box.preferred.height, child_box.minimum.height,
-                    child_box.maximum.height);
-            }
-        }
+        const bool intrinsic_width = sizing.intrinsic_width;
+        const bool unresolved_normal_width = sizing.unresolved_normal_width;
         std::optional<FloatSlot> formatting_slot;
         if (child.style.float_side == FloatSide::None
             && avoids_floats_as_block_item(child) && !floats.empty()) {
-            const Unit separation = pending_margin.merged(
-                MarginStrut::from(margin.top)).resolve(child_id);
-            Unit estimated_y = checked(static_cast<double>(context.origin_y)
-                + cursor + separation, child_id);
-            if (child.style.clear != ClearSide::None) {
-                estimated_y = std::max(estimated_y,
-                    floats.clear_bottom(child.style.clear));
-            }
-            const auto preferred = child_box.preferred.width;
-            const auto required = preferred
-                ? std::optional<Unit>(constrain_axis(*preferred,
-                    child_box.minimum.width, child_box.maximum.width))
-                : child_box.minimum.width;
+            const auto estimated = flow.position(MarginStrut::from(margin.top),
+                clear_threshold(child.style.clear, child_id),
+                context.has_adjoining_float(child.style.clear), std::nullopt, child_id);
+            const Unit estimated_y = checked(static_cast<double>(context.origin_y)
+                + estimated.y, child_id);
             formatting_slot = floats.place_formatting_context(estimated_y,
-                margin.left, margin.right, required, float_bounds, child_id);
+                margin.left, margin.right,
+                {child_box.preferred.width, child_box.minimum.width, child_box.maximum.width},
+                node.style.box.direction, float_bounds, child_id);
             formatting_slot->x = checked(static_cast<double>(formatting_slot->x)
                 - context.origin_x, child_id);
             formatting_slot->y = checked(static_cast<double>(formatting_slot->y)
@@ -241,7 +215,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             if (unresolved_normal_width && !child_box.preferred.width
                 && !intrinsic_width) {
                 child_constraints.known_width = constrain_axis(
-                    formatting_slot->width, child_box.minimum.width,
+                    formatting_slot->stretch_width, child_box.minimum.width,
                     child_box.maximum.width);
             }
         }
@@ -252,18 +226,14 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             && !child.style.align_content.has_value();
         const bool share_float_context = same_bfc && !child.children.empty()
             && (!floats.empty() || has_float_subtree(child_id, depth + 1));
-        FloatContext probe_floats;
-        BlockContext probe_context{probe_floats, 0, 0};
-        auto nested = layout(child_id, child_constraints, depth + 1,
-            share_float_context ? &probe_context : nullptr);
+        Fragment nested;
         if (share_float_context) {
-            const MarginStrut child_top = nested.block_margins
-                ? nested.block_margins->top : MarginStrut::from(margin.top);
-            Unit y = checked(static_cast<double>(cursor)
-                + pending_margin.merged(child_top).resolve(child_id), child_id);
-            if (child.style.clear != ClearSide::None) {
-                y = std::max(y, checked(static_cast<double>(
-                    floats.clear_bottom(child.style.clear)) - context.origin_y, child_id));
+            // Float context coordinates follow the provisional margin edge.
+            // The final border edge is selected from the returned collapsed
+            // strut and may differ when that strut escapes through the parent.
+            Unit y = checked(static_cast<double>(flow.absolute_y(child_id)) + margin.top, child_id);
+            if (const auto cleared = clear_threshold(child.style.clear, child_id)) {
+                y = std::max(y, *cleared);
             }
             const auto child_border = edges(child_box.border, child_id);
             const auto child_padding = edges(child_box.padding, child_id);
@@ -274,8 +244,12 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 checked(static_cast<double>(context.origin_x) + margin.left
                     + child_border.left + child_padding.left, child_id),
                 checked(static_cast<double>(context.origin_y) + y
-                    + child_border.top + child_padding.top, child_id)};
+                    + child_border.top + child_padding.top, child_id),
+                context.adjoining_floats, {}};
             nested = layout(child_id, child_constraints, depth + 1, &child_context);
+            context.merge_adjoining(child_context);
+        } else {
+            nested = layout(child_id, child_constraints, depth + 1);
         }
         // Block item metadata is resolved when the parent's item list is
         // formed. The child's own layout may use a later containing width,
@@ -298,7 +272,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             const auto [float_x, float_y] = floats.place_float(
                 child.style.float_side, child.style.clear, outer_float_width,
                 outer_float_height,
-                checked(static_cast<double>(context.origin_y) + cursor, child_id),
+                checked(static_cast<double>(context.origin_y) + flow.float_y(child_id), child_id),
                 float_bounds, child_id);
             const Unit left = checked(static_cast<double>(float_x)
                 - context.origin_x + margin.left, child_id);
@@ -309,7 +283,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 checked(static_cast<double>(y_origin) + top, child_id), child_id);
             floats.add(child.style.float_side, float_x, float_y,
                 outer_float_width, outer_float_height, child_id);
-            placed_local_float = true;
+            if (collapsible_top && flow.leading_open()) {
+                context.adjoining_floats[child.style.float_side == FloatSide::Left ? 0 : 1] = true;
+            }
         } else {
             const MarginStrut child_top = nested.block_margins
                 ? nested.block_margins->top : MarginStrut::from(margin.top);
@@ -317,39 +293,19 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 ? nested.block_margins->bottom : MarginStrut::from(margin.bottom);
             const bool child_through = nested.block_margins
                 && nested.block_margins->through;
-            if (leading_open) {
-                if (child.style.clear != ClearSide::None || placed_local_float) {
-                    leading_clear = true;
-                }
-                if (!leading_clear) {
-                    leading_margin = leading_margin.merged(child_top);
-                    if (child_through) {
-                        leading_margin = leading_margin.merged(child_bottom);
-                    }
-                }
-                if (!child_through) leading_open = false;
-            }
-            const MarginStrut separation_margin = pending_margin.merged(child_top);
-            const Unit separation = separation_margin.resolve(child_id);
-            Unit y = checked(static_cast<double>(cursor) + separation, child_id);
-            if (child.style.clear != ClearSide::None) {
-                y = std::max(y, checked(static_cast<double>(
-                    floats.clear_bottom(child.style.clear)) - context.origin_y, child_id));
-            }
-            if (formatting_slot) y = std::max(y, formatting_slot->y);
+            const auto placed = flow.position(child_top,
+                clear_threshold(child.style.clear, child_id),
+                context.has_adjoining_float(child.style.clear),
+                formatting_slot ? std::optional<Unit>{formatting_slot->y} : std::nullopt, child_id);
+            const Unit y = placed.y;
             const Unit x = inline_position(nested, child_box, margin,
                 formatting_slot, child_id);
             translate(nested,
                 checked(static_cast<double>(x_origin) + x, child_id),
                 checked(static_cast<double>(y_origin) + y, child_id), child_id);
-            if (child_through) {
-                pending_margin = separation_margin.merged(child_bottom);
-            } else {
-                cursor = checked(static_cast<double>(y) + nested.size.height, child_id);
-                pending_margin = child_bottom;
-                has_nonempty_flow = true;
-            }
-            has_flow = true;
+            flow.commit(placed, child_top, child_bottom, child_through,
+                nested.size.height, child_id);
+            if (!child_through || placed.clearance) context.commit_strut();
         }
         const auto [relative_x, relative_y] = relative_offset(child,
             Size{content_width, content_height_basis},
@@ -357,56 +313,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         translate(nested, relative_x, relative_y, child_id);
         fragments[source] = std::move(nested);
     }
-    const auto own_margin = edges(box.margin, node.id);
-    BlockMargins margins{MarginStrut::from(own_margin.top),
-                         MarginStrut::from(own_margin.bottom), false};
-    const bool block_flow_parent = node.parent
-        && (get(*node.parent).style.display == Display::Block
-            || get(*node.parent).style.display == Display::FlowRoot);
-    const bool independent = node.style.display != Display::Block
-        || node.style.position == Position::Absolute
-        || node.style.item_is_table || node.style.box.replaced
-        || node.style.align_content.has_value()
-        || node.style.contain != Contain::None
-        || scroll_container(node.style.overflow_x)
-        || scroll_container(node.style.overflow_y)
-        || node.style.float_side != FloatSide::None;
-    const bool collapse_top = block_flow_parent && !independent
-        && border.top == 0 && padding.top == 0 && !leading_clear;
-    const bool collapse_bottom = block_flow_parent && !independent
-        && border.bottom == 0 && padding.bottom == 0
-        && !preferred_height && !box.minimum.height.value_or(Unit{0});
-    const bool through = collapse_top && collapse_bottom
-        && !has_nonempty_flow && !placed_local_float;
-    Unit top_shift = 0;
-    if (through) {
-        const MarginStrut all = margins.top.merged(margins.bottom)
-            .merged(pending_margin);
-        margins.top = all;
-        margins.bottom = all;
-        margins.through = true;
-        top_shift = pending_margin.resolve(node.id);
-    } else if (collapse_top && has_flow) {
-        margins.top = margins.top.merged(leading_margin);
-        top_shift = leading_margin.resolve(node.id);
-    }
-    if (collapse_bottom && !through && has_flow) {
-        margins.bottom = margins.bottom.merged(pending_margin);
-    }
-    Unit content_height = through ? Unit{0}
-        : has_flow ? checked(static_cast<double>(cursor)
-            + (collapse_bottom ? 0 : pending_margin.resolve(node.id))
-            - top_shift, node.id) : Unit{0};
-    if (top_shift != 0) {
-        for (std::size_t source = 0; source < node.children.size(); ++source) {
-            const auto& child = get(node.children[source]);
-            if (child.style.display != Display::None
-                && child.style.position != Position::Absolute
-                && child.style.float_side == FloatSide::None) {
-                translate(fragments[source], 0, -top_shift, child.id);
-            }
-        }
-    }
+    const bool through = collapsible_top && collapsible_bottom
+        && !box.minimum.height.value_or(Unit{0}) && !flow.has_nonempty_flow();
+    const Unit content_height = through ? Unit{0}
+        : flow.content_height(collapsible_bottom, node.id);
     const bool contains_floats = !node.parent || node.style.display == Display::FlowRoot
         || node.style.position == Position::Absolute
         || node.style.float_side != FloatSide::None
@@ -436,6 +346,12 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         candidate.height = constrain_axis(candidate.height,
             box.minimum.height, box.maximum.height);
     }
+    const auto own_margin = edges(box.margin, node.id);
+    const bool minimum_blocks_bottom = box.minimum.height.value_or(Unit{0}) > 0
+        && *box.minimum.height >= candidate.height;
+    const auto margins = flow.margins(MarginStrut::from(own_margin.top),
+        MarginStrut::from(own_margin.bottom),
+        collapsible_bottom && !minimum_blocks_bottom, through);
     if (node.style.align_content) {
         const Unit free = checked(static_cast<double>(candidate.height)
             - intrinsic_outer_height, node.id);
@@ -474,10 +390,6 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         const auto id = node.children[source];
         if (get(id).style.position == Position::Absolute
             && get(id).style.display != Display::None) {
-            if (static_block_y[source]) {
-                static_block_y[source] = checked(
-                    static_cast<double>(*static_block_y[source]) - top_shift, id);
-            }
             fragments[source] = absolute(node, id, candidate, flow_box, depth,
                 std::nullopt, static_block_y[source]);
         }

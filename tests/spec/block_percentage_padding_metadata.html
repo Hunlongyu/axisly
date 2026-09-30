@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Block percentage padding and Taffy 0.14 reported metadata</title>
+<style>
+  body { margin: 0; }
+  #root { width: 40px; }
+  #item { box-sizing: border-box; width: 100px; padding: 10%; }
+  #child { height: 10px; }
+</style>
+<div id="root"><div id="item"><div id="child"></div></div></div>
+<pre id="result"></pre>
+<script>
+  const item = document.getElementById("item");
+  const child = document.getElementById("child");
+  const style = getComputedStyle(item);
+  const rect = child.getBoundingClientRect();
+  const values = {padding: [style.paddingLeft, style.paddingTop,
+    style.paddingRight, style.paddingBottom].map(parseFloat),
+    child: [rect.x, rect.y, rect.width, rect.height],
+    itemHeight: item.getBoundingClientRect().height};
+  const pass = JSON.stringify(values.padding) === "[4,4,4,4]"
+    && JSON.stringify(values.child) === "[4,4,92,10]" && values.itemHeight === 18;
+  document.getElementById("result").textContent =
+    `${pass ? "PASS" : "FAIL"} ${JSON.stringify(values)}`;
+</script>

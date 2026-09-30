@@ -37,6 +37,8 @@ add_library(axisly STATIC
     src/css/layout_engine.cpp
     src/css/leaf_layout.cpp
     src/css/block_layout.cpp
+    src/css/block_item_sizing.cpp
+    src/css/block_flow_state.cpp
     src/css/block_intrinsic_width.cpp
     src/css/block_float_context.cpp
     src/css/flex_layout.cpp

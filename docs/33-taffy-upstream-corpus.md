@@ -160,4 +160,31 @@ Block、Flex、Grid 和绝对定位分别保留有符号物理空间用于 RTL �
 全量对照 **5890/6020**，较滚动条阶段新增通过 60 项，无新增失败。
 **Flex 2648/2648** 与测量叶节点 56/56 均通过；其余 130 项集中于
 Block、Float、Grid。[完整报告](reference-validation/taffy-upstream-2026-09-30/flex-item-stages.json)
-保留所有差异。Release 357/357 通过，Debug／ASan 在本阶段源码上复核。
+保留所有差异。Release／Debug 各通过 357/357，完整 MSVC ASan 通过
+356/356；ASan 不包含与其不兼容的独立异常行为测试。
+
+## Block 项目尺寸、边距折叠与浮动区域
+
+`block_item_sizing.cpp` 区分早期百分比尺寸解析和选定容器宽度后的边距。
+`block_flow_state.cpp` 分别保存已提交高度、活动边距集合、首边距集合和
+clearance 隔断。浮动位置使用尚未提交的边距，空块的 clearance 保留
+内部边距；最小高度是否阻断底部折叠由实际自然高度决定。同一格式化
+上下文的后代共用浮动坐标和首边距标记，直接完成一次布局。
+
+浮动区域把外盒可放置宽度和自动拉伸宽度分别求解。首边距可以被浮动
+吸收；尾部正边距允许超出区域。负边距下自动宽度保证边距盒非负，
+不足时移到浮动下方。独立测试固定 LTR／RTL、最小高度、空块清除、
+跨层 adjoining float 和百分比解析阶段。
+
+全量为 **5964/6020**，较 Flex 阶段新增通过 74 项，无新增失败。
+Block 940/940、Float 88/88 通过；剩余 56 项均位于 Grid。
+[完整报告](reference-validation/taffy-upstream-2026-09-30/block-flow-stages.json)
+保留全部输入差异。Release／Debug 各通过 361/361，定向 MSVC ASan
+通过 5/5（含 552 组浮动矩阵）；完整 ASan 在组合阶段继续验收。
+
+Taffy 0.14 的 Block 项目元数据对上下百分比 padding 使用早期高度基准，
+子树流布局则使用包含块宽度。兼容输出保留该差异；浏览器规范断言
+得到四边 4px，子盒 `[4,4,92,10]`，两条引擎的流几何均相同。
+该元数据不计作 CSS padding 规范通过，见
+[规范索引](32-css-normative-case-index.md) 和
+[浏览器结果](reference-validation/taffy-upstream-2026-09-30/block-padding-browser.json)。

@@ -5,12 +5,16 @@
 namespace axisly::css::detail {
 
 Unit FloatContext::clear_bottom(ClearSide clear) const noexcept {
-    Unit bottom = 0;
+    return clear_threshold(clear).value_or(Unit{0});
+}
+
+std::optional<Unit> FloatContext::clear_threshold(ClearSide clear) const noexcept {
+    std::optional<Unit> bottom;
     for (const auto& region : regions_) {
         if (clear == ClearSide::Both
             || (clear == ClearSide::Left && region.side == FloatSide::Left)
             || (clear == ClearSide::Right && region.side == FloatSide::Right)) {
-            bottom = std::max(bottom, region.bottom);
+            bottom = std::max(bottom.value_or(region.bottom), region.bottom);
         }
     }
     return bottom;
@@ -97,7 +101,11 @@ std::pair<Unit, Unit> FloatContext::place_float(FloatSide side, ClearSide clear,
 
 FloatSlot FloatContext::place_formatting_context(Unit initial_y,
     Unit margin_left, Unit margin_right,
-    std::optional<Unit> preferred_width, FloatBounds bounds, NodeId node) const {
+    FloatItemWidth item_width,
+    Direction direction, FloatBounds bounds, NodeId node) const {
+    const Unit margin_left_edge = checked(static_cast<double>(bounds.left) + margin_left, node);
+    const Unit margin_right_edge = checked(static_cast<double>(bounds.right) - margin_right, node);
+    const Unit minimum_auto_width = checked(-static_cast<double>(margin_left) - margin_right, node);
     Unit y = initial_y;
     for (std::size_t attempt = 0; attempt <= regions_.size(); ++attempt) {
         const auto next_bottom = next_occupied_bottom(y, y);
@@ -106,20 +114,27 @@ FloatSlot FloatContext::place_formatting_context(Unit initial_y,
                 static_cast<double>(bounds.right) - bounds.left
                     - margin_left - margin_right,
                 node));
-            return {checked(static_cast<double>(bounds.left) + margin_left,
-                node), y, width};
+            return {margin_left_edge, y, width, width};
         }
         const auto free = free_intervals(y, y, bounds);
         for (const auto& interval : free) {
-            const Unit x = std::max(
-                checked(static_cast<double>(bounds.left) + margin_left, node),
-                interval.left);
-            const Unit trailing_margin = interval.right == bounds.right
-                ? margin_right : Unit{0};
-            const Unit width = std::max(Unit{0}, checked(
-                static_cast<double>(interval.right) - x - trailing_margin, node));
-            if (!preferred_width || *preferred_width <= width) {
-                return {x, y, width};
+            const bool left_float = interval.left > bounds.left;
+            const bool right_float = interval.right < bounds.right;
+            const bool rtl = direction == Direction::Rtl;
+            const Unit fit_left = !rtl
+                ? left_float ? std::max(interval.left, margin_left_edge) : margin_left_edge
+                : left_float ? interval.left : std::min(bounds.left, margin_left_edge);
+            const Unit fit_right = rtl
+                ? right_float ? std::min(interval.right, margin_right_edge) : margin_right_edge
+                : right_float ? interval.right : std::max(bounds.right, margin_right_edge);
+            const Unit stretch_left = left_float ? std::max(interval.left, margin_left_edge) : margin_left_edge;
+            const Unit stretch_right = right_float ? std::min(interval.right, margin_right_edge) : margin_right_edge;
+            const Unit fit_width = std::max(Unit{0}, checked(static_cast<double>(fit_right) - fit_left, node));
+            const Unit stretch_width = std::max(Unit{0}, checked(static_cast<double>(stretch_right) - stretch_left, node));
+            const Unit required = constrain_axis(item_width.preferred.value_or(
+                std::max(stretch_width, minimum_auto_width)), item_width.minimum, item_width.maximum);
+            if (required <= fit_width) {
+                return {fit_left, y, fit_width, std::max(stretch_width, minimum_auto_width)};
             }
         }
         y = *next_bottom;

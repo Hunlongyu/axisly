@@ -2,6 +2,7 @@
 
 #include "layout_engine.hpp"
 
+#include <array>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -9,11 +10,15 @@
 namespace axisly::css::detail {
 
 struct FloatSlot {
-    Unit x{}, y{}, width{};
+    Unit x{}, y{}, width{}, stretch_width{};
 };
 
 struct FloatBounds {
     Unit left{}, right{};
+};
+
+struct FloatItemWidth {
+    std::optional<Unit> preferred, minimum, maximum;
 };
 
 class FloatContext;
@@ -23,6 +28,21 @@ class FloatContext;
 struct BlockContext {
     FloatContext& floats;
     Unit origin_x{}, origin_y{};
+    std::array<bool, 2> adjoining_floats{};
+    std::optional<std::array<bool, 2>> top_adjoining_floats;
+    void commit_strut() {
+        if (!top_adjoining_floats) top_adjoining_floats = adjoining_floats;
+        adjoining_floats = {};
+    }
+    [[nodiscard]] bool has_adjoining_float(ClearSide side) const {
+        return ((side == ClearSide::Left || side == ClearSide::Both) && adjoining_floats[0])
+            || ((side == ClearSide::Right || side == ClearSide::Both) && adjoining_floats[1]);
+    }
+    void merge_adjoining(const BlockContext& child) {
+        const auto flags = child.top_adjoining_floats.value_or(child.adjoining_floats);
+        adjoining_floats[0] = adjoining_floats[0] || flags[0];
+        adjoining_floats[1] = adjoining_floats[1] || flags[1];
+    }
 };
 
 class FloatContext {
@@ -31,13 +51,15 @@ public:
 
     [[nodiscard]] bool empty() const noexcept { return regions_.empty(); }
     [[nodiscard]] Unit clear_bottom(ClearSide clear) const noexcept;
+    [[nodiscard]] std::optional<Unit> clear_threshold(ClearSide clear) const noexcept;
     [[nodiscard]] Unit maximum_bottom() const noexcept;
     [[nodiscard]] std::pair<Unit, Unit> place_float(FloatSide side, ClearSide clear,
         Unit outer_width, Unit outer_height, Unit initial_y,
         FloatBounds bounds, NodeId node) const;
     [[nodiscard]] FloatSlot place_formatting_context(Unit initial_y,
         Unit margin_left, Unit margin_right,
-        std::optional<Unit> preferred_width, FloatBounds bounds, NodeId node) const;
+        FloatItemWidth item_width,
+        Direction direction, FloatBounds bounds, NodeId node) const;
     void add(FloatSide side, Unit left, Unit top,
         Unit outer_width, Unit outer_height, NodeId node);
 

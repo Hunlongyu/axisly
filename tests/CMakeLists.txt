@@ -19,6 +19,14 @@ foreach(behavior IN ITEMS leaf_and_block leaf_available_constraints topology_and
     add_test(NAME axisly.css.tree.${behavior} COMMAND axisly_css_tree_tests ${behavior})
 endforeach()
 
+add_executable(axisly_css_block_flow_tests css/css_block_flow_tests.cpp)
+target_link_libraries(axisly_css_block_flow_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_css_block_flow_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_block_flow_tests)
+foreach(behavior IN ITEMS minimum_and_collapsed_margins floating_margin_struts formatting_context_slots percentage_item_stages)
+    add_test(NAME axisly.css.block.${behavior} COMMAND axisly_css_block_flow_tests ${behavior})
+endforeach()
+
 add_executable(axisly_css_flex_tests css/css_flex_tests.cpp)
 target_link_libraries(axisly_css_flex_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_flex_tests PROPERTIES CXX_EXTENSIONS OFF)

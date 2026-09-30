@@ -1,0 +1,2957 @@
+{
+  "protocol": "AXISLY_UPSTREAM_AUDIT_V1",
+  "taffy": "0.14.0",
+  "commit": "77f385683c1d698c91a23a259f87fdddf26925fb",
+  "corpus_sha256": "833248fad307ab882325a9d3cd3650a94a187ab817abc424f7331aff846eec54",
+  "total": 6020,
+  "passed": 5964,
+  "groups": {
+    "block": {
+      "total": 940,
+      "passed": 940,
+      "native_xml_geometry_comparisons": 940,
+      "taffy_xml_geometry_comparisons": 940,
+      "native_xml_geometry_difference": 2,
+      "taffy_xml_geometry_difference": 2
+    },
+    "blockflex": {
+      "total": 44,
+      "passed": 44,
+      "native_xml_geometry_comparisons": 44,
+      "taffy_xml_geometry_comparisons": 44
+    },
+    "blockgrid": {
+      "total": 56,
+      "passed": 56,
+      "native_xml_geometry_comparisons": 56,
+      "taffy_xml_geometry_comparisons": 56
+    },
+    "contain": {
+      "total": 32,
+      "passed": 32,
+      "native_xml_geometry_comparisons": 32,
+      "taffy_xml_geometry_comparisons": 32
+    },
+    "flex": {
+      "total": 2648,
+      "passed": 2648,
+      "native_xml_geometry_comparisons": 2648,
+      "taffy_xml_geometry_comparisons": 2648,
+      "native_xml_geometry_difference": 2,
+      "taffy_xml_geometry_difference": 2
+    },
+    "float": {
+      "total": 88,
+      "passed": 88,
+      "native_xml_geometry_comparisons": 88,
+      "taffy_xml_geometry_comparisons": 88
+    },
+    "grid": {
+      "total": 2132,
+      "passed": 2076,
+      "native_xml_geometry_comparisons": 2132,
+      "taffy_xml_geometry_comparisons": 2132,
+      "layout_difference": 56,
+      "native_xml_geometry_difference": 54,
+      "taffy_xml_geometry_difference": 2
+    },
+    "gridflex": {
+      "total": 24,
+      "passed": 24,
+      "native_xml_geometry_comparisons": 24,
+      "taffy_xml_geometry_comparisons": 24
+    },
+    "leaf": {
+      "total": 56,
+      "passed": 56,
+      "native_xml_geometry_comparisons": 56,
+      "taffy_xml_geometry_comparisons": 56
+    }
+  },
+  "failures": [
+    {
+      "name": "upstream-4052-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_child_margin_percent__border_box_ltr.xml",
+        "sha256": "639d661f7ac0e4aca009dd213c75a67e0b73b0bcc0a815e62bd7eae2a46c211e"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4052-grid",
+        3,
+        "overflow",
+        [
+          0,
+          0,
+          50.5099983,
+          10.5100021
+        ],
+        [
+          0.0,
+          0.0,
+          50.5,
+          10.5
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4053-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_child_margin_percent__border_box_rtl.xml",
+        "sha256": "c912bc538490ef3bedf7aa8faaf33dd467c78686820c6e676d4b65c3f2f1a9df"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4053-grid",
+        3,
+        "overflow",
+        [
+          0,
+          0,
+          50.5099983,
+          10.5100021
+        ],
+        [
+          0.0,
+          0.0,
+          50.5,
+          10.5
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4054-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_child_margin_percent__content_box_ltr.xml",
+        "sha256": "6add7fa5369a8db0c54b4e975657337f61bd4154c1977cb090699f49005cefb5"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4054-grid",
+        3,
+        "overflow",
+        [
+          0,
+          0,
+          50.5099983,
+          10.5100021
+        ],
+        [
+          0.0,
+          0.0,
+          50.5,
+          10.5
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4055-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_child_margin_percent__content_box_rtl.xml",
+        "sha256": "40b7bac80a453ec09b72f05b12510c16496e275c7b9b32e56f069507fe2d1efe"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4055-grid",
+        3,
+        "overflow",
+        [
+          0,
+          0,
+          50.5099983,
+          10.5100021
+        ],
+        [
+          0.0,
+          0.0,
+          50.5,
+          10.5
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4088-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__border_box_ltr.xml",
+        "sha256": "434cf501b3c63fae3e4b3823c297d51122e53945cd0ec60fcda5853cae130675"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4088-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          110
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4089-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__border_box_rtl.xml",
+        "sha256": "8cce39221d78d12343b7d6f96aea1bda55415626dde3b859845e91186444acda"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4089-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          110
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4090-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__content_box_ltr.xml",
+        "sha256": "0d26f0ef60c66afa1bbb1646c3f87e506795410ab376257b6ff42354341a3cf9"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4090-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          110
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4091-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__content_box_rtl.xml",
+        "sha256": "4ac61fc36894fc19907235ec1c6be0751ab14bce8dd5f92c28bb9f6c9e23d6ea"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4091-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          110
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4092-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__border_box_ltr.xml",
+        "sha256": "079a532661dac115adb75773a5d12119a48b3688f5e1a166d6e836b3090de9d0"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4092-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          130
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          160.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4093-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__border_box_rtl.xml",
+        "sha256": "ac722fb3da2687c0e777f531ca829fb0a568a8d3adc180f9f0ce3592faca9dfe"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4093-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          130
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          160.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4094-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__content_box_ltr.xml",
+        "sha256": "fa3be15c07740e6959a4341d01e2e3b701e911cceaca40dd9f199dd159b9da5b"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4094-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          130
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          160.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4095-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__content_box_rtl.xml",
+        "sha256": "50e14bae55b83c529b8ab8d8a2d210ab8ea68cd6d36519b8ea246daa8d3f1ade"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4095-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          130
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          160.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4096-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__border_box_ltr.xml",
+        "sha256": "0fd3152c10c28236b1a71649630db57bf70cff4ff41ec133411b38e9994325da"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4096-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          95
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4097-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__border_box_rtl.xml",
+        "sha256": "98d5242b43b9b16b851698ffca316f506bc462773551c08d97800b0305a188d7"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4097-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          95
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4098-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__content_box_ltr.xml",
+        "sha256": "aa939cc1fe90fdd276cdda63fbb22ff18806bcaf5e33a75a4965529e786dbdd7"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4098-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          95
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-4099-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__content_box_rtl.xml",
+        "sha256": "f77cf6cbd12df74836614f56a58ec365859da55c13aa0db9f6c60fc1c13f8a1b"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-4099-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          100,
+          95
+        ],
+        [
+          0.0,
+          0.0,
+          100.0,
+          120.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5400-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__border_box_ltr.xml",
+        "sha256": "347c7379cc5e11f79231a2b0aba4072e11688a1fa311cd0e8316840dc1ab2982"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5400-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          20,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5401-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__border_box_rtl.xml",
+        "sha256": "bcce64b2e2109d8b6e0c1470ce050eaca68b1b7f4dd54900504630707ca3460f"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5401-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          20,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5402-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__content_box_ltr.xml",
+        "sha256": "ea0083e639e46d48a780366b4a1577a898b689386bc99fabd9e0b2f323e7512d"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5402-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          20,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5403-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__content_box_rtl.xml",
+        "sha256": "1a350762ae4b8103f3b20f20ce4155b06fc469ec4e74cf1eb760f3b56211e3e0"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5403-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          20,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5416-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__border_box_ltr.xml",
+        "sha256": "befb8d1592fd3cf40c28fcc76a4f104e4f1729586db09cb6da1ec98ae800e557"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5416-grid",
+        2,
+        "rect",
+        [
+          0,
+          0,
+          20,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5417-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__border_box_rtl.xml",
+        "sha256": "bc0fdf78e5dc50f56f2a9cbb04c647f10d75838a6d5ef219b8b18857fa4ebf43"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5417-grid",
+        2,
+        "rect",
+        [
+          20,
+          0,
+          20,
+          40
+        ],
+        [
+          32.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5418-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__content_box_ltr.xml",
+        "sha256": "5f05b87287a3f28e8cddd630b4bf44dc60a03924601d3a1f626c921eed14a7d1"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5418-grid",
+        2,
+        "rect",
+        [
+          0,
+          0,
+          20,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5419-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__content_box_rtl.xml",
+        "sha256": "1243b45b0132de03c742dad8dfcadc966b7f2eccc3ba94adb6d2194b3e791f3e"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5419-grid",
+        2,
+        "rect",
+        [
+          20,
+          0,
+          20,
+          40
+        ],
+        [
+          32.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5688-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__border_box_ltr.xml",
+        "sha256": "ee2c808facd65f7ca0e22d237ad17eacc38010c995a10ac106ccb6a89d3d99ef"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5688-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5689-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__border_box_rtl.xml",
+        "sha256": "011ce7d04faab32051043f99804d916afcf8080426daf6f5c3569074e282b548"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5689-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5690-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__content_box_ltr.xml",
+        "sha256": "11342f977770b3dc50bbb5ad25df9c6efdab5e5feda7619644a1c5a89aa77ea9"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5690-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5691-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__content_box_rtl.xml",
+        "sha256": "1e3823c7002957a1bd6180661369b3c061c8219781dc89483ef224ce877eb353"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5691-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5692-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__border_box_ltr.xml",
+        "sha256": "9b905a8f3cdb8163218167f37c58717a505165471a0d3f25712a0c57765c2528"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5692-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5693-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__border_box_rtl.xml",
+        "sha256": "f02d527ed48b3ff311e3f5adfd70ffa4b779eab9dd235727e36f35dbf129ffab"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5693-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5694-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__content_box_ltr.xml",
+        "sha256": "b4a12eeefdcfa318d00432f7023665d9daf16578c27871b6513913d2b41f8072"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5694-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5695-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__content_box_rtl.xml",
+        "sha256": "dce78d46b61aad1b5234399713d709af994402c41ffb42640d198c1d6b131d79"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5695-grid",
+        1,
+        "overflow",
+        [
+          0,
+          0,
+          400,
+          100
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          100.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5712-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__border_box_ltr.xml",
+        "sha256": "417eee9a8c3b152d2bb0c77a32c4e5dc3cf93a1915cb95a94f798cdad4cbf550"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5712-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          200,
+          21.5
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          16.299999237060547
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5713-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__border_box_rtl.xml",
+        "sha256": "3747b01aa15d5c3361d60d96841fb0bc46c7c285fb70593cb519ee9b80fbbb0a"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5713-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          200,
+          21.5
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          16.299999237060547
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5714-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__content_box_ltr.xml",
+        "sha256": "dfb7b07153da5e307de1ff24baa515ab866cdb0ed8f30173060806e6c97d6de2"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5714-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          200,
+          21.7999992
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          16.299999237060547
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5715-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__content_box_rtl.xml",
+        "sha256": "e312f4a859a46241fd505e63df67ec53c7860b37fc040c10c5017614aa3c7d73"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5715-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          200,
+          21.7999992
+        ],
+        [
+          0.0,
+          0.0,
+          200.0,
+          16.299999237060547
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5764-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__border_box_ltr.xml",
+        "sha256": "83f526ac001824943badbd9c6d3fa99c1cbee683ad67e2aa512d4c0550c21643"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5764-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          70,
+          50
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5765-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__border_box_rtl.xml",
+        "sha256": "21466ad708ef3a898183b1abe663501c9eb90e81a71b4be4d1841cb57bf2ea93"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5765-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          70,
+          50
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5766-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__content_box_ltr.xml",
+        "sha256": "a365af0d57cf10e669b455f91b421473c4353765c8aa1a5c113204ffd634b07b"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5766-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          70,
+          50
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5767-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__content_box_rtl.xml",
+        "sha256": "fe595e5d7aaf825f55a81b24bf7352482494421e5dc2eb94f506d9c7bc54478c"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5767-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          70,
+          50
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5864-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__border_box_ltr.xml",
+        "sha256": "31ff1ddfcd17c0c9eaa6983ec23b1bd373473a48a9950d04efe5bf890d5b113e"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5864-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5865-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__border_box_rtl.xml",
+        "sha256": "e41f7a0023ec569fbc15a9d397e2de6ed577d366a52d513f8109e03cd375abd8"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5865-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5866-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__content_box_ltr.xml",
+        "sha256": "8d75d0e3216f4f6e6856fc0c264e8f57ab2602d1c96fe55411f2142fe370214f"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5866-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5867-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__content_box_rtl.xml",
+        "sha256": "1f5bb19fa9cab89f5810dc729f84356eaa237eed00e9a95446cc5fc4385837fb"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5867-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5868-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__border_box_ltr.xml",
+        "sha256": "aa600b632e42265e802024d8192c4dc984fbcd5d1b6987158d2f075220d22a88"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5868-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5869-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__border_box_rtl.xml",
+        "sha256": "45081b9afdadbf6c0db8ba60113149081e0d7d719885ad51b8c2b2d4cf10340f"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5869-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5870-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__content_box_ltr.xml",
+        "sha256": "737b946d8a734d36c2faa616e18481e74c0f923e362944c7c88cdcdc324559cd"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5870-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5871-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__content_box_rtl.xml",
+        "sha256": "6d935bad027fbf4e7549398fcff4e4b443ddd3c5f8a4f14a446a27ccc357f124"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5871-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5872-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__border_box_ltr.xml",
+        "sha256": "7044eb31367222790fa358a9d42ef3ea8a89e7fef84e74b0798fa4c8ee8fd34f"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5872-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5873-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__border_box_rtl.xml",
+        "sha256": "fac174e72725980c951ff871b3ce184d2646c8c951ebe36427b692a47acacf6b"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5873-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5874-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__content_box_ltr.xml",
+        "sha256": "1ed655598c047fd893b678109343a79ed8ea2821e03c3129879bd35b2e3744ed"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5874-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5875-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__content_box_rtl.xml",
+        "sha256": "e9b79f419f33d77a5344ea0dce9d8e55e42efa1e27ff2e8a2fd84e3f4d0bd2ed"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5875-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5876-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__border_box_ltr.xml",
+        "sha256": "a2510a025ca1bee93e1ccd145f5794e59ea3da1332fe938ed8f0dfb035e82754"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5876-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5877-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__border_box_rtl.xml",
+        "sha256": "be60d411ef1410e2fb77d66666697c688fab3db6436c02feab438bf0960fa1b7"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5877-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5878-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__content_box_ltr.xml",
+        "sha256": "14828377114ddac8248ae24c3013bb8da9572adce6cbd926673116404e6958cc"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5878-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      ]
+    },
+    {
+      "name": "upstream-5879-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__content_box_rtl.xml",
+        "sha256": "82d336322ba854827b6f31a852f56d9346ba80a2956479090df08e50a90731dd"
+      },
+      "kind": "layout_difference",
+      "difference": [
+        "upstream-5879-grid",
+        1,
+        "rect",
+        [
+          0,
+          0,
+          80,
+          40
+        ],
+        [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      ]
+    }
+  ],
+  "xml_geometry_differences": [
+    {
+      "name": "upstream-0253-block",
+      "source": {
+        "path": "block/block_align_baseline_child_margin_percent__border_box_rtl.xml",
+        "sha256": "a78a9a2777adc48e97433ee995a0e278dab2cd22dc5aa7b3b96cd64c82b223ff"
+      },
+      "native": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      },
+      "taffy": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "upstream-0255-block",
+      "source": {
+        "path": "block/block_align_baseline_child_margin_percent__content_box_rtl.xml",
+        "sha256": "4699b0ee7d295a408745259dbc94915af31c3323b5f3cc23f403690c51d6c667"
+      },
+      "native": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      },
+      "taffy": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "upstream-1357-flex",
+      "source": {
+        "path": "flex/align_baseline_child_margin_percent__border_box_rtl.xml",
+        "sha256": "53d0f8df2cdac842aa9e48468288c1b6d7aa2813f7ba0c5fe2b7fa2e51dc9348"
+      },
+      "native": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      },
+      "taffy": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "upstream-1359-flex",
+      "source": {
+        "path": "flex/align_baseline_child_margin_percent__content_box_rtl.xml",
+        "sha256": "4c05cec002a0ec68158219350252b4e6b93400d463ced15fdb3a0327681ebe57"
+      },
+      "native": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      },
+      "taffy": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          51,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "upstream-4053-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_child_margin_percent__border_box_rtl.xml",
+        "sha256": "c912bc538490ef3bedf7aa8faaf33dd467c78686820c6e676d4b65c3f2f1a9df"
+      },
+      "native": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          50,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      },
+      "taffy": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          50,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "upstream-4055-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_child_margin_percent__content_box_rtl.xml",
+        "sha256": "40b7bac80a453ec09b72f05b12510c16496e275c7b9b32e56f069507fe2d1efe"
+      },
+      "native": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          50,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      },
+      "taffy": {
+        "node": 4,
+        "field": "rect",
+        "actual": [
+          -1,
+          1,
+          50,
+          10
+        ],
+        "expected": [
+          0.0,
+          1.0,
+          50.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "upstream-4088-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__border_box_ltr.xml",
+        "sha256": "434cf501b3c63fae3e4b3823c297d51122e53945cd0ec60fcda5853cae130675"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          0,
+          90,
+          50,
+          20
+        ],
+        "expected": [
+          0.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4089-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__border_box_rtl.xml",
+        "sha256": "8cce39221d78d12343b7d6f96aea1bda55415626dde3b859845e91186444acda"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          50,
+          90,
+          50,
+          20
+        ],
+        "expected": [
+          50.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4090-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__content_box_ltr.xml",
+        "sha256": "0d26f0ef60c66afa1bbb1646c3f87e506795410ab376257b6ff42354341a3cf9"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          0,
+          90,
+          50,
+          20
+        ],
+        "expected": [
+          0.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4091-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline__content_box_rtl.xml",
+        "sha256": "4ac61fc36894fc19907235ec1c6be0751ab14bce8dd5f92c28bb9f6c9e23d6ea"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          50,
+          90,
+          50,
+          20
+        ],
+        "expected": [
+          50.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4092-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__border_box_ltr.xml",
+        "sha256": "079a532661dac115adb75773a5d12119a48b3688f5e1a166d6e836b3090de9d0"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          0,
+          60,
+          40,
+          70
+        ],
+        "expected": [
+          0.0,
+          90.0,
+          40.0,
+          70.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4093-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__border_box_rtl.xml",
+        "sha256": "ac722fb3da2687c0e777f531ca829fb0a568a8d3adc180f9f0ce3592faca9dfe"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          60,
+          60,
+          40,
+          70
+        ],
+        "expected": [
+          60.0,
+          90.0,
+          40.0,
+          70.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4094-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__content_box_ltr.xml",
+        "sha256": "fa3be15c07740e6959a4341d01e2e3b701e911cceaca40dd9f199dd159b9da5b"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          0,
+          60,
+          40,
+          70
+        ],
+        "expected": [
+          0.0,
+          90.0,
+          40.0,
+          70.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4095-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_column__content_box_rtl.xml",
+        "sha256": "50e14bae55b83c529b8ab8d8a2d210ab8ea68cd6d36519b8ea246daa8d3f1ade"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          60,
+          60,
+          40,
+          70
+        ],
+        "expected": [
+          60.0,
+          90.0,
+          40.0,
+          70.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4096-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__border_box_ltr.xml",
+        "sha256": "0fd3152c10c28236b1a71649630db57bf70cff4ff41ec133411b38e9994325da"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          0,
+          75,
+          50,
+          20
+        ],
+        "expected": [
+          0.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4097-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__border_box_rtl.xml",
+        "sha256": "98d5242b43b9b16b851698ffca316f506bc462773551c08d97800b0305a188d7"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          50,
+          75,
+          50,
+          20
+        ],
+        "expected": [
+          50.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4098-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__content_box_ltr.xml",
+        "sha256": "aa939cc1fe90fdd276cdda63fbb22ff18806bcaf5e33a75a4965529e786dbdd7"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          0,
+          75,
+          50,
+          20
+        ],
+        "expected": [
+          0.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-4099-grid",
+      "source": {
+        "path": "grid/grid_align_items_baseline_multiline_row_and_column__content_box_rtl.xml",
+        "sha256": "f77cf6cbd12df74836614f56a58ec365859da55c13aa0db9f6c60fc1c13f8a1b"
+      },
+      "native": {
+        "node": 5,
+        "field": "rect",
+        "actual": [
+          50,
+          75,
+          50,
+          20
+        ],
+        "expected": [
+          50.0,
+          100.0,
+          50.0,
+          20.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5400-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__border_box_ltr.xml",
+        "sha256": "347c7379cc5e11f79231a2b0aba4072e11688a1fa311cd0e8316840dc1ab2982"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5401-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__border_box_rtl.xml",
+        "sha256": "bcce64b2e2109d8b6e0c1470ce050eaca68b1b7f4dd54900504630707ca3460f"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5402-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__content_box_ltr.xml",
+        "sha256": "ea0083e639e46d48a780366b4a1577a898b689386bc99fabd9e0b2f323e7512d"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5403-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_fixed_10px__content_box_rtl.xml",
+        "sha256": "1a350762ae4b8103f3b20f20ce4155b06fc469ec4e74cf1eb760f3b56211e3e0"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          10.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5416-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__border_box_ltr.xml",
+        "sha256": "befb8d1592fd3cf40c28fcc76a4f104e4f1729586db09cb6da1ec98ae800e557"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5417-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__border_box_rtl.xml",
+        "sha256": "bc0fdf78e5dc50f56f2a9cbb04c647f10d75838a6d5ef219b8b18857fa4ebf43"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          20,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          32.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5418-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__content_box_ltr.xml",
+        "sha256": "5f05b87287a3f28e8cddd630b4bf44dc60a03924601d3a1f626c921eed14a7d1"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5419-grid",
+      "source": {
+        "path": "grid/grid_minmax_auto_percent_indefinite__content_box_rtl.xml",
+        "sha256": "1243b45b0132de03c742dad8dfcadc966b7f2eccc3ba94adb6d2194b3e791f3e"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          20,
+          0,
+          20,
+          40
+        ],
+        "expected": [
+          32.0,
+          0.0,
+          8.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5688-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__border_box_ltr.xml",
+        "sha256": "ee2c808facd65f7ca0e22d237ad17eacc38010c995a10ac106ccb6a89d3d99ef"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5689-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__border_box_rtl.xml",
+        "sha256": "011ce7d04faab32051043f99804d916afcf8080426daf6f5c3569074e282b548"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          100.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5690-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__content_box_ltr.xml",
+        "sha256": "11342f977770b3dc50bbb5ad25df9c6efdab5e5feda7619644a1c5a89aa77ea9"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5691-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_auto__content_box_rtl.xml",
+        "sha256": "1e3823c7002957a1bd6180661369b3c061c8219781dc89483ef224ce877eb353"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          100.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5692-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__border_box_ltr.xml",
+        "sha256": "9b905a8f3cdb8163218167f37c58717a505165471a0d3f25712a0c57765c2528"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5693-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__border_box_rtl.xml",
+        "sha256": "f02d527ed48b3ff311e3f5adfd70ffa4b779eab9dd235727e36f35dbf129ffab"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          100.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5694-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__content_box_ltr.xml",
+        "sha256": "b4a12eeefdcfa318d00432f7023665d9daf16578c27871b6513913d2b41f8072"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5695-grid",
+      "source": {
+        "path": "grid/grid_percent_items_100_percent_2_col_fr__content_box_rtl.xml",
+        "sha256": "dce78d46b61aad1b5234399713d709af994402c41ffb42640d198c1d6b131d79"
+      },
+      "native": {
+        "node": 2,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          200,
+          50
+        ],
+        "expected": [
+          100.0,
+          0.0,
+          100.0,
+          50.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5712-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__border_box_ltr.xml",
+        "sha256": "417eee9a8c3b152d2bb0c77a32c4e5dc3cf93a1915cb95a94f798cdad4cbf550"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0.0,
+          0.0,
+          200.0,
+          21.5
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          200.0,
+          16.28125
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5713-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__border_box_rtl.xml",
+        "sha256": "3747b01aa15d5c3361d60d96841fb0bc46c7c285fb70593cb519ee9b80fbbb0a"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0.0,
+          0.0,
+          200.0,
+          21.5
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          200.0,
+          16.28125
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5714-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__content_box_ltr.xml",
+        "sha256": "dfb7b07153da5e307de1ff24baa515ab866cdb0ed8f30173060806e6c97d6de2"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0.0,
+          0.0,
+          200.0,
+          21.799999237060547
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          200.0,
+          16.28125
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5715-grid",
+      "source": {
+        "path": "grid/grid_percent_items_width_and_margin_2_col__content_box_rtl.xml",
+        "sha256": "e312f4a859a46241fd505e63df67ec53c7860b37fc040c10c5017614aa3c7d73"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0.0,
+          0.0,
+          200.0,
+          21.799999237060547
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          200.0,
+          16.28125
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5764-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__border_box_ltr.xml",
+        "sha256": "83f526ac001824943badbd9c6d3fa99c1cbee683ad67e2aa512d4c0550c21643"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          70,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5765-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__border_box_rtl.xml",
+        "sha256": "21466ad708ef3a898183b1abe663501c9eb90e81a71b4be4d1841cb57bf2ea93"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          70,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5766-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__content_box_ltr.xml",
+        "sha256": "a365af0d57cf10e669b455f91b421473c4353765c8aa1a5c113204ffd634b07b"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          70,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5767-grid",
+      "source": {
+        "path": "grid/grid_relayout_vertical_text__content_box_rtl.xml",
+        "sha256": "fe595e5d7aaf825f55a81b24bf7352482494421e5dc2eb94f506d9c7bc54478c"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          70,
+          50
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          60.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5864-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__border_box_ltr.xml",
+        "sha256": "31ff1ddfcd17c0c9eaa6983ec23b1bd373473a48a9950d04efe5bf890d5b113e"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5865-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__border_box_rtl.xml",
+        "sha256": "e41f7a0023ec569fbc15a9d397e2de6ed577d366a52d513f8109e03cd375abd8"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5866-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__content_box_ltr.xml",
+        "sha256": "8d75d0e3216f4f6e6856fc0c264e8f57ab2602d1c96fe55411f2142fe370214f"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5867-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite__content_box_rtl.xml",
+        "sha256": "1f5bb19fa9cab89f5810dc729f84356eaa237eed00e9a95446cc5fc4385837fb"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          40.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5868-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__border_box_ltr.xml",
+        "sha256": "aa600b632e42265e802024d8192c4dc984fbcd5d1b6987158d2f075220d22a88"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5869-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__border_box_rtl.xml",
+        "sha256": "45081b9afdadbf6c0db8ba60113149081e0d7d719885ad51b8c2b2d4cf10340f"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5870-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__content_box_ltr.xml",
+        "sha256": "737b946d8a734d36c2faa616e18481e74c0f923e362944c7c88cdcdc324559cd"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5871-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_10px_indefinite_hidden__content_box_rtl.xml",
+        "sha256": "6d935bad027fbf4e7549398fcff4e4b443ddd3c5f8a4f14a446a27ccc357f124"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5872-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__border_box_ltr.xml",
+        "sha256": "7044eb31367222790fa358a9d42ef3ea8a89e7fef84e74b0798fa4c8ee8fd34f"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5873-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__border_box_rtl.xml",
+        "sha256": "fac174e72725980c951ff871b3ce184d2646c8c951ebe36427b692a47acacf6b"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5874-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__content_box_ltr.xml",
+        "sha256": "1ed655598c047fd893b678109343a79ed8ea2821e03c3129879bd35b2e3744ed"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5875-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite__content_box_rtl.xml",
+        "sha256": "e9b79f419f33d77a5344ea0dce9d8e55e42efa1e27ff2e8a2fd84e3f4d0bd2ed"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          50.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5876-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__border_box_ltr.xml",
+        "sha256": "a2510a025ca1bee93e1ccd145f5794e59ea3da1332fe938ed8f0dfb035e82754"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5877-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__border_box_rtl.xml",
+        "sha256": "be60d411ef1410e2fb77d66666697c688fab3db6436c02feab438bf0960fa1b7"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5878-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__content_box_ltr.xml",
+        "sha256": "14828377114ddac8248ae24c3013bb8da9572adce6cbd926673116404e6958cc"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    },
+    {
+      "name": "upstream-5879-grid",
+      "source": {
+        "path": "grid/grid_span_2_min_content_fit_content_30px_indefinite_hidden__content_box_rtl.xml",
+        "sha256": "82d336322ba854827b6f31a852f56d9346ba80a2956479090df08e50a90731dd"
+      },
+      "native": {
+        "node": 1,
+        "field": "rect",
+        "actual": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "expected": [
+          0.0,
+          0.0,
+          70.0,
+          40.0
+        ]
+      },
+      "taffy": null
+    }
+  ]
+}

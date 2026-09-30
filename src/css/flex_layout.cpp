@@ -1,6 +1,7 @@
-#include "layout_engine.hpp"
+#include "flex_internal.hpp"
 #include "balanced_lines.hpp"
 #include "item_alignment.hpp"
+#include "sizing_keywords.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -10,19 +11,6 @@
 
 namespace axisly::css::detail {
 namespace {
-bool is_row(FlexDirection direction) {
-    return direction == FlexDirection::Row || direction == FlexDirection::RowReverse;
-}
-
-Unit axis(Size size, bool row, bool main) {
-    return (row == main) ? size.width : size.height;
-}
-
-Unit axis(const Insets& value, bool row, bool main, bool start) {
-    if (row == main) return start ? value.left : value.right;
-    return start ? value.top : value.bottom;
-}
-
 void set_axis_margin(Insets& margin, bool row, bool main,
                      bool logical_start, bool reverse, Unit value) {
     const bool physical_start = logical_start != reverse;
@@ -33,34 +21,6 @@ void set_axis_margin(Insets& margin, bool row, bool main,
     }
 }
 
-std::optional<Unit> axis(const ResolvedDimensions& size, bool row, bool main) {
-    return row == main ? size.width : size.height;
-}
-
-struct FlexItem {
-    NodeId id;
-    std::size_t source_index{};
-    ResolvedBox box;
-    Insets margin;
-    // Flex base size includes padding and border; shrink weights use its content size.
-    Unit base{};
-    Unit inner_base{};
-    Unit main_decoration{};
-    Unit content_main{};
-    Unit target{};
-    Unit minimum{};
-    std::optional<Unit> maximum;
-    Unit hypothetical_minimum{};
-    std::optional<Unit> hypothetical_maximum;
-    Unit grow{}, shrink{};
-    Unit cross{};
-    bool auto_main_start{}, auto_main_end{};
-    bool auto_cross_start{}, auto_cross_end{};
-    bool content_based_cross_width{};
-    bool main_size_is_definite{}, cross_size_is_definite{};
-    bool scroll_container{};
-    Constraints final_constraints;
-};
 
 struct FlexLine {
     std::vector<std::size_t> items;
@@ -84,8 +44,8 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         for (const auto& item : items) {
             const Unit hypothetical = hypothetical_main_size(item);
             outer_sizes.push_back(checked(static_cast<double>(hypothetical)
-                + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false), item.id));
+                + flex_axis(item.margin, row, true, true)
+                + flex_axis(item.margin, row, true, false), item.id));
         }
         const auto counts = balanced_line_counts(outer_sizes,
             available.value_or(std::numeric_limits<Unit>::infinity()),
@@ -102,8 +62,8 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
         for (std::size_t i = 0; i < items.size(); ++i) {
             const auto& item = items[i];
             const auto outer = static_cast<double>(hypothetical_main_size(item))
-                + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false);
+                + flex_axis(item.margin, row, true, true)
+                + flex_axis(item.margin, row, true, false);
             if (wrap != FlexWrap::NoWrap && available
                 && !lines.back().items.empty()
                 && estimated_main + gap + outer > *available) {
@@ -119,7 +79,7 @@ std::vector<FlexLine> collect_flex_lines(const std::vector<FlexItem>& items,
 }
 
 Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId node) {
-    // Taffy resolves Flex gaps against zero while the container axis is
+    // Taffy resolves Flex gaps against zero while the container flex_axis is
     // indefinite. This preserves a calc expression's fixed-length term.
     const auto numeric = value.resolve_numeric(basis.value_or(Unit{0}));
     if (!numeric) return 0;
@@ -127,27 +87,6 @@ Unit resolved_gap(const Length& value, std::optional<Unit> basis, NodeId node) {
     return *numeric;
 }
 
-enum class CrossSpaceStage { FlexBase, Hypothetical };
-
-AvailableSpace cross_space_for_item(AvailableSpace available,
-                                   std::optional<Unit> minimum,
-                                   std::optional<Unit> maximum,
-                                   Unit outer_margin, CrossSpaceStage stage,
-                                   NodeId id) {
-    if (minimum) *minimum = checked(static_cast<double>(*minimum) + outer_margin, id);
-    if (maximum) *maximum = checked(static_cast<double>(*maximum) + outer_margin, id);
-    if (available.kind == AvailableKind::Definite) {
-        return AvailableSpace::definite(constrain_axis(available.value, minimum, maximum));
-    }
-    if (stage == CrossSpaceStage::Hypothetical) return available;
-    if (available.kind == AvailableKind::MinContent && minimum) {
-        return AvailableSpace::definite(*minimum);
-    }
-    if (available.kind == AvailableKind::MaxContent && maximum) {
-        return AvailableSpace::definite(*maximum);
-    }
-    return available;
-}
 
 struct Distribution {
     Unit offset{}, extra_gap{};
@@ -233,10 +172,10 @@ Unit hypothetical_main_size(const FlexItem& item) {
     return checked(std::max(value, static_cast<double>(item.hypothetical_minimum)), item.id);
 }
 
-Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
-    const double margin = static_cast<double>(axis(item.margin, row, true, true))
-        + axis(item.margin, row, true, false);
-    const auto preferred = axis(item.box.preferred, row, true);
+Unit intrinsic_content_contribution(const FlexItem& item, bool row) {
+    const double margin = static_cast<double>(flex_axis(item.margin, row, true, true))
+        + flex_axis(item.margin, row, true, false);
+    const auto preferred = flex_axis(item.box.preferred, row, true);
     const double clamping_basis = preferred
         ? std::max<double>(item.base, *preferred) : item.base;
     const double minimum = std::max<double>(item.minimum,
@@ -252,12 +191,21 @@ Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
     double content = preferred.value_or(item.content_main);
     content += margin;
     if (!row) content = std::max(content, static_cast<double>(item.base));
-    if (const auto minimum_style = axis(item.box.specified_minimum, row, true)) {
+    if (const auto minimum_style = flex_axis(item.box.specified_minimum, row, true)) {
         content = std::max(content, static_cast<double>(*minimum_style));
     }
     if (item.maximum) content = std::min(content,
         static_cast<double>(*item.maximum));
     return checked(content, item.id);
+}
+
+Unit intrinsic_item_main_size(const FlexItem& item, bool row) {
+    const Unit content = intrinsic_content_contribution(item, row);
+    // Intrinsic flex fractions cannot reduce a base whose scaled shrink
+    // weight is zero. This also handles a zero-sized item with negative
+    // margins without dividing by zero or creating an invalid target size.
+    if (content < item.base && item.inner_base == 0) return item.base;
+    return content;
 }
 
 void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
@@ -267,8 +215,8 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
     double hypothetical_occupied = gutters;
     for (const auto index : line.items) {
         const auto& item = items[index];
-        const double margin = static_cast<double>(axis(item.margin, row, true, true))
-            + axis(item.margin, row, true, false);
+        const double margin = static_cast<double>(flex_axis(item.margin, row, true, true))
+            + flex_axis(item.margin, row, true, false);
         hypothetical_occupied += hypothetical_main_size(item) + margin;
     }
     const bool growing = hypothetical_occupied < main_size;
@@ -290,8 +238,8 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
     for (std::size_t slot = 0; slot < line.items.size(); ++slot) {
         const auto& item = items[line.items[slot]];
         initial_occupied += (frozen[slot] ? item.target : item.base)
-            + axis(item.margin, row, true, true)
-            + axis(item.margin, row, true, false);
+            + flex_axis(item.margin, row, true, true)
+            + flex_axis(item.margin, row, true, false);
     }
     const double initial_free = static_cast<double>(main_size) - initial_occupied;
     for (std::size_t pass = 0; pass < line.items.size(); ++pass) {
@@ -300,8 +248,8 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
             const auto index = line.items[slot];
             const auto& item = items[index];
             occupied += (frozen[slot] ? item.target : item.base)
-                + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false);
+                + flex_axis(item.margin, row, true, true)
+                + flex_axis(item.margin, row, true, false);
             if (!frozen[slot]) {
                 raw_factor_sum += growing ? item.grow : item.shrink;
                 scaled_factor_sum += growing ? item.grow
@@ -350,7 +298,7 @@ void resolve_flexible_lengths(FlexLine& line, std::vector<FlexItem>& items,
 
 Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                       const ResolvedBox& box, std::size_t depth) {
-    const bool row = is_row(node.style.flex_direction);
+    const bool row = flex_is_row(node.style.flex_direction);
     const bool reverse_direction = node.style.flex_direction == FlexDirection::RowReverse
         || node.style.flex_direction == FlexDirection::ColumnReverse;
     const bool main_reverse = row
@@ -391,15 +339,15 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     const bool main_size_is_definite = known_main
         ? (row ? constraints.known_width_is_definite
                : constraints.known_height_is_definite)
-        : axis(box.preferred, row, true).has_value();
+        : flex_axis(box.preferred, row, true).has_value();
     const auto outer_main_space = row ? constraints.available.width
         : constraints.available.height;
     const auto main_query = outer_main_space.kind;
     const bool ignore_main_bounds = row ? constraints.ignore_min_max_width
         : constraints.ignore_min_max_height;
-    const auto line_maximum = axis(ignore_main_bounds ? box.specified_maximum
+    const auto line_maximum = flex_axis(ignore_main_bounds ? box.specified_maximum
         : box.maximum, row, true);
-    const auto line_minimum = axis(ignore_main_bounds ? box.specified_minimum
+    const auto line_minimum = flex_axis(ignore_main_bounds ? box.specified_minimum
         : box.minimum, row, true);
     // Line collection uses the parent's remaining space even when the
     // container will derive its own main size from those lines.
@@ -443,211 +391,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         if (child.style.position == Position::Absolute) {
             continue;
         }
-        ResolvedBox child_box;
-        try { child_box = resolve_layout_box(child, inner_width, inner_height); }
-        catch (const std::invalid_argument& error) {
-            throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
-        }
-        // Flex resolves raw min/max styles to border-box values first. Its
-        // hypothetical-size ratio transfer then uses those border-box axes,
-        // while preferred style sizes transfer before content-box decoration.
-        auto item_ratio_box = child_box;
-        item_ratio_box.box_sizing = BoxSizing::BorderBox;
-        child_box.minimum = transfer_aspect_ratio(
-            child_box.specified_minimum, item_ratio_box);
-        child_box.maximum = transfer_aspect_ratio(
-            child_box.specified_maximum, item_ratio_box);
-        const auto cross_alignment = child.style.align_self.value_or(
-            node.style.align_items.value_or(ItemAlignment{}));
-        const auto cross_preferred = axis(child_box.preferred, row, false);
-        const auto main_preferred = axis(child_box.preferred, row, true);
-        const auto& cross_size_style = row
-            ? child.style.box.size.height : child.style.box.size.width;
-        const bool cross_auto_margin = (row
-            ? child_box.margin.top.kind == EdgeKind::Auto
-                || child_box.margin.bottom.kind == EdgeKind::Auto
-            : child_box.margin.left.kind == EdgeKind::Auto
-                || child_box.margin.right.kind == EdgeKind::Auto);
-        const bool content_based_cross_width = !row
-            && (child.style.display == Display::Block
-                || child.style.display == Display::FlowRoot)
-            && cross_size_style.kind() == LengthKind::Auto
-            && !cross_preferred
-            && (cross_alignment.position != ItemPosition::Stretch
-                || cross_auto_margin);
-        const auto main_decoration = row
-            ? child_box.horizontal_padding_border() : child_box.vertical_padding_border();
-        if (!main_decoration) {
-            throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, id,
-                "Flex item decoration requires a definite containing inline size");
-        }
-        const auto margin = edges(child_box.margin, id);
-        const Unit cross_outer_margin = checked(static_cast<double>(
-            axis(margin, row, false, true))
-            + axis(margin, row, false, false), id);
-        Constraints child_constraints;
-        child_constraints.content_based_width = content_based_cross_width;
-        child_constraints.containing_width = inner_width;
-        child_constraints.containing_height = inner_height;
-        child_constraints.available.width = inner_width
-            ? AvailableSpace::definite(*inner_width) : constraints.available.width;
-        child_constraints.available.height = inner_height
-            ? AvailableSpace::definite(*inner_height) : constraints.available.height;
-        const auto base_space = main_query == AvailableKind::MinContent
-            ? AvailableSpace::min_content() : AvailableSpace::max_content();
-        if (row) child_constraints.available.width = base_space;
-        else child_constraints.available.height = base_space;
-        auto& child_cross_space = row ? child_constraints.available.height
-            : child_constraints.available.width;
-        child_cross_space = cross_space_for_item(child_cross_space,
-            axis(child_box.minimum, row, false),
-            axis(child_box.maximum, row, false), cross_outer_margin,
-            CrossSpaceStage::FlexBase, id);
-        // A definite preferred main size is the flex basis before min/max
-        // clamping. For an auto-sized subtree, its own layout algorithm
-        // observes its bounds while answering the content-size query.
-        if (main_preferred) {
-            if (row) child_constraints.ignore_min_max_width = true;
-            else child_constraints.ignore_min_max_height = true;
-        }
-        const auto base_layout = layout_size(id, child_constraints, depth + 1);
-        Unit basis = axis(base_layout.size, row, true);
-        const auto flex_basis = child.style.flex_basis.kind();
-        bool basis_is_definite = flex_basis == LengthKind::Auto
-            && main_preferred.has_value();
-        if (flex_basis == LengthKind::Length || flex_basis == LengthKind::Percent
-            || flex_basis == LengthKind::Calc) {
-            const auto resolved = child.style.flex_basis.resolve_numeric(main_available);
-            if (resolved) {
-                basis_is_definite = true;
-                basis = child.style.box.box_sizing == BoxSizing::ContentBox
-                    ? checked(static_cast<double>(std::max(*resolved, Unit{0})) + *main_decoration, id)
-                    : std::max(*resolved, *main_decoration);
-            }
-        } else if (flex_basis != LengthKind::Auto) {
-            const auto probe = [&](AvailableSpace main_space) {
-                auto query = child_constraints;
-                if (row) {
-                    query.ignore_preferred_width = true;
-                    query.available.width = main_space;
-                } else {
-                    query.ignore_preferred_height = true;
-                    query.available.height = main_space;
-                }
-                return axis(layout_size(id, query, depth + 1).size, row, true);
-            };
-            if (flex_basis == LengthKind::Stretch && main_available) {
-                basis_is_definite = true;
-                basis = std::max(Unit{0}, checked(static_cast<double>(*main_available)
-                    - axis(margin, row, true, true)
-                    - axis(margin, row, true, false), id));
-            } else if (flex_basis == LengthKind::MinContent) {
-                basis = probe(AvailableSpace::min_content());
-            } else if (flex_basis == LengthKind::Content
-                || flex_basis == LengthKind::MaxContent
-                || flex_basis == LengthKind::Stretch) {
-                basis = probe(AvailableSpace::max_content());
-            } else {
-                const Unit minimum = probe(AvailableSpace::min_content());
-                const Unit maximum = probe(AvailableSpace::max_content());
-                std::optional<Unit> limit = flex_basis == LengthKind::FitContent
-                    ? main_available
-                    : child.style.flex_basis.resolve_fit_content_limit(main_available);
-                basis = limit ? std::max(minimum, std::min(maximum, *limit)) : maximum;
-            }
-        }
-        if (child_box.aspect_ratio && cross_available
-            && !main_preferred && !cross_preferred
-            && cross_size_style.kind() == LengthKind::Auto
-            && (flex_basis == LengthKind::Auto || flex_basis == LengthKind::Content)
-            && node.style.flex_wrap == FlexWrap::NoWrap
-            && cross_alignment.position == ItemPosition::Stretch
-            && !cross_auto_margin) {
-            const Unit cross_margin = checked(static_cast<double>(
-                axis(margin, row, false, true))
-                + axis(margin, row, false, false), id);
-            const auto transferred_max = transfer_aspect_ratio(
-                child_box.maximum, child_box);
-            const auto cross_limit = [&](std::optional<Unit> limit) -> std::optional<Unit> {
-                return limit ? std::optional<Unit>(checked(
-                    static_cast<double>(*limit) + cross_margin, id)) : std::nullopt;
-            };
-            const Unit constrained_cross_space = constrain_axis(*cross_available,
-                cross_limit(axis(child_box.minimum, row, false)),
-                cross_limit(axis(transferred_max, row, false)));
-            const Unit stretched_cross = std::max(Unit{0}, checked(
-                static_cast<double>(constrained_cross_space) - cross_margin, id));
-            const auto transferred = transfer_aspect_ratio(row
-                ? ResolvedDimensions{std::nullopt, stretched_cross}
-                : ResolvedDimensions{stretched_cross, std::nullopt}, item_ratio_box);
-            basis = axis(transferred, row, true).value_or(basis);
-            basis_is_definite = true;
-        }
-        auto minimum = axis(child_box.specified_minimum, row, true);
-        if (!minimum) {
-            const auto overflow = row ? child.style.overflow_x : child.style.overflow_y;
-            if (overflow == Overflow::Hidden || overflow == Overflow::Scroll) {
-                minimum = Unit{0};
-            } else {
-                auto min_constraints = child_constraints;
-                min_constraints.ignore_min_max_width = false;
-                min_constraints.ignore_min_max_height = false;
-                if (row) {
-                    min_constraints.available.width = AvailableSpace::min_content();
-                    min_constraints.ignore_preferred_width = true;
-                } else {
-                    min_constraints.available.height = AvailableSpace::min_content();
-                    min_constraints.ignore_preferred_height = true;
-                }
-                const auto intrinsic = layout_size(id, min_constraints, depth + 1);
-                minimum = axis(intrinsic.size, row, true);
-                if (const auto suggested = axis(child_box.preferred, row, true)) {
-                    minimum = std::min(*minimum, *suggested);
-                }
-            }
-        }
-        const auto maximum = axis(child_box.specified_maximum, row, true);
-        const auto& margin_start = row ? child_box.margin.left : child_box.margin.top;
-        const auto& margin_end = row ? child_box.margin.right : child_box.margin.bottom;
-        const auto& cross_start = row ? child_box.margin.top : child_box.margin.left;
-        const auto& cross_end = row ? child_box.margin.bottom : child_box.margin.right;
-        const bool scroll_container = child.style.overflow_x == Overflow::Hidden
-            || child.style.overflow_x == Overflow::Scroll
-            || child.style.overflow_y == Overflow::Hidden
-            || child.style.overflow_y == Overflow::Scroll;
-        basis = std::max(basis, *main_decoration);
-        FlexItem item{id, source, child_box, margin};
-        item.base = basis;
-        item.inner_base = checked(static_cast<double>(basis) - *main_decoration, id);
-        item.main_decoration = *main_decoration;
-        item.content_main = axis(base_layout.size, row, true);
-        item.target = basis;
-        item.minimum = minimum.value_or(Unit{0});
-        item.maximum = maximum;
-        item.hypothetical_minimum = std::max(item.minimum,
-            axis(child_box.minimum, row, true).value_or(Unit{0}));
-        item.hypothetical_maximum = axis(transfer_aspect_ratio(
-            child_box.maximum, child_box), row, true);
-        item.grow = child.style.flex_grow;
-        item.shrink = child.style.flex_shrink;
-        item.cross = axis(base_layout.size, row, false);
-        item.auto_main_start = (main_reverse ? margin_end : margin_start).kind == EdgeKind::Auto;
-        item.auto_main_end = (main_reverse ? margin_start : margin_end).kind == EdgeKind::Auto;
-        item.auto_cross_start = (cross_reverse ? cross_end : cross_start).kind == EdgeKind::Auto;
-        item.auto_cross_end = (cross_reverse ? cross_start : cross_end).kind == EdgeKind::Auto;
-        item.content_based_cross_width = content_based_cross_width;
-        item.main_size_is_definite = main_size_is_definite || basis_is_definite;
-        const bool cross_available_is_definite = cross_available.has_value()
-            || (row ? constraints.available.height : constraints.available.width).kind
-                == AvailableKind::Definite;
-        const bool stretched_cross = !cross_auto_margin
-            && (cross_size_style.kind() == LengthKind::Stretch
-                || (cross_alignment.position == ItemPosition::Stretch
-                    && cross_size_style.kind() == LengthKind::Auto));
-        item.cross_size_is_definite = cross_preferred.has_value() || stretched_cross
-            || (!row && cross_available_is_definite);
-        item.scroll_container = scroll_container;
-        items.push_back(std::move(item));
+        items.push_back(prepare_flex_item(node, child, constraints,
+            {source, {inner_width, inner_height}, main_query,
+                main_size_is_definite, main_reverse, cross_reverse}, depth));
     }
 
     std::vector<FlexLine> lines;
@@ -675,10 +421,10 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 outer_sizes.push_back(intrinsic_item_main_size(item, row));
             } else {
                 const Unit contribution = std::max(item.base,
-                    axis(item.box.specified_minimum, row, true).value_or(Unit{0}));
+                    flex_axis(item.box.specified_minimum, row, true).value_or(Unit{0}));
                 const double outer = static_cast<double>(contribution)
-                    + axis(item.margin, row, true, true)
-                    + axis(item.margin, row, true, false);
+                    + flex_axis(item.margin, row, true, true)
+                    + flex_axis(item.margin, row, true, false);
                 outer_sizes.push_back(checked(std::max(outer,
                     static_cast<double>(item.main_decoration)), item.id));
             }
@@ -752,27 +498,35 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 ? AvailableSpace::definite(*inner_height) : constraints.available.height;
             auto& final_cross_space = row ? final_constraints.available.height
                 : final_constraints.available.width;
+            final_cross_space = divided_flex_cross_space(node, final_cross_space, cross_available);
             const Unit cross_outer_margin = checked(static_cast<double>(
-                axis(item.margin, row, false, true))
-                + axis(item.margin, row, false, false), item.id);
+                flex_axis(item.margin, row, false, true))
+                + flex_axis(item.margin, row, false, false), item.id);
             const auto cross_maximum = transfer_aspect_ratio(
                 item.box.maximum, item.box);
-            const auto cross_min = axis(item.box.minimum, row, false);
-            const auto cross_max = axis(cross_maximum, row, false);
+            const auto cross_min = flex_axis(item.box.minimum, row, false);
+            const auto cross_max = flex_axis(cross_maximum, row, false);
             final_cross_space = cross_space_for_item(final_cross_space,
                 cross_min, cross_max, cross_outer_margin,
                 CrossSpaceStage::Hypothetical, item.id);
+            const auto& cross_style = row ? get(item.id).style.box.size.height
+                : get(item.id).style.box.size.width;
+            if (const auto keyword = sizing_keyword(cross_style,
+                    cross_available ? std::optional<Unit>{*cross_available - cross_outer_margin} : std::nullopt,
+                    cross_available); keyword && std::holds_alternative<AvailableSpace>(*keyword)) {
+                final_cross_space = std::get<AvailableSpace>(*keyword);
+            }
             if (row) final_constraints.known_width = item.target;
             else final_constraints.known_height = item.target;
             // Resolve the hypothetical cross size using the post-flex main
             // size, then perform the item layout with both axes fixed. A
             // nested container may lay out its own children differently in
             // that final pass even when its border-box size stays the same.
-            const auto cross_preferred = axis(item.box.preferred, row, false);
+            const auto cross_preferred = flex_axis(item.box.preferred, row, false);
             Unit cross_measured = cross_preferred.value_or(Unit{0});
             if (!cross_preferred) {
                 const auto cross_probe = layout_size(item.id, final_constraints, depth + 1);
-                cross_measured = axis(cross_probe.size, row, false);
+                cross_measured = flex_axis(cross_probe.size, row, false);
             }
             const auto decoration = row ? item.box.vertical_padding_border()
                 : item.box.horizontal_padding_border();
@@ -784,17 +538,18 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             fragments[item.source_index] = detail_ == FragmentDetail::Size
                 ? layout_sizing(item.id, final_constraints, depth + 1)
                 : layout(item.id, final_constraints, depth + 1);
-            item.target = axis(fragments[item.source_index].size, row, true);
-            item.cross = axis(fragments[item.source_index].size, row, false);
+            item.target = flex_axis(fragments[item.source_index].size, row, true);
+            item.cross = flex_axis(fragments[item.source_index].size, row, false);
             const Unit outer_cross = checked(static_cast<double>(item.cross)
-                + axis(item.margin, row, false, true)
-                + axis(item.margin, row, false, false), item.id);
+                + flex_axis(item.margin, row, false, true)
+                + flex_axis(item.margin, row, false, false), item.id);
             line.cross = std::max(line.cross, outer_cross);
             if (row) {
                 const auto& child = get(item.id);
                 const auto alignment = child.style.align_self.value_or(
                     node.style.align_items.value_or(ItemAlignment{}));
-                if (alignment.position == ItemPosition::Baseline) {
+                if (alignment.position == ItemPosition::Baseline
+                    && !item.auto_cross_start && !item.auto_cross_end) {
                     const Unit baseline = child_baseline(
                         fragments[item.source_index], child.style).value_or(item.cross);
                     const Unit before = checked(static_cast<double>(item.margin.top)
@@ -859,7 +614,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         cross_free, lines.size());
     const bool wrap_reverse = node.style.flex_wrap == FlexWrap::WrapReverse
         || node.style.flex_wrap == FlexWrap::BalanceReverse;
-    // Start/End follow the cross axis of the writing mode. FlexStart/FlexEnd
+    // Start/End follow the cross flex_axis of the writing mode. FlexStart/FlexEnd
     // follow the line stacking direction, which wrap-reverse flips.
     if (wrap_reverse) {
         if (align_lines.position == ContentPosition::Start) {
@@ -882,8 +637,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         std::size_t auto_margins = 0;
         for (const auto index : line.items) {
             const auto& item = items[index];
-            main_occupied += item.target + axis(item.margin, row, true, true)
-                + axis(item.margin, row, true, false);
+            main_occupied += item.target + flex_axis(item.margin, row, true, true)
+                + flex_axis(item.margin, row, true, false);
             auto_margins += static_cast<std::size_t>(item.auto_main_start)
                 + static_cast<std::size_t>(item.auto_main_end);
         }
@@ -901,11 +656,12 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             const auto& child_style = get(item.id).style;
             const auto alignment = child_style.align_self.value_or(node.style.align_items.value_or(
                 ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
-            const bool cross_auto = (row ? child_style.box.size.height : child_style.box.size.width)
-                .kind() == LengthKind::Auto;
-            Unit cross_margin_start = axis(item.margin, row, false, !cross_reverse);
-            Unit cross_margin_end = axis(item.margin, row, false, cross_reverse);
-            if (alignment.position == ItemPosition::Stretch && cross_auto
+            const auto cross_kind = (row ? child_style.box.size.height : child_style.box.size.width)
+                .kind();
+            Unit cross_margin_start = flex_axis(item.margin, row, false, !cross_reverse);
+            Unit cross_margin_end = flex_axis(item.margin, row, false, cross_reverse);
+            if ((cross_kind == LengthKind::Stretch
+                || (alignment.position == ItemPosition::Stretch && cross_kind == LengthKind::Auto))
                 && !item.auto_cross_start && !item.auto_cross_end) {
                 const Unit stretched_cross = std::max(Unit{0}, checked(
                     static_cast<double>(line.cross) - cross_margin_start - cross_margin_end,
@@ -914,8 +670,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 // Ratio-transferred bounds belong to the earlier hypothetical
                 // cross-size stage, before the line's used cross size exists.
                 const Unit target_cross = constrain_axis(stretched_cross,
-                    axis(item.box.specified_minimum, row, false),
-                    axis(item.box.specified_maximum, row, false));
+                    flex_axis(item.box.specified_minimum, row, false),
+                    flex_axis(item.box.specified_maximum, row, false));
                 Constraints stretched = item.final_constraints;
                 stretched.containing_width = child_percentage_width;
                 stretched.containing_height = child_percentage_height;
@@ -926,7 +682,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 if (row) { stretched.known_width = item.target; stretched.known_height = target_cross; }
                 else { stretched.known_height = item.target; stretched.known_width = target_cross; }
                 fragment = layout(item.id, stretched, depth + 1);
-                item.cross = axis(fragment.size, row, false);
+                item.cross = flex_axis(fragment.size, row, false);
             }
             double cross_remain = static_cast<double>(line.cross) - item.cross
                 - cross_margin_start - cross_margin_end;
@@ -974,9 +730,9 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     }
                 }
             }
-            const Unit main_start_margin = axis(item.margin, row, true, !main_reverse)
+            const Unit main_start_margin = flex_axis(item.margin, row, true, !main_reverse)
                 + (item.auto_main_start ? auto_share : 0);
-            const Unit main_end_margin = axis(item.margin, row, true, main_reverse)
+            const Unit main_end_margin = flex_axis(item.margin, row, true, main_reverse)
                 + (item.auto_main_end ? auto_share : 0);
             auto& resolved_margin = fragment.nodes.front().margin;
             set_axis_margin(resolved_margin, row, true, true, main_reverse,

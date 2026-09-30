@@ -27,6 +27,14 @@ foreach(behavior IN ITEMS row_grow shrink_and_reverse wrap_and_cross_alignment a
     add_test(NAME axisly.css.flex.${behavior} COMMAND axisly_css_flex_tests ${behavior})
 endforeach()
 
+add_executable(axisly_css_flex_sizing_tests css/css_flex_sizing_tests.cpp)
+target_link_libraries(axisly_css_flex_sizing_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_css_flex_sizing_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_flex_sizing_tests)
+foreach(behavior IN ITEMS item_size_stages baseline_auto_margins balanced_measurement_budget)
+    add_test(NAME axisly.css.flex.${behavior} COMMAND axisly_css_flex_sizing_tests ${behavior})
+endforeach()
+
 add_executable(axisly_css_grid_tests css/css_grid_tests.cpp)
 target_link_libraries(axisly_css_grid_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_grid_tests PROPERTIES CXX_EXTENSIONS OFF)

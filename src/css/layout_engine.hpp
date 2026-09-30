@@ -77,6 +77,8 @@ using MeasurementCacheMap =
 
 struct BlockContext;
 struct PositionedItemInput;
+struct FlexItem;
+struct FlexItemSizingInput;
 
 [[nodiscard]] Unit checked(double value, NodeId id);
 [[nodiscard]] Unit edge(const ResolvedEdge& value, NodeId id);
@@ -157,6 +159,9 @@ private:
         AvailableSpace available, std::size_t depth);
     [[nodiscard]] Fragment flex(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box, std::size_t depth);
+    [[nodiscard]] FlexItem prepare_flex_item(const LayoutNode& node,
+        const LayoutNode& child, const Constraints& constraints,
+        const FlexItemSizingInput& input, std::size_t depth);
     [[nodiscard]] Fragment grid(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box, std::size_t depth);
     [[nodiscard]] Fragment hidden(const LayoutNode& node, std::size_t depth);

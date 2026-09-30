@@ -454,6 +454,12 @@ Fragment Engine::layout_size(NodeId id, Constraints constraints,
 std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
     const Constraints& constraints, const ResolvedBox& box,
     std::size_t depth, bool horizontal) {
+    // Grid and Flex content queries use the parent's selected measurement
+    // constraint. Block still interprets its intrinsic sizing style while
+    // choosing a content-based outer inline axis.
+    if (constraints.sizing_mode == SizingMode::Content
+        && node.style.display != Display::Block
+        && node.style.display != Display::FlowRoot) return std::nullopt;
     const auto& value = horizontal ? node.style.box.size.width : node.style.box.size.height;
     const auto kind = value.kind();
     if (kind != LengthKind::MinContent && kind != LengthKind::MaxContent

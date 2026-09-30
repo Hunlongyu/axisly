@@ -202,6 +202,8 @@ void equal(const LayoutResult& first, const LayoutResult& second,
             && a.columns == b.columns && a.rows == b.rows
             && a.row_positions == b.row_positions
             && a.column_positions == b.column_positions
+            && a.row_line_names == b.row_line_names
+            && a.column_line_names == b.column_line_names
             && a.items.size() == b.items.size(),
             "CSS targeted/full tracks differ");
         for (std::size_t item = 0; item < a.items.size(); ++item) {

@@ -589,7 +589,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     if (detail_ == FragmentDetail::Size) {
         Fragment result;
         result.size = constrain_size(Size{*border_width, *border_height}, box);
-        result.nodes.push_back(make_layout(node, result.size, box));
+        result.root = make_layout(node, result.size, box);
         return result;
     }
     if (!cross_available) {
@@ -740,7 +740,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 + (item.auto_main_start ? auto_share : 0);
             const Unit main_end_margin = flex_axis(item.margin, row, true, main_reverse)
                 + (item.auto_main_end ? auto_share : 0);
-            auto& resolved_margin = fragment.nodes.front().margin;
+            auto& resolved_margin = fragment.root_layout().margin;
             set_axis_margin(resolved_margin, row, true, true, main_reverse,
                 main_start_margin);
             set_axis_margin(resolved_margin, row, true, false, main_reverse,
@@ -778,7 +778,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
     candidate = constrain_size(candidate, box);
     Fragment result;
     result.size = candidate;
-    result.nodes.push_back(make_layout(node, candidate, box));
+    result.root = make_layout(node, candidate, box);
     if (!lines.empty()) {
         const auto& first_line = wrap_reverse ? lines.back() : lines.front();
         if (!first_line.items.empty()) {
@@ -803,8 +803,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             const auto& fragment = fragments[item.source_index];
             const Unit baseline = child_baseline(fragment, child_style)
                 .value_or(fragment.size.height);
-            result.nodes.front().first_baseline = checked(
-                static_cast<double>(fragment.nodes.front().border_box.y)
+            result.root_layout().first_baseline = checked(
+                static_cast<double>(fragment.root_layout().border_box.y)
                     + baseline, node.id);
         }
     }
@@ -816,9 +816,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         }
         auto& fragment = fragments[source];
         if (detail_ == FragmentDetail::Full) {
-            result.nodes.insert(result.nodes.end(),
-                std::make_move_iterator(fragment.nodes.begin()),
-                std::make_move_iterator(fragment.nodes.end()));
+            result.append_nodes(std::move(fragment));
             result.grid_tracks.insert(result.grid_tracks.end(),
                 std::make_move_iterator(fragment.grid_tracks.begin()),
                 std::make_move_iterator(fragment.grid_tracks.end()));

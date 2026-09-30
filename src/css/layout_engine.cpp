@@ -129,7 +129,7 @@ NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& res
 
 void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box) {
     fragment.size = size;
-    auto& layout = fragment.nodes.front();
+    auto& layout = fragment.root_layout();
     layout.border_box.width = size.width;
     layout.border_box.height = size.height;
     const auto padding = edges(box.padding, layout.node);
@@ -142,7 +142,7 @@ void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& 
 
 void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box) {
     const auto reported = make_layout(node, fragment.size, box);
-    auto& root = fragment.nodes.front();
+    auto& root = fragment.root_layout();
     root.padding = reported.padding;
     root.border = reported.border;
     root.content_box = reported.content_box;
@@ -151,17 +151,19 @@ void publish_item_box(Fragment& fragment, const LayoutNode& node, const Resolved
 }
 
 void translate(Fragment& fragment, Unit x, Unit y, NodeId node) {
-    for (auto& layout : fragment.nodes) {
+    auto move = [&](NodeLayout& layout) {
         layout.border_box.x = checked(static_cast<double>(layout.border_box.x) + x, node);
         layout.border_box.y = checked(static_cast<double>(layout.border_box.y) + y, node);
         layout.content_box.x = checked(static_cast<double>(layout.content_box.x) + x, node);
         layout.content_box.y = checked(static_cast<double>(layout.content_box.y) + y, node);
-    }
+    };
+    if (fragment.root) move(*fragment.root);
+    for (auto& layout : fragment.descendants) move(layout);
 }
 
 std::optional<Unit> child_baseline(const Fragment& fragment, const Style& style) {
-    if (fragment.nodes.empty()) return std::nullopt;
-    const auto baseline = fragment.nodes.front().first_baseline;
+    if (!fragment.root) return std::nullopt;
+    const auto baseline = fragment.root_layout().first_baseline;
     if (style.overflow_y == Overflow::Hidden || style.overflow_y == Overflow::Scroll) {
         return std::clamp(baseline.value_or(fragment.size.height),
             Unit{0}, fragment.size.height);
@@ -180,7 +182,7 @@ void Engine::stage(NodeId id, const Constraints& constraints, const Fragment& fr
     // deep chain otherwise takes quadratic space.
     constexpr std::size_t maximum_fragment_nodes = 512;
     constexpr std::size_t entries_per_node = 8;
-    const auto count = fragment.nodes.size();
+    const auto count = fragment.node_count();
     const auto existing = updates_.find(id.value);
     std::optional<std::size_t> match_index;
     if (existing != updates_.end()) {
@@ -192,9 +194,9 @@ void Engine::stage(NodeId id, const Constraints& constraints, const Fragment& fr
         }
     }
     const auto old_count = match_index
-        ? existing->second[*match_index].fragment.nodes.size()
+        ? existing->second[*match_index].fragment.node_count()
         : existing != updates_.end() && existing->second.size() == entries_per_node
-            ? existing->second.front().fragment.nodes.size() : 0;
+            ? existing->second.front().fragment.node_count() : 0;
     if (count > maximum_fragment_nodes
         || count > limits_.maximum_cached_layouts - (pending_layouts_ - old_count)) return;
     auto& entries = updates_[id.value];
@@ -290,7 +292,7 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
         }
         auto fragment = layout(root, constraints, 1);
         result.size = fragment.size;
-        result.nodes = std::move(fragment.nodes);
+        result.nodes = std::move(fragment).take_nodes();
         result.grid_tracks = std::move(fragment.grid_tracks);
         if (get(root).style.box.direction == Direction::Rtl
             && available.width.kind == AvailableKind::Definite) {
@@ -382,8 +384,8 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
     if (node.children.empty()) {
         fragment = leaf(node, constraints, box);
         if (suppresses_baseline(node.style.contain)) {
-            fragment.nodes.front().first_baseline.reset();
-            fragment.nodes.front().last_baseline.reset();
+            fragment.root_layout().first_baseline.reset();
+            fragment.root_layout().last_baseline.reset();
         }
         if (node.style.display == Display::Block) {
             const auto margin = edges(box.margin, node.id);
@@ -429,8 +431,8 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
             "CSS display value is invalid");
     }
     if (suppresses_baseline(node.style.contain)) {
-        fragment.nodes.front().first_baseline.reset();
-        fragment.nodes.front().last_baseline.reset();
+        fragment.root_layout().first_baseline.reset();
+        fragment.root_layout().last_baseline.reset();
     }
     if (!block_context) stage(id, constraints, fragment);
     return fragment;
@@ -570,12 +572,11 @@ Fragment Engine::hidden(const LayoutNode& node, std::size_t depth) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, node.id, "CSS layout depth exceeded");
     }
     Fragment fragment;
-    fragment.nodes.push_back({node.id, node.parent});
+    fragment.root = NodeLayout{node.id, node.parent};
     for (const auto child : node.children) {
         auto nested = hidden(get(child), depth + 1);
         if (detail_ == FragmentDetail::Full) {
-            fragment.nodes.insert(fragment.nodes.end(),
-                nested.nodes.begin(), nested.nodes.end());
+            fragment.append_nodes(std::move(nested));
         }
     }
     return fragment;

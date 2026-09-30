@@ -150,7 +150,7 @@ Fragment Engine::positioned_item(const LayoutNode& child,
     constraints.known_height_is_final = true;
     auto fragment = layout(child.id, constraints, depth + 1);
     set_fragment_border_size(fragment, final_size, box);
-    auto& layout = fragment.nodes.front();
+    auto& layout = fragment.root_layout();
     layout.padding = edges(box.padding, child.id);
     layout.border = edges(box.border, child.id);
     return fragment;

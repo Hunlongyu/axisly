@@ -1,6 +1,7 @@
 #pragma once
 
 #include <axisly/css_tree.hpp>
+#include "layout_fragment.hpp"
 
 #include <stdexcept>
 #include <unordered_map>
@@ -47,25 +48,6 @@ struct Constraints {
 
 [[nodiscard]] ResolvedDimensions requested_size(const Constraints& constraints,
     const ResolvedBox& box);
-
-struct MarginStrut {
-    Unit positive{}, negative{};
-    [[nodiscard]] static MarginStrut from(Unit value);
-    [[nodiscard]] MarginStrut merged(MarginStrut other) const;
-    [[nodiscard]] Unit resolve(NodeId node) const;
-};
-
-struct BlockMargins {
-    MarginStrut top, bottom;
-    bool through{};
-};
-
-struct Fragment {
-    Size size{};
-    std::vector<NodeLayout> nodes;
-    std::vector<GridTracks> grid_tracks;
-    std::optional<BlockMargins> block_margins;
-};
 
 struct CacheEntry {
     Constraints constraints;

@@ -130,8 +130,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 / (static_cast<int>(auto_left) + static_cast<int>(auto_right)), child_id);
             if (auto_left) used_left = share;
             if (auto_right) used_right = share;
-            fragment.nodes.front().margin.left = used_left;
-            fragment.nodes.front().margin.right = used_right;
+            fragment.root_layout().margin.left = used_left;
+            fragment.root_layout().margin.right = used_right;
         }
         const bool rtl = node.style.box.direction == Direction::Rtl;
         Unit x = rtl
@@ -262,8 +262,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         // but it does not replace the parent's reported padding and border.
         const auto item_padding = edges(child_box.padding, child_id);
         const auto item_border = edges(child_box.border, child_id);
-        if (nested.nodes.front().padding != item_padding
-            || nested.nodes.front().border != item_border) {
+        if (nested.root_layout().padding != item_padding
+            || nested.root_layout().border != item_border) {
             publish_item_box(nested, child, child_box);
         }
         if (child.style.float_side != FloatSide::None) {
@@ -370,10 +370,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     }
     Fragment result;
     result.size = candidate;
-    result.nodes.push_back(make_layout(node, candidate, box));
-    result.nodes.front().overflow_origin_border = border;
-    result.nodes.front().margin.top = margins.top.resolve(node.id);
-    result.nodes.front().margin.bottom = margins.bottom.resolve(node.id);
+    result.root = make_layout(node, candidate, box);
+    result.root_layout().overflow_origin_border = border;
+    result.root_layout().margin.top = margins.top.resolve(node.id);
+    result.root_layout().margin.bottom = margins.bottom.resolve(node.id);
     result.block_margins = margins;
     if (detail_ == FragmentDetail::Size) return result;
     for (std::size_t source = 0; source < node.children.size(); ++source) {
@@ -383,8 +383,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             || child.style.float_side != FloatSide::None) continue;
         const auto baseline = child_baseline(fragments[source], child.style);
         if (!baseline) continue;
-        result.nodes.front().first_baseline = checked(
-            static_cast<double>(fragments[source].nodes.front().border_box.y)
+        result.root_layout().first_baseline = checked(
+            static_cast<double>(fragments[source].root_layout().border_box.y)
                 + *baseline, node.id);
         break;
     }
@@ -397,9 +397,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         auto& nested = fragments[source];
         if (detail_ == FragmentDetail::Full) {
-            result.nodes.insert(result.nodes.end(),
-                std::make_move_iterator(nested.nodes.begin()),
-                std::make_move_iterator(nested.nodes.end()));
+            result.append_nodes(std::move(nested));
             result.grid_tracks.insert(result.grid_tracks.end(),
                 std::make_move_iterator(nested.grid_tracks.begin()),
                 std::make_move_iterator(nested.grid_tracks.end()));

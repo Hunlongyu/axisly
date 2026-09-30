@@ -322,7 +322,7 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                 + static_block_y.value_or(Unit{0}) + margin.top, child.id);
         }
     }
-    fragment.nodes.front().margin = {horizontal.start_margin, vertical.start_margin,
+    fragment.root_layout().margin = {horizontal.start_margin, vertical.start_margin,
         horizontal.end_margin, vertical.end_margin};
     translate(fragment,
         checked(static_cast<double>(containing.x) + placed_horizontal.offset, child.id),

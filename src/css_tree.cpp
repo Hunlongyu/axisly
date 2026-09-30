@@ -73,7 +73,7 @@ struct LayoutTree::Impl {
         const auto entry = cache.find(id.value);
         if (entry != cache.end()) {
             for (const auto& cached : entry->second) {
-                cached_layouts -= cached.fragment.nodes.size();
+                cached_layouts -= cached.fragment.node_count();
             }
             cache.erase(entry);
         }
@@ -227,10 +227,10 @@ const LayoutResult& LayoutTree::compute(NodeId root, AvailableSize available) & 
                         return cached.constraints == entry.constraints;
                     });
                 const auto old_count = match != resident.end()
-                    ? match->fragment.nodes.size()
+                    ? match->fragment.node_count()
                     : resident.size() == entries_per_node
-                        ? resident.front().fragment.nodes.size() : 0;
-                const auto new_count = entry.fragment.nodes.size();
+                        ? resident.front().fragment.node_count() : 0;
+                const auto new_count = entry.fragment.node_count();
                 if (new_count > impl_->limits.maximum_cached_layouts
                     - (impl_->cached_layouts - old_count)) continue;
                 if (match != resident.end()) {

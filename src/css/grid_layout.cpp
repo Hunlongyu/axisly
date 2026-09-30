@@ -223,7 +223,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         }
         Fragment result;
         result.size = measured;
-        result.nodes.push_back(make_layout(node, measured, box));
+        result.root = make_layout(node, measured, box);
         return result;
     }
     const bool intrinsic_columns = std::any_of(track_columns.tracks.begin(),
@@ -356,9 +356,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         node.style.align_content.value_or(ContentAlignment{}), node.id);
     Fragment result;
     result.size = candidate;
-    result.nodes.push_back(make_layout(node, candidate, box));
+    result.root = make_layout(node, candidate, box);
     if (constraints.preserve_known_grid_size && *border_width != candidate.width) {
-        result.nodes.front().overflow_coordinate_width = *border_width;
+        result.root_layout().overflow_coordinate_width = *border_width;
     }
     const auto border = edges(box.border, node.id);
     const auto padding = edges(box.padding, node.id);
@@ -546,7 +546,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             + ((auto_top || auto_bottom) ? 0 : align_offset(vertical_free,
                 vertical, false, node.style.box.direction,
                 child.style.box.direction, id)), id);
-        child_fragment.nodes.front().margin = {used_left, used_top, used_right, used_bottom};
+        child_fragment.root_layout().margin = {used_left, used_top, used_right, used_bottom};
         if (node.style.box.direction == Direction::Rtl) {
             x = checked(static_cast<double>(positioning_width) - x - child_fragment.size.width, id);
         }
@@ -578,15 +578,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const auto source = aligned.value_or(*first_item);
         const auto& fragment = fragments[source];
         const Unit baseline = baseline_items[source].ascent.value_or(fragment.size.height);
-        result.nodes.front().first_baseline = checked(
-            static_cast<double>(fragment.nodes.front().border_box.y)
+        result.root_layout().first_baseline = checked(
+            static_cast<double>(fragment.root_layout().border_box.y)
                 + baseline, node.id);
     }
     for (auto& fragment : fragments) {
         if (detail_ == FragmentDetail::Full) {
-            result.nodes.insert(result.nodes.end(),
-                std::make_move_iterator(fragment.nodes.begin()),
-                std::make_move_iterator(fragment.nodes.end()));
+            result.append_nodes(std::move(fragment));
             result.grid_tracks.insert(result.grid_tracks.end(),
                 std::make_move_iterator(fragment.grid_tracks.begin()),
                 std::make_move_iterator(fragment.grid_tracks.end()));

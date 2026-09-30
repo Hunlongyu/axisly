@@ -31,6 +31,7 @@ void run_case(std::size_t parent_display, std::size_t replaced,
     const auto root = tree.create_node(root_style);
 
     Style leaf_style;
+    leaf_style.display = Display::Block;
     leaf_style.box.replaced = replaced != 0;
     leaf_style.box.direction = root_style.box.direction;
     leaf_style.box.box_sizing = box_sizing

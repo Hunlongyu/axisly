@@ -14,6 +14,10 @@
 本表记录 2026-09-30 的工作树现状。测试列中 `已建` 是 Taffy 参考输入；
 其中列于末尾“原生树差分”的用例同时通过 Axisly 矩形对照。
 
+新增 [6020 个官方 XML 的全量重放](33-taffy-upstream-corpus.md)，首次
+通过 5496/6020；436 个布局差异及 88 个 Grid 边界错误保持为待修复项。
+该审计补充已有组合矩阵，不将已存在的差异归入通过集合。
+
 | Style 字段 | Taffy 0.14 输入与关键取值 | Axisly 现状 | 阶段 | 参考用例 |
 | --- | --- | --- | --- | --- |
 | `display` | Block／FlowRoot／Flex／Grid／None，决定子树算法 | 部分：新树均可调度；Block／Flex／Grid 向嵌套父容器传递首基线，各算法尚未完整 | P2–P4 | 已建：mixed-block-flex-grid、hidden-and-positioned、nested-block／flex／grid-baseline |

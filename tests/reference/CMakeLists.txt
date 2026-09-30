@@ -27,6 +27,8 @@ add_custom_command(OUTPUT "${taffy_output}" "${taffy_tree_output}" "${taffy_calc
     COMMENT "Building pinned Taffy reference tool (development only)" VERBATIM)
 add_custom_target(axisly_taffy_reference ALL DEPENDS "${taffy_output}" "${taffy_tree_output}" "${taffy_calc_output}")
 
+include(upstream.cmake)
+
 add_executable(axisly_reference_native native_runner.cpp)
 target_link_libraries(axisly_reference_native PRIVATE axisly::axisly)
 set_target_properties(axisly_reference_native PROPERTIES CXX_EXTENSIONS OFF)

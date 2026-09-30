@@ -144,14 +144,127 @@ struct NodeInput {
 }
 
 #[derive(Deserialize)]
+#[serde(untagged)]
+enum MeasureInput {
+    Metrics(MetricsInput),
+    Ahem(AhemInput),
+}
+
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct MeasureInput {
+struct MetricsInput {
     minimum: [f32; 2],
     preferred: [f32; 2],
     baseline: Option<f32>,
 }
 
-fn metrics(input: MeasureInput) -> Result<Metrics> {
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AhemInput {
+    ahem_text: String,
+    #[serde(default)]
+    vertical: bool,
+}
+
+enum LeafContent {
+    Metrics(Metrics),
+    Ahem {
+        segments: Vec<usize>,
+        vertical: bool,
+    },
+}
+
+impl LeafContent {
+    fn from_input(input: &MeasureInput) -> Result<Self> {
+        match input {
+            MeasureInput::Metrics(input) => metrics(input).map(Self::Metrics),
+            MeasureInput::Ahem(input) => {
+                if input.ahem_text.len() > 4096 {
+                    return Err("Ahem text outside reference limits".into());
+                }
+                Ok(Self::Ahem {
+                    segments: input.ahem_text.split('\u{200b}').map(str::len).collect(),
+                    vertical: input.vertical,
+                })
+            }
+        }
+    }
+
+    fn measure(&self, known: Size<Option<f32>>, space: Size<AvailableSpace>) -> Size<f32> {
+        match self {
+            Self::Metrics(metrics) => Size {
+                width: measure(
+                    known.width,
+                    space.width,
+                    metrics.minimum.width,
+                    metrics.preferred.width,
+                ),
+                height: measure(
+                    known.height,
+                    space.height,
+                    metrics.minimum.height,
+                    metrics.preferred.height,
+                ),
+            },
+            Self::Ahem { segments, vertical } => {
+                // Taffy 0.14 tests/common/src/lib.rs at the pinned upstream
+                // commit: 10x10 Ahem glyphs, U+200B break opportunities.
+                let (known_inline, known_block, available) = if *vertical {
+                    (known.height, known.width, space.height)
+                } else {
+                    (known.width, known.height, space.width)
+                };
+                let minimum = *segments.iter().max().unwrap_or(&0) as f32 * 10.0;
+                let maximum = segments.iter().sum::<usize>() as f32 * 10.0;
+                let inline = known_inline
+                    .unwrap_or_else(|| match available {
+                        AvailableSpace::MinContent => minimum,
+                        AvailableSpace::MaxContent => maximum,
+                        AvailableSpace::Definite(size) => size.min(maximum),
+                    })
+                    .max(minimum);
+                let capacity = (inline / 10.0).floor() as usize;
+                let mut lines = 1;
+                let mut current = 0;
+                for length in segments {
+                    if current + length > capacity {
+                        if current > 0 {
+                            lines += 1;
+                        }
+                        current = *length;
+                    } else {
+                        current += length;
+                    }
+                }
+                let block = known_block.unwrap_or(lines as f32 * 10.0);
+                let computed = if *vertical {
+                    Size {
+                        width: block,
+                        height: inline,
+                    }
+                } else {
+                    Size {
+                        width: inline,
+                        height: block,
+                    }
+                };
+                Size {
+                    width: known.width.unwrap_or(computed.width),
+                    height: known.height.unwrap_or(computed.height),
+                }
+            }
+        }
+    }
+
+    fn baseline(&self) -> Option<f32> {
+        match self {
+            Self::Metrics(metrics) => metrics.baseline,
+            Self::Ahem { .. } => None,
+        }
+    }
+}
+
+fn metrics(input: &MetricsInput) -> Result<Metrics> {
     let [min_w, min_h] = input.minimum;
     let [pref_w, pref_h] = input.preferred;
     if [min_w, min_h, pref_w, pref_h]
@@ -217,7 +330,7 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
         width: available_width.into_taffy()?,
         height: available_height.into_taffy()?,
     };
-    let mut tree: TaffyTree<Metrics> = TaffyTree::new();
+    let mut tree: TaffyTree<LeafContent> = TaffyTree::new();
     tree.disable_rounding();
     let mut nodes = vec![None; case.nodes.len()];
     for index in (0..case.nodes.len()).rev() {
@@ -225,14 +338,7 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
         let style = decode_style(&input.style, allowed_fields)
             .map_err(|error| format!("node {} Style: {error}", input.id))?;
         let node = if let Some(measurement) = &input.measure {
-            tree.new_leaf_with_context(
-                style,
-                metrics(MeasureInput {
-                    minimum: measurement.minimum,
-                    preferred: measurement.preferred,
-                    baseline: measurement.baseline,
-                })?,
-            )
+            tree.new_leaf_with_context(style, LeafContent::from_input(measurement)?)
         } else if children[index].is_empty() {
             tree.new_leaf(style)
         } else {
@@ -247,27 +353,20 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
     }
     let root = nodes[0].unwrap();
     tree.compute_layout_with_measure(root, available, |inputs, _, context, style| {
-        let metrics = context.copied().unwrap_or_default();
+        let content = context.as_deref();
         let mut output = taffy::compute_leaf_layout(
             inputs,
             style,
             |_, _| 0.0,
-            |known, space| Size {
-                width: measure(
-                    known.width,
-                    space.width,
-                    metrics.minimum.width,
-                    metrics.preferred.width,
-                ),
-                height: measure(
-                    known.height,
-                    space.height,
-                    metrics.minimum.height,
-                    metrics.preferred.height,
-                ),
+            |known, space| {
+                content.map_or_else(
+                    || known.map(|value| value.unwrap_or(0.0)),
+                    |content| content.measure(known, space),
+                )
             },
         );
-        output.baselines = taffy::tree::Baselines::from_first(metrics.baseline);
+        output.baselines =
+            taffy::tree::Baselines::from_first(content.and_then(LeafContent::baseline));
         output
     })
     .map_err(|e| e.to_string())?;
@@ -318,7 +417,10 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
                 taffy::tree::DetailedLayoutInfo::Grid(info) => {
                     let rows = &info.rows;
                     let columns = &info.columns;
-                    if rows.positions.iter().chain(columns.positions.iter())
+                    if rows
+                        .positions
+                        .iter()
+                        .chain(columns.positions.iter())
                         .any(|track| !track.start.is_finite() || !track.end.is_finite())
                     {
                         return Err(format!("Non-finite Taffy Grid track for node {}", input.id));
@@ -368,8 +470,11 @@ pub(super) fn run(input: &str) -> Result<()> {
         return Ok(());
     }
     let document: Document = serde_json::from_value(value).map_err(|e| e.to_string())?;
-    if !matches!(document.protocol.as_str(), TREE_PROTOCOL | GRID_DETAILS_PROTOCOL)
-        || document.cases.is_empty() || document.cases.len() > 1024
+    if !matches!(
+        document.protocol.as_str(),
+        TREE_PROTOCOL | GRID_DETAILS_PROTOCOL
+    ) || document.cases.is_empty()
+        || document.cases.len() > 1024
     {
         return Err("Invalid tree protocol or case count".into());
     }

@@ -1,0 +1,141 @@
+{
+  "browser": "Chrome 153.0.8010.53",
+  "cases": {
+    "rtl_percentage_half_pixel": {
+      "passed": true,
+      "observations": [
+        {
+          "display": "block",
+          "sizing": "border-box",
+          "rect": [
+            -0.5,
+            0.5,
+            50,
+            10
+          ]
+        },
+        {
+          "display": "block",
+          "sizing": "content-box",
+          "rect": [
+            -0.5,
+            0.5,
+            50,
+            10
+          ]
+        },
+        {
+          "display": "flex",
+          "sizing": "border-box",
+          "rect": [
+            -0.5,
+            0.5,
+            50,
+            10
+          ]
+        },
+        {
+          "display": "flex",
+          "sizing": "content-box",
+          "rect": [
+            -0.5,
+            0.5,
+            50,
+            10
+          ]
+        },
+        {
+          "display": "grid",
+          "sizing": "border-box",
+          "rect": [
+            -0.5,
+            0.5,
+            50,
+            10
+          ]
+        },
+        {
+          "display": "grid",
+          "sizing": "content-box",
+          "rect": [
+            -0.5,
+            0.5,
+            50,
+            10
+          ]
+        }
+      ]
+    },
+    "flex_small_factors_gap": {
+      "passed": true,
+      "observations": [
+        {
+          "id": "grow",
+          "items": [
+            [
+              0,
+              67.5
+            ],
+            [
+              77.5,
+              67.5
+            ]
+          ]
+        },
+        {
+          "id": "shrink",
+          "items": [
+            [
+              0,
+              62.5
+            ],
+            [
+              72.5,
+              62.5
+            ]
+          ]
+        }
+      ]
+    },
+    "wpt_flex_single_line_wrap": {
+      "passed": true,
+      "observations": [
+        {
+          "alignment": "flex-start",
+          "actual": 0,
+          "expected": 0
+        },
+        {
+          "alignment": "flex-end",
+          "actual": 50,
+          "expected": 50
+        },
+        {
+          "alignment": "center",
+          "actual": 25,
+          "expected": 25
+        },
+        {
+          "alignment": "space-between",
+          "actual": 0,
+          "expected": 0
+        },
+        {
+          "alignment": "space-around",
+          "actual": 25,
+          "expected": 25
+        },
+        {
+          "alignment": "space-evenly",
+          "actual": 25,
+          "expected": 25
+        },
+        {
+          "alignment": "stretch",
+          "actual": 0,
+          "expected": 0
+        }
+      ]
+    }
+  }
+}

@@ -20,6 +20,9 @@ def compare_grid_details(native, oracle):
             assert len(observed) == len(target), (
                 native["name"], actual_node["id"], axis, "track count",
                 len(observed), len(target))
+            assert actual[axis]["line_names"] == expected[axis]["line_names"], (
+                native["name"], actual_node["id"], axis, "line names",
+                actual[axis]["line_names"], expected[axis]["line_names"])
             for index, (got, want) in enumerate(zip(observed, target, strict=True)):
                 assert all(math.isclose(x, y, rel_tol=0, abs_tol=0.01)
                            for x, y in zip(got, want, strict=True)), (

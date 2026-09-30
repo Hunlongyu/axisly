@@ -140,18 +140,21 @@ void apply_grid_template_areas(const GridStyle& style, ExpandedTemplate& rows, E
     };
     extend(rows, cells.size());
     extend(columns, cells.front().size());
-    std::unordered_map<std::string, std::array<std::size_t, 4>> bounds;
+    std::unordered_map<std::string, std::size_t> area_indices;
+    std::vector<std::pair<std::string, std::array<std::size_t, 4>>> bounds;
     for (std::size_t row = 0; row < cells.size(); ++row) {
         for (std::size_t column = 0; column < cells[row].size(); ++column) {
             const auto& name = cells[row][column];
             if (name == ".") continue;
-            auto [it, inserted] = bounds.try_emplace(name,
-                std::array<std::size_t, 4>{row, row + 1, column, column + 1});
-            if (!inserted) {
-                it->second[0] = std::min(it->second[0], row);
-                it->second[1] = std::max(it->second[1], row + 1);
-                it->second[2] = std::min(it->second[2], column);
-                it->second[3] = std::max(it->second[3], column + 1);
+            const auto [it, inserted] = area_indices.try_emplace(name, bounds.size());
+            if (inserted) {
+                bounds.emplace_back(name, std::array<std::size_t, 4>{row, row + 1, column, column + 1});
+            } else {
+                auto& box = bounds[it->second].second;
+                box[0] = std::min(box[0], row);
+                box[1] = std::max(box[1], row + 1);
+                box[2] = std::min(box[2], column);
+                box[3] = std::max(box[3], column + 1);
             }
         }
     }
@@ -161,6 +164,21 @@ void apply_grid_template_areas(const GridStyle& style, ExpandedTemplate& rows, E
         columns.line_names[std::min(box[2], columns.tracks.size())].push_back(name + "-start");
         columns.line_names[std::min(box[3], columns.tracks.size())].push_back(name + "-end");
     }
+}
+
+std::vector<std::vector<std::string>> reported_grid_line_names(
+    const ExpandedTemplate& definition, const TrackAxis& axis) {
+    if (std::none_of(definition.line_names.begin(), definition.line_names.end(),
+        [](const auto& names) { return !names.empty(); })) return {};
+    std::vector<std::vector<std::string>> result(axis.tracks.size() + 1);
+    const auto leading = static_cast<std::size_t>(-axis.origin);
+    for (std::size_t line = 0; line < definition.line_names.size(); ++line) {
+        auto& names = result.at(leading + line);
+        for (const auto& name : definition.line_names[line]) {
+            if (std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
+        }
+    }
+    return result;
 }
 
 } // namespace axisly::css::detail

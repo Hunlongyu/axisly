@@ -48,6 +48,7 @@ add_library(axisly STATIC
     src/css/grid_placement.cpp
     src/css/grid_positioned_area.cpp
     src/css/grid_item_sizing.cpp
+    src/css/grid_item_contribution.cpp
     src/css/grid_track_sizing.cpp
     src/css/positioned_layout.cpp
     src/css/positioned_item_layout.cpp

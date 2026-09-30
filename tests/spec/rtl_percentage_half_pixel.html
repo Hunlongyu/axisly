@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RTL percentage margins and fractional layout coordinates</title>
+<style>body { margin: 0; }</style>
+<main id="cases"></main><pre id="result"></pre>
+<script>
+const observations = [];
+for (const display of ["block", "flex", "grid"]) {
+  for (const sizing of ["border-box", "content-box"]) {
+    const root = document.createElement("div");
+    root.style.cssText = `display:${display === "grid" ? "grid" : "flex"};direction:rtl;align-items:baseline;width:100px;height:100px`;
+    const first = document.createElement("div");
+    first.style.cssText = `display:${display};direction:rtl;width:50px;height:50px;margin:5%;box-sizing:${sizing}`;
+    const second = document.createElement("div");
+    second.style.cssText = `display:${display};direction:rtl;width:50px;height:20px;box-sizing:${sizing};flex-direction:column`;
+    const child = document.createElement("div");
+    child.style.cssText = `display:${display};direction:rtl;width:50px;height:10px;margin:1%;box-sizing:${sizing}`;
+    second.append(child); root.append(first, second);
+    document.getElementById("cases").append(root);
+    const parentRect = second.getBoundingClientRect(), rect = child.getBoundingClientRect();
+    observations.push({display, sizing, rect:[rect.x-parentRect.x, rect.y-parentRect.y, rect.width, rect.height]});
+  }
+}
+const passed = observations.every(item => Math.abs(item.rect[0] + .5) < .02
+  && Math.abs(item.rect[1] - .5) < .02 && item.rect[2] === 50 && item.rect[3] === 10);
+document.getElementById("result").textContent = JSON.stringify({passed, observations});
+</script>

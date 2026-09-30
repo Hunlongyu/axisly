@@ -434,6 +434,7 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
                             "positive": rows.positive_implicit_tracks,
                             "positions": rows.positions.iter()
                                 .map(|track| [track.start, track.end]).collect::<Vec<_>>(),
+                            "line_names": rows.iter_line_names().collect::<Vec<_>>(),
                         },
                         "columns": {
                             "negative": columns.negative_implicit_tracks,
@@ -441,6 +442,7 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
                             "positive": columns.positive_implicit_tracks,
                             "positions": columns.positions.iter()
                                 .map(|track| [track.start, track.end]).collect::<Vec<_>>(),
+                            "line_names": columns.iter_line_names().collect::<Vec<_>>(),
                         },
                         "items": info.items.iter().map(|item| [
                             item.row_start, item.row_end,

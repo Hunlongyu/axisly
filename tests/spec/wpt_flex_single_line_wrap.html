@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>WPT align-content-wrap-001 horizontal geometry</title>
+<link rel="help" href="https://github.com/web-platform-tests/wpt/blob/master/css/css-flexbox/align-content-wrap-001.html">
+<style>
+  .flex { display: flex; flex-wrap: wrap; position: relative; width: 200px;
+          height: 70px; border: 1px solid red; margin: 5px; }
+  .flex > div { width: 20px; height: 20px; }
+</style>
+<main id="cases"></main><pre id="result"></pre>
+<script>
+// Horizontal geometry from WPT; writing-mode and its testharness are outside
+// the typed Taffy layout scope. Offsets below exclude the 1px border.
+const expected = {"flex-start":0, "flex-end":50, center:25, "space-between":0,
+                  "space-around":25, "space-evenly":25, stretch:0};
+const observations = [];
+for (const [alignment, offset] of Object.entries(expected)) {
+  const root = document.createElement("div"), child = document.createElement("div");
+  root.className = "flex"; root.style.alignContent = alignment;
+  root.append(child); document.getElementById("cases").append(root);
+  const actual = child.getBoundingClientRect().y - root.getBoundingClientRect().y - 1;
+  observations.push({alignment, actual, expected:offset});
+}
+document.getElementById("result").textContent = JSON.stringify({
+  passed:observations.every(item=>item.actual === item.expected), observations});
+</script>

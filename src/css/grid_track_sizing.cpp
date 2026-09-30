@@ -198,31 +198,23 @@ Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
         spans_flexible_track |= track.style.maximum.kind()
             == TrackBreadthKind::Fraction;
     }
-    return spans_auto_minimum && (end - start == 1 || !spans_flexible_track)
-        ? min_content : Unit{0};
-}
-
-void apply_cross_axis_ratio_contributions(const TrackAxis& rows,
-    std::vector<ItemContribution>& items, NodeId id) {
-    for (auto& item : items) {
-        if (!item.ratio_from_rows_box) continue;
-        const auto& box = *item.ratio_from_rows_box;
-        const Unit row_span = rows.span(item.placement.row_start,
-            item.placement.row_end);
-        const Unit available_height = std::max(Unit{0}, checked(
-            static_cast<double>(row_span) - item.margin.top
-                - item.margin.bottom, id));
-        const auto derived = transfer_aspect_ratio(
-            {std::nullopt, available_height}, box).width;
-        if (!derived) continue;
-        const Unit width = constrain_axis(*derived,
-            box.minimum.width, box.maximum.width);
-        for (auto* value : {&item.minimum_contribution.width,
-            &item.min_content.width, &item.max_content.width}) {
-            *value = std::max(constrain_axis(*value,
-                box.minimum.width, box.maximum.width), width);
+    if (!spans_auto_minimum || (end - start > 1 && spans_flexible_track)) return 0;
+    std::optional<Unit> fixed_limit{Unit{0}};
+    for (auto index = start; index < end; ++index) {
+        const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+        const auto kind = track.style.maximum.kind();
+        if (!track.maximum || kind == TrackBreadthKind::FitContentLength
+            || kind == TrackBreadthKind::FitContentPercent) {
+            fixed_limit.reset();
+            break;
+        }
+        *fixed_limit = checked(static_cast<double>(*fixed_limit) + *track.maximum, child.id);
+        if (index + 1 < end) {
+            *fixed_limit = checked(static_cast<double>(*fixed_limit)
+                + axis.gutter_after[static_cast<std::size_t>(index - axis.origin)], child.id);
         }
     }
+    return fixed_limit ? std::min(min_content, *fixed_limit) : min_content;
 }
 
 namespace {
@@ -269,6 +261,11 @@ std::vector<double> plan_spanning_base_increase(const TrackAxis& axis,
         } else {
             limits.push_back(track.maximum ? *track.maximum : infinity);
         }
+        const auto kind = track.style.maximum.kind();
+        if (max_content_phase && track.maximum
+            && (kind == TrackBreadthKind::FitContentLength || kind == TrackBreadthKind::FitContentPercent)) {
+            limits.back() = std::min(limits.back(), std::max<double>(track.size, *track.maximum));
+        }
     }
     double remaining = distribute_to_limits(bases, limits, increases, deficit);
     if (remaining <= 0.01) return increases;
@@ -293,7 +290,7 @@ std::vector<double> plan_spanning_base_increase(const TrackAxis& axis,
         const auto kind = track.style.maximum.kind();
         const bool fit_content = kind == TrackBreadthKind::FitContentLength
             || kind == TrackBreadthKind::FitContentPercent;
-        limits[i] = fit_content && track.maximum ? *track.maximum : infinity;
+        limits[i] = fit_content && track.maximum ? std::max<double>(track.size, *track.maximum) : infinity;
     }
     distribute_to_limits(bases, limits, increases, remaining);
     return increases;

@@ -11,7 +11,7 @@
 
 `tests/xml` 下全部 6020 个 XML 纳入重放。按相对 POSIX 路径排序后，
 依次哈希 `路径 UTF-8 + NUL + 原始文件字节 + NUL`，结果为
-`833448fad307ab882325a9d3cd3650a94a187ab817abc424f7331aff846eec54`。
+`833248fad307ab882325a9d3cd3650a94a187ab817abc424f7331aff846eec54`。
 数量或摘要变化会终止转换。每个用例保留原路径、文件摘要、取整开关、
 XML 预期和完整输入树；未知属性、拓扑不一致、非法值不会被静默忽略。
 巨大索引、重复轨道列表及有限 f32 极值同样纳入。
@@ -37,19 +37,24 @@ cmake --build build/reference-release --target axisly_upstream_audit
 可通过 `test_upstream_corpus.py --group leaf` 等命令单独重放布局组。
 原生和参考工具的进程错误、超时、单项布局错误都会记录为失败；
 整批进程失败时二分重放，定位到具体输入。任何失败都会让命令返回非零。
-当前全量审计保留差异报告，尚未加入要求全部通过的 CTest 门禁。
+全量审计已纳入 `axisly.reference.upstream` CTest 门禁，仍保留差异报告。
 
 与 Taffy 比较每个节点的未取整矩形、margin、padding、border、
-scrollbar、可滚动溢出，以及 Grid 轨道坐标、显式／隐式轨道数和项目线范围。
+scrollbar、可滚动溢出，以及 Grid 轨道坐标、显式／隐式轨道数、项目线范围和线名。
 使用现有参考套件的 0.01px 绝对容限，没有为上游审计放宽。
 
 另比较 XML 的 x/y/width/height；按上游的 f32 累积位置和边缘取整规则
 恢复取整结果，容限为上游 XML 测试使用的 0.1px。
-**这一层目前只比较几何**，尚未断言 XML 的 scroll_width／scroll_height、
-resolved-rows／resolved-columns。这些预期继续保留在转换结果中。
-上游 XML 预期与 Taffy 本身的差异单独记录，不能作为 Axisly 布局通过的理由。
+同时断言 XML 的 scroll_width／scroll_height、resolved-rows／resolved-columns：
+前者是 Taffy `Layout::scroll_width/height` 的最大偏移，后者比较不含间隙的
+轨道尺寸及顺序完整的线名。轨道诊断使用未取整值；滚动偏移使用取整后的
+溢出、尺寸、滚动条及盒边。未知预期属性、非有限数值或非法轨道列表会报错。
+上游 XML 预期与 Taffy 本身的差异单独记录；全部输入仍参加 Taffy 差分。
 
 ## 首次全量结果
+
+最新 Grid 贡献与基线阶段已达到 **6020/6020**，原生错误和 Taffy 差异均为零。
+详细记录见文末；以下保留各阶段的历史结果。
 
 以生产代码提交 `1ab29fe` 为基线，2026-09-30 的 Release 重放：
 
@@ -188,3 +193,32 @@ Taffy 0.14 的 Block 项目元数据对上下百分比 padding 使用早期高�
 该元数据不计作 CSS padding 规范通过，见
 [规范索引](32-css-normative-case-index.md) 和
 [浏览器结果](reference-validation/taffy-upstream-2026-09-30/block-padding-browser.json)。
+
+## Grid 贡献、基线与全部上游断言
+
+`grid_item_contribution.cpp` 独立处理按网格区域的尺寸查询：自身轴只把
+确定的固定轨道作为百分比基准，另一轴区分初次最大值估计和已求解轨道。
+行基线垫量在轨道求解前加入贡献。Size 查询在首次双轴轨道计算后返回，
+Full 查询继续跨轴重测与循环百分比阶段，避免探测尺寸包含最终重排结果。
+固有增长上限和固定最大轨道对自动最小贡献的约束分别进入轨道算法。
+旧交叉比例补偿函数已删除，纵横比使用统一的项目尺寸查询。
+
+全量 **6020/6020**，较 Block 阶段新增 56 项，没有新增错误。
+全部九个上游组均通过；原始结果为
+[grid-contribution-stages.json](reference-validation/taffy-upstream-2026-09-30/grid-contribution-stages.json)。
+新的 `GridTracks` 还输出线名：包括重复边界、命名区域生成线、首尾隐式线，
+保持源顺序并去重。现有 Grid 矩阵也比较该字段。
+
+XML 层逐项断言 24,876 节点的四项几何、各 356 个最大横／纵滚动偏移、
+各 2,532 个行／列解析轨道列表；滚动与轨道预期差异均为零。
+6 个 RTL 半像素几何记录继续保留：未取整的 `[-0.5,0.5,50,10]`
+在 Axisly、Taffy 和 Chrome 相同，Taffy 的负半像素取整及累计边缘取整
+与 XML 的整数预期不同。没有排除这些输入，也没有把该差异当作算法错误。
+[浏览器重放](../tests/spec/rtl_percentage_half_pixel.html) 与
+[原始结果](reference-validation/taffy-upstream-2026-09-30/normative-browser.json)
+覆盖三种算法与两种盒尺寸。
+
+四组独立 Grid 数值测试固定循环百分比区域、增长上限、基线行高和跨轴测量。
+期望解析测试还通过损坏滚动偏移、轨道尺寸与线名来验证差异检测器。
+全量审计已成为 CTest 门禁；Release／Debug 各通过 **367/367**。
+完整 MSVC ASan 继续执行，最终结果在组合验收中记录。

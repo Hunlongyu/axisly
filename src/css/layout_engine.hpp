@@ -9,6 +9,11 @@
 
 namespace axisly::css::detail {
 
+struct GridContributionInput;
+struct GridAxisContribution;
+struct GridBaselineItem;
+struct Placement;
+
 struct LayoutNode {
     NodeId id;
     Style style;
@@ -164,6 +169,11 @@ private:
         const FlexItemSizingInput& input, std::size_t depth);
     [[nodiscard]] Fragment grid(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box, std::size_t depth);
+    [[nodiscard]] GridAxisContribution grid_axis_contribution(NodeId id,
+        const GridContributionInput& input, std::size_t depth);
+    [[nodiscard]] std::vector<GridBaselineItem> measure_grid_baselines(const LayoutNode& parent,
+        const std::vector<Placement>& placements, ResolvedDimensions container_inner,
+        std::size_t depth);
     [[nodiscard]] Fragment hidden(const LayoutNode& node, std::size_t depth);
     [[nodiscard]] Fragment absolute(const LayoutNode& parent, NodeId child,
         Size parent_size, const ResolvedBox& parent_box, std::size_t depth,

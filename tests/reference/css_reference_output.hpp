@@ -15,6 +15,17 @@ namespace axisly::css::reference {
 
 using IdentifiedNode = std::pair<int, NodeId>;
 
+inline void write_json_string(std::ostream& out, std::string_view value) {
+    constexpr char hex[] = "0123456789abcdef";
+    out << '"';
+    for (const unsigned char byte : value) {
+        if (byte == '"' || byte == '\\') out << '\\' << static_cast<char>(byte);
+        else if (byte < 0x20) out << "\\u00" << hex[byte >> 4] << hex[byte & 15];
+        else out << static_cast<char>(byte);
+    }
+    out << '"';
+}
+
 inline void write_case(std::ostream& out, std::string_view name,
                        const LayoutResult& result,
                        const std::vector<IdentifiedNode>& nodes,
@@ -55,7 +66,8 @@ inline void write_case(std::ostream& out, std::string_view name,
             } else {
                 const auto write_axis = [&out](std::int32_t origin,
                     std::size_t explicit_count,
-                    const std::vector<GridTrackPosition>& positions) {
+                    const std::vector<GridTrackPosition>& positions,
+                    const std::vector<std::vector<std::string>>& line_names) {
                     if (origin > 0) {
                         throw std::runtime_error("Invalid CSS Grid track origin");
                     }
@@ -75,13 +87,24 @@ inline void write_case(std::ostream& out, std::string_view name,
                         first_position = false;
                         out << '[' << position.start << ',' << position.end << ']';
                     }
+                    out << "],\"line_names\":[";
+                    for (std::size_t line = 0; line < line_names.size(); ++line) {
+                        if (line) out << ',';
+                        out << '[';
+                        for (std::size_t name = 0; name < line_names[line].size(); ++name) {
+                            if (name) out << ',';
+                            write_json_string(out, line_names[line][name]);
+                        }
+                        out << ']';
+                    }
                     out << "]}";
                 };
                 out << "{\"rows\":";
-                write_axis(grid->row_origin, grid->explicit_rows, grid->row_positions);
+                write_axis(grid->row_origin, grid->explicit_rows, grid->row_positions,
+                    grid->row_line_names);
                 out << ",\"columns\":";
                 write_axis(grid->column_origin, grid->explicit_columns,
-                    grid->column_positions);
+                    grid->column_positions, grid->column_line_names);
                 out << ",\"items\":[";
                 bool first_item = true;
                 for (const auto& item : grid->items) {

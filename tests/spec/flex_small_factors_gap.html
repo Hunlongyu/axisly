@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CSS Flexbox 9.7: factor sums below one with a gap</title>
+<link rel="help" href="https://www.w3.org/TR/2025/CRD-css-flexbox-1-20251014/#resolve-flexible-lengths">
+<style>
+  body { margin: 0; }
+  .flex { display: flex; gap: 10px; height: 20px; }
+  #grow { width: 200px; }
+  #grow > div { flex: .25 0 40px; }
+  #shrink { width: 100px; }
+  #shrink > div { flex: 0 .25 80px; min-width: 0; }
+</style>
+<div id="grow" class="flex"><div></div><div></div></div>
+<div id="shrink" class="flex"><div></div><div></div></div>
+<pre id="result"></pre>
+<script>
+const observations = ["grow", "shrink"].map(id => {
+  const root = document.getElementById(id), origin = root.getBoundingClientRect().x;
+  return {id, items:[...root.children].map(child => {
+    const rect = child.getBoundingClientRect(); return [rect.x-origin, rect.width];
+  })};
+});
+// Grow: 110px free * .5 / 2 = 27.5px each. Shrink: 70px deficit
+// * .5 / 2 = 17.5px each. The 10px gap has already been accounted for.
+const expected = [[[0,67.5],[77.5,67.5]], [[0,62.5],[72.5,62.5]]];
+document.getElementById("result").textContent = JSON.stringify({
+  passed:JSON.stringify(observations.map(item=>item.items)) === JSON.stringify(expected), observations});
+</script>

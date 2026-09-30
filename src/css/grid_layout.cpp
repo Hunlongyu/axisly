@@ -1,11 +1,11 @@
 #include "grid_internal.hpp"
 #include "grid_item_sizing.hpp"
+#include "grid_item_contribution.hpp"
 #include "item_alignment.hpp"
 
 #include <algorithm>
 #include <cstdint>
 #include <iterator>
-#include <unordered_map>
 #include <utility>
 
 namespace axisly::css::detail {
@@ -157,187 +157,100 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         min_row, max_row, initial_track_height, row_gap, node.id);
     collapse_auto_fit(track_columns, columns, placements, true);
     collapse_auto_fit(track_rows, rows, placements, false);
+    auto baseline_items = measure_grid_baselines(node, placements, {inner_width, inner_height}, depth);
     std::vector<ItemContribution> contributions;
     contributions.reserve(node.children.size());
     std::vector<std::optional<std::size_t>> contribution_indices(node.children.size());
     for (std::size_t i = 0; i < node.children.size(); ++i) {
         if (placements[i].hidden) continue;
         const auto id = node.children[i];
-        ResolvedBox child_box;
-        try { child_box = resolve_layout_box(get(id), inner_width, inner_height); }
-        catch (const std::invalid_argument& error) {
-            throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
-        }
-        Constraints intrinsic;
-        intrinsic.containing_width = inner_width;
-        intrinsic.containing_height = inner_height;
-        intrinsic.available = {AvailableSpace::min_content(), AvailableSpace::min_content()};
-        const auto min_fragment = layout_size(id, intrinsic, depth + 1);
-        intrinsic.available = {AvailableSpace::max_content(), AvailableSpace::max_content()};
-        const auto max_fragment = layout_size(id, intrinsic, depth + 1);
-        const Size minimum_contribution{
-            grid_item_minimum(get(id), child_box, placements[i], track_columns,
-                min_fragment.size.width, true),
-            grid_item_minimum(get(id), child_box, placements[i], track_rows,
-                min_fragment.size.height, false)};
+        const auto axis = grid_axis_contribution(id,
+            {node, placements[i], track_columns, track_rows, {inner_width, inner_height},
+                true, GridCrossSizing::MaximumEstimate, baseline_items[i].shim}, depth);
         const auto scrolls = [](Overflow overflow) {
             return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
         };
-        const bool ratio_candidate = inner_height && child_box.aspect_ratio
-            && get(id).style.box.size.width.kind() == LengthKind::Auto
-            && !child_box.preferred.width;
-        // A stretched auto row has a used size, but it is still indefinite
-        // while computing the item's inline intrinsic contribution.
-        const bool ratio_from_rows = ratio_candidate && std::all_of(
-            track_rows.tracks.begin()
-                + (placements[i].row_start - track_rows.origin),
-            track_rows.tracks.begin()
-                + (placements[i].row_end - track_rows.origin),
-            [inner_height](const TrackState& track) {
-                return track.style.minimum.resolve_numeric(inner_height).has_value()
-                    && track.style.maximum.resolve_numeric(inner_height).has_value();
-            });
         contribution_indices[i] = contributions.size();
-        contributions.push_back({placements[i], minimum_contribution,
-            min_fragment.size, max_fragment.size, edges(child_box.margin, id),
-            scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y),
-            ratio_from_rows ? std::optional<ResolvedBox>(child_box) : std::nullopt});
-    }
-    if (inner_height && std::any_of(contributions.begin(), contributions.end(),
-        [](const ItemContribution& item) { return item.ratio_from_rows_box.has_value(); })) {
-        auto measured_rows = track_rows;
-        size_axis(measured_rows, contributions, false, row_space, node.id);
-        apply_cross_axis_ratio_contributions(measured_rows, contributions, node.id);
+        contributions.push_back({placements[i], {axis.minimum, 0},
+            {axis.min_content, 0}, {axis.max_content, 0},
+            {axis.margin_start, 0, axis.margin_end, 0},
+            scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y)});
     }
     size_axis(track_columns, contributions, true, column_space, node.id);
-    // Track contributions are axis-specific queries. Row measurements see the
-    // provisional column widths; a later column pass can in turn see row
-    // heights. Measuring both axes up front loses nested width/height reflow.
+    Unit measured_width = track_columns.offsets.back();
+    ResolvedDimensions provisional_inner{
+        inner_width.value_or(track_columns.offsets.back()), inner_height};
+    // An axis contribution sees only definite tracks in its own grid area.
+    // The opposite axis uses either its initial maximum estimate or the
+    // provisional sizes from the previous track pass.
     const auto measure_cross_dependent_contributions = [&](bool rows_axis) {
         bool changed = false;
         for (std::size_t i = 0; i < node.children.size(); ++i) {
             if (!contribution_indices[i]) continue;
-            const auto id = node.children[i];
-            const auto& child = get(id);
-            const auto& place = placements[i];
-            const Unit cross_size = rows_axis
-                ? track_columns.span(place.column_start, place.column_end)
-                : track_rows.span(place.row_start, place.row_end);
-            const std::optional<Unit> containing_width = rows_axis
-                ? std::optional<Unit>{cross_size} : inner_width;
-            const std::optional<Unit> containing_height = rows_axis
-                ? inner_height : std::optional<Unit>{cross_size};
-            ResolvedBox child_box;
-            try { child_box = resolve_layout_box(child, containing_width, containing_height); }
-            catch (const std::invalid_argument& error) {
-                throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
-            }
-            const auto margin = edges(child_box.margin, id);
-            Constraints intrinsic;
-            intrinsic.containing_width = containing_width;
-            intrinsic.containing_height = containing_height;
-            auto& own_available = rows_axis ? intrinsic.available.height
-                : intrinsic.available.width;
-            auto& cross_available = rows_axis ? intrinsic.available.width
-                : intrinsic.available.height;
-            cross_available = AvailableSpace::definite(cross_size);
-            const auto alignment = rows_axis
-                ? child.style.justify_self.value_or(node.style.justify_items.value_or(
-                    ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}))
-                : child.style.align_self.value_or(node.style.align_items.value_or(
-                    ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
-            const auto& cross_style = rows_axis
-                ? child.style.box.size.width : child.style.box.size.height;
-            const auto& cross_margin_start = rows_axis
-                ? child_box.margin.left : child_box.margin.top;
-            const auto& cross_margin_end = rows_axis
-                ? child_box.margin.right : child_box.margin.bottom;
-            ResolvedDimensions stretch;
-            if (alignment.position == ItemPosition::Stretch
-                && cross_style.kind() == LengthKind::Auto
-                && cross_margin_start.kind != EdgeKind::Auto
-                && cross_margin_end.kind != EdgeKind::Auto) {
-                const Unit margin_sum = rows_axis
-                    ? checked(static_cast<double>(margin.left) + margin.right, id)
-                    : checked(static_cast<double>(margin.top) + margin.bottom, id);
-                const Unit known = std::max(Unit{0}, checked(
-                    static_cast<double>(cross_size) - margin_sum, id));
-                if (rows_axis) stretch.width = known;
-                else stretch.height = known;
-            }
-            const auto sizing = resolve_grid_item_sizing(child_box, stretch,
-                GridItemSizingPhase::Intrinsic);
-            intrinsic.known_width = sizing.size.width;
-            intrinsic.known_height = sizing.size.height;
-            own_available = AvailableSpace::min_content();
-            const auto minimum = layout_size(id, intrinsic, depth + 1);
-            own_available = AvailableSpace::max_content();
-            const auto maximum = layout_size(id, intrinsic, depth + 1);
+            const auto axis = grid_axis_contribution(node.children[i],
+                {node, placements[i], track_columns, track_rows, provisional_inner,
+                    !rows_axis, GridCrossSizing::ResolvedTracks, baseline_items[i].shim}, depth);
             auto& contribution = contributions[*contribution_indices[i]];
-            auto& min_content = rows_axis
-                ? contribution.min_content.height : contribution.min_content.width;
-            auto& max_content = rows_axis
-                ? contribution.max_content.height : contribution.max_content.width;
-            auto& minimum_contribution = rows_axis
-                ? contribution.minimum_contribution.height
+            auto& minimum = rows_axis ? contribution.minimum_contribution.height
                 : contribution.minimum_contribution.width;
-            const Unit measured_min = rows_axis
-                ? minimum.size.height : minimum.size.width;
-            const Unit measured_max = rows_axis
-                ? maximum.size.height : maximum.size.width;
-            const Unit measured_minimum = grid_item_minimum(child, child_box, place,
-                rows_axis ? track_rows : track_columns, measured_min, !rows_axis);
-            changed |= min_content != measured_min || max_content != measured_max
-                || minimum_contribution != measured_minimum;
-            min_content = measured_min;
-            max_content = measured_max;
-            minimum_contribution = measured_minimum;
-            if (rows_axis) {
-                changed |= contribution.margin.top != margin.top
-                    || contribution.margin.bottom != margin.bottom;
-                contribution.margin.top = margin.top;
-                contribution.margin.bottom = margin.bottom;
-            } else {
-                changed |= contribution.margin.left != margin.left
-                    || contribution.margin.right != margin.right;
-                contribution.margin.left = margin.left;
-                contribution.margin.right = margin.right;
-            }
+            auto& min_content = rows_axis ? contribution.min_content.height : contribution.min_content.width;
+            auto& max_content = rows_axis ? contribution.max_content.height : contribution.max_content.width;
+            auto& margin_start = rows_axis ? contribution.margin.top : contribution.margin.left;
+            auto& margin_end = rows_axis ? contribution.margin.bottom : contribution.margin.right;
+            changed |= minimum != axis.minimum || min_content != axis.min_content
+                || max_content != axis.max_content || margin_start != axis.margin_start
+                || margin_end != axis.margin_end;
+            minimum = axis.minimum;
+            min_content = axis.min_content;
+            max_content = axis.max_content;
+            margin_start = axis.margin_start;
+            margin_end = axis.margin_end;
         }
         return changed;
     };
     measure_cross_dependent_contributions(true);
     size_axis(track_rows, contributions, false, row_space, node.id);
+    Unit measured_height = track_rows.offsets.back();
+    provisional_inner.height = inner_height.value_or(track_rows.offsets.back());
+    if (detail_ == FragmentDetail::Size) {
+        Size measured{
+            border_width.value_or(checked(static_cast<double>(measured_width) + *decoration_width, node.id)),
+            border_height.value_or(checked(static_cast<double>(measured_height) + *decoration_height, node.id))};
+        measured = constrain_size(measured, box);
+        if (constraints.preserve_known_grid_size) {
+            if (constraints.known_width) measured.width = *constraints.known_width;
+            if (constraints.known_height) measured.height = *constraints.known_height;
+        }
+        Fragment result;
+        result.size = measured;
+        result.nodes.push_back(make_layout(node, measured, box));
+        return result;
+    }
     const bool intrinsic_columns = std::any_of(track_columns.tracks.begin(),
         track_columns.tracks.end(), [](const TrackState& track) {
             return track.intrinsic_min || track.intrinsic_max;
         });
-    if (intrinsic_columns) {
-        if (measure_cross_dependent_contributions(false)) {
-            // Track base sizes grow monotonically across axis passes. A row
-            // estimate can increase an inline contribution, but cyclic
-            // percentages must not shrink an established intrinsic base.
-            // Definite space is redistributed from the updated contributions.
-            if (column_space.grid_space.kind == AvailableKind::Definite) {
-                track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
-                    min_column, max_column, initial_track_width, column_gap, node.id);
-                collapse_auto_fit(track_columns, columns, placements, true);
-            }
-            size_axis(track_columns, contributions, true, column_space, node.id);
-            if (measure_cross_dependent_contributions(true)) {
-                if (row_space.grid_space.kind == AvailableKind::Definite) {
-                    track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
-                        min_row, max_row, initial_track_height, row_gap, node.id);
-                    collapse_auto_fit(track_rows, rows, placements, false);
-                }
-                size_axis(track_rows, contributions, false, row_space, node.id);
-            }
+    if (intrinsic_columns && measure_cross_dependent_contributions(false)) {
+        // Reflow can reduce an intrinsic contribution. Reinitialize the
+        // affected axis so an earlier estimate does not become a permanent
+        // lower bound. The selected container size remains independent.
+        track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+            min_column, max_column, initial_track_width, column_gap, node.id);
+        collapse_auto_fit(track_columns, columns, placements, true);
+        auto reflow_column_space = column_space;
+        reflow_column_space.inner_size = provisional_inner.width;
+        size_axis(track_columns, contributions, true, reflow_column_space, node.id);
+        if (!has_cyclic_percentage(track_columns)) measured_width = track_columns.offsets.back();
+        if (measure_cross_dependent_contributions(true)) {
+            track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+                min_row, max_row, initial_track_height, row_gap, node.id);
+            collapse_auto_fit(track_rows, rows, placements, false);
+            auto reflow_row_space = row_space;
+            reflow_row_space.inner_size = provisional_inner.height;
+            size_axis(track_rows, contributions, false, reflow_row_space, node.id);
+            if (!has_cyclic_percentage(track_rows)) measured_height = track_rows.offsets.back();
         }
     }
-    const Unit measured_width = track_columns.offsets.empty() ? 0
-        : track_columns.offsets.back();
-    const Unit measured_height = track_rows.offsets.empty() ? 0
-        : track_rows.offsets.back();
     const bool intrinsic_width = !border_width;
     const bool intrinsic_height = !border_height;
     const bool cyclic_columns = intrinsic_width
@@ -385,6 +298,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
             min_column, max_column, sizing_width, column_gap, node.id);
         collapse_auto_fit(track_columns, columns, placements, true);
+        provisional_inner.width = sizing_width;
+        measure_cross_dependent_contributions(false);
         auto rerun_space = column_space;
         rerun_space.inner_size = sizing_width;
         size_axis(track_columns, contributions, true, rerun_space, node.id);
@@ -426,12 +341,6 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         inner_width = std::max(Unit{0}, candidate.width - *decoration_width);
         inner_height = std::max(Unit{0}, candidate.height - *decoration_height);
     }
-    if (detail_ == FragmentDetail::Size) {
-        Fragment result;
-        result.size = candidate;
-        result.nodes.push_back(make_layout(node, candidate, box));
-        return result;
-    }
     const Unit positioning_width = (constraints.preserve_known_grid_size
         ? *border_width : candidate.width) - *decoration_width;
     const Unit positioning_height = (constraints.preserve_known_grid_size
@@ -457,6 +366,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         report.row_origin = track_rows.origin;
         report.explicit_columns = columns.tracks.size();
         report.explicit_rows = rows.tracks.size();
+        report.column_line_names = reported_grid_line_names(columns, track_columns);
+        report.row_line_names = reported_grid_line_names(rows, track_rows);
         report.columns.reserve(track_columns.tracks.size());
         report.rows.reserve(track_rows.tracks.size());
         report.column_positions.reserve(track_columns.tracks.size());
@@ -500,14 +411,6 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         result.grid_tracks.push_back(std::move(report));
     }
     std::vector<Fragment> fragments(node.children.size());
-    struct BaselinePlacement {
-        std::size_t source;
-        std::int32_t row;
-        Unit baseline;
-        Unit margin_top;
-    };
-    std::vector<BaselinePlacement> baseline_items;
-    std::unordered_map<std::int32_t, Unit> row_baselines;
     for (std::size_t i = 0; i < node.children.size(); ++i) {
         const auto id = node.children[i];
         const auto& child = get(id);
@@ -536,7 +439,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         const Unit cell_y = track_rows.line(place.row_start);
         const auto& child_box = child.style.box;
         const auto resolved = resolve_layout_box(child, cell_width, cell_height);
-        const auto margin = edges(resolved.margin, id);
+        auto margin = edges(resolved.margin, id);
+        margin.top = checked(static_cast<double>(margin.top) + baseline_items[i].shim, id);
         Constraints final;
         final.containing_width = cell_width;
         final.containing_height = cell_height;
@@ -605,16 +509,6 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         auto child_fragment = layout(id, final, depth + 1);
         finalize_grid_item_fragment(child_fragment, resolved, sizing,
             {final.known_width, final.known_height});
-        if (vertical.position == ItemPosition::Baseline
-            && resolved.margin.top.kind != EdgeKind::Auto
-            && resolved.margin.bottom.kind != EdgeKind::Auto) {
-            const Unit baseline = child_baseline(child_fragment, child.style)
-                .value_or(child_fragment.size.height);
-            const Unit ascent = checked(static_cast<double>(margin.top) + baseline, id);
-            auto [entry, inserted] = row_baselines.try_emplace(place.row_start, ascent);
-            if (!inserted) entry->second = std::max(entry->second, ascent);
-            baseline_items.push_back({i, place.row_start, baseline, margin.top});
-        }
         const Unit horizontal_free = checked(static_cast<double>(cell_width)
             - child_fragment.size.width - margin.left - margin.right, id);
         const Unit vertical_free = checked(static_cast<double>(cell_height)
@@ -659,38 +553,26 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         translate(child_fragment, relative_x, relative_y, id);
         fragments[i] = std::move(child_fragment);
     }
-    for (const auto& item : baseline_items) {
-        const Unit delta = checked(static_cast<double>(row_baselines.at(item.row))
-            - item.baseline - item.margin_top, node.id);
-        translate(fragments[item.source], 0, delta, node.id);
-        auto& used_margin = fragments[item.source].nodes.front().margin;
-        used_margin.top = checked(static_cast<double>(used_margin.top) + delta,
-            node.id);
-    }
-    std::optional<std::int32_t> first_row;
     std::optional<std::size_t> first_item;
     for (std::size_t source = 0; source < placements.size(); ++source) {
         if (placements[source].hidden
             || get(node.children[source]).style.position == Position::Absolute) continue;
-        if (!first_row || placements[source].row_start < *first_row) {
-            first_row = placements[source].row_start;
+        if (!first_item || std::pair{placements[source].row_start, placements[source].column_start}
+            < std::pair{placements[*first_item].row_start, placements[*first_item].column_start}) {
             first_item = source;
         }
     }
-    if (first_row) {
-        std::optional<BaselinePlacement> aligned;
-        for (const auto& item : baseline_items) {
-            if (item.row == *first_row) {
-                aligned = item;
-                break;
+    if (first_item) {
+        std::optional<std::size_t> aligned;
+        for (std::size_t i = 0; i < placements.size(); ++i) {
+            if (!placements[i].hidden && placements[i].row_start == placements[*first_item].row_start
+                && grid_baseline_participant(node, get(node.children[i]))) {
+                if (!aligned || placements[i].column_start < placements[*aligned].column_start) aligned = i;
             }
         }
-        const auto source = aligned ? aligned->source : *first_item;
+        const auto source = aligned.value_or(*first_item);
         const auto& fragment = fragments[source];
-        const Unit baseline = aligned
-            ? checked(static_cast<double>(aligned->baseline)
-                + aligned->margin_top, node.id)
-            : fragment.size.height;
+        const Unit baseline = baseline_items[source].ascent.value_or(fragment.size.height);
         result.nodes.front().first_baseline = checked(
             static_cast<double>(fragment.nodes.front().border_box.y)
                 + baseline, node.id);

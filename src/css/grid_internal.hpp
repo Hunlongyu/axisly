@@ -42,7 +42,6 @@ struct ItemContribution {
     Size minimum_contribution{}, min_content{}, max_content{};
     Insets margin{};
     bool scrolls_x{}, scrolls_y{};
-    std::optional<ResolvedBox> ratio_from_rows_box;
 };
 
 struct TrackState {
@@ -89,6 +88,8 @@ struct GridExtent {
     std::optional<Unit> available, Unit gap, bool minimum_strategy, NodeId id);
 void apply_grid_template_areas(const GridStyle& style,
     ExpandedTemplate& rows, ExpandedTemplate& columns);
+[[nodiscard]] std::vector<std::vector<std::string>> reported_grid_line_names(
+    const ExpandedTemplate& definition, const TrackAxis& axis);
 [[nodiscard]] AxisPlacement resolve_grid_placement(const GridPlacement& value,
     const ExpandedTemplate& axis);
 [[nodiscard]] AbsoluteGridPlacement resolve_absolute_grid_placement(
@@ -120,8 +121,6 @@ struct AxisSizingSpace {
 };
 void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
     bool columns, const AxisSizingSpace& space, NodeId id);
-void apply_cross_axis_ratio_contributions(const TrackAxis& rows,
-    std::vector<ItemContribution>& items, NodeId id);
 void align_tracks(TrackAxis& axis, Unit available, ContentAlignment alignment, NodeId id);
 
 } // namespace axisly::css::detail

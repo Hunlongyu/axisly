@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
 
+from upstream_expectations import validate_expectation
+
 
 TAFFY_COMMIT = "77f385683c1d698c91a23a259f87fdddf26925fb"
 ARCHIVE_SHA256 = "baf36d0a3f896d901b81c241b332e2fc59f2f1b6ab05c574b8323b29e35d0baa"
@@ -121,9 +123,10 @@ def read_case(path, root, index):
                 node["measure"] = {"ahem_text": element.text.strip(),
                                    "vertical": element.get("writing-mode") == "vertical-lr"}
         nodes.append(node)
-        expected.append(dict(expectation.attrib))
         if len(element) != len(expectation):
             raise ValueError(f"Input/expectation topology differs: {relative}")
+        validate_expectation(expectation.attrib)
+        expected.append(dict(expectation.attrib))
         for child, child_expected in zip(element, expectation, strict=True):
             visit(child, child_expected, number)
 

@@ -16,6 +16,18 @@ Axisly 的兼容路径在该输入上的结果相等；规范结论另行验收�
 
 ## WPT 移植界限与后续
 
+### PIXEL-RTL-01：XML 的负半像素整数预期
+
+全量 XML 中，三种算法和两种盒尺寸的 6 个 RTL 百分比外边距用例，
+孙节点的未取整矩形均为 `[-0.5,0.5,50,10]`。Axisly 与 Taffy 相同，
+[Chrome 重放](../tests/spec/rtl_percentage_half_pixel.html) 也给出该值。
+XML 存储 `[0,1,50,10]`，而 Taffy 对负半像素舍入及累计边缘舍入
+得到 `[-1,1,51,10]`（Block/Flex）或 `[-1,1,50,10]`（Grid 的累计
+绝对位置不同）。这是整数取整预期的差异，不能据此声明 CSS 几何不符合。
+CSS 2.2 [§10.3.3](https://www.w3.org/TR/CSS22/visudet.html#blockwidth)
+的 RTL 过约束规则与该负左边位置一致；浏览器仍保留分数几何。
+原始观察见 [normative-browser.json](reference-validation/taffy-upstream-2026-09-30/normative-browser.json)。
+
 ### BLOCK-PADDING-01：百分比 padding 的报告阶段
 
 [CSS 2.2 §8.4](https://www.w3.org/TR/CSS22/box.html#padding-properties)

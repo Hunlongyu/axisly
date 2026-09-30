@@ -51,6 +51,14 @@ foreach(behavior IN ITEMS tracks_and_placement implicit_and_negative_lines inval
     add_test(NAME axisly.css.grid.${behavior} COMMAND axisly_css_grid_tests ${behavior})
 endforeach()
 
+add_executable(axisly_css_grid_contribution_tests css/css_grid_contribution_tests.cpp)
+target_link_libraries(axisly_css_grid_contribution_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_css_grid_contribution_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_grid_contribution_tests)
+foreach(behavior IN ITEMS percentage_grid_areas intrinsic_growth_limits baseline_track_sizes cross_axis_measurement)
+    add_test(NAME axisly.css.grid.${behavior} COMMAND axisly_css_grid_contribution_tests ${behavior})
+endforeach()
+
 foreach(contract IN ITEMS geometry tracks invalid_tracks ranges invalid_ranges grids measurement results)
     add_test(NAME axisly.${contract} COMMAND axisly_contract_tests ${contract})
 endforeach()

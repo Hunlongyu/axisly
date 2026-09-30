@@ -81,6 +81,9 @@ struct GridTracks {
     // Used track sizes and positions in implicit-grid order, including collapsed tracks.
     std::vector<Unit> rows, columns;
     std::vector<GridTrackPosition> row_positions, column_positions;
+    // Names in implicit-grid line order (tracks + 1), or empty if all lines
+    // are unnamed. Repeat boundaries retain source order without duplicates.
+    std::vector<std::vector<std::string>> row_line_names, column_line_names;
     // In-flow children only; line zero is the explicit grid's first line.
     std::vector<GridItemPlacement> items;
 };

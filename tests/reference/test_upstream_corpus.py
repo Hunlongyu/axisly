@@ -3,13 +3,12 @@
 import argparse
 import collections
 import json
-import math
 from pathlib import Path
-import struct
 import subprocess
 
 from grid_detail_compare import compare_grid_details
 from test_flex_matrix import compare
+from upstream_expectations import xml_differences
 
 
 def replay_cases(executable, cases, first=None):
@@ -43,41 +42,6 @@ def replay_cases(executable, cases, first=None):
     return output["cases"]
 
 
-def round_pixel(value):
-    return math.floor(value + 0.5) if value >= 0 else math.ceil(value - 0.5)
-
-
-def f32(value):
-    return struct.unpack("f", struct.pack("f", value))[0]
-
-
-def xml_geometry_difference(case, result, absolute):
-    """Compare the stored upstream geometry; do not infer browser conformance."""
-    if "error" in result:
-        return None
-    cumulative = []
-    for index, (node, expected) in enumerate(zip(result["nodes"], case["xml_expected"], strict=True)):
-        observed = [f32(value) for value in node["rect"]]
-        parent = case["nodes"][index]["parent"]
-        if absolute:
-            cumulative.append(observed[:2])
-            if parent is not None:
-                observed[0] = f32(observed[0] - f32(result["nodes"][parent]["rect"][0]))
-                observed[1] = f32(observed[1] - f32(result["nodes"][parent]["rect"][1]))
-        else:
-            cumulative.append([f32(observed[0] + (cumulative[parent][0] if parent is not None else 0)),
-                               f32(observed[1] + (cumulative[parent][1] if parent is not None else 0))])
-        if case["use_rounding"]:
-            x, y = cumulative[-1]
-            observed = [round_pixel(observed[0]), round_pixel(observed[1]),
-                        round_pixel(f32(x + observed[2])) - round_pixel(x),
-                        round_pixel(f32(y + observed[3])) - round_pixel(y)]
-        target = [float(expected[key]) for key in ("x", "y", "width", "height")]
-        if any(abs(a - b) >= 0.1 for a, b in zip(observed, target, strict=True)):
-            return {"node": index + 1, "field": "rect", "actual": observed, "expected": target}
-    return None
-
-
 def audit(document, native, taffy, group=None, progress=True):
     selected = [(index, case) for index, case in enumerate(document["cases"])
                 if group is None or case["source"]["path"].split("/")[0] == group]
@@ -86,6 +50,8 @@ def audit(document, native, taffy, group=None, progress=True):
     groups = collections.defaultdict(collections.Counter)
     failures = []
     xml_failures = []
+    xml_metrics = []
+    assertion_counts = collections.Counter()
     # Group selection preserves a contiguous range in the sorted corpus.
     for start in range(0, len(selected), 100):
         batch = selected[start:start + 100]
@@ -117,8 +83,12 @@ def audit(document, native, taffy, group=None, progress=True):
             else:
                 groups[category][failure["kind"]] += 1
                 failures.append({"name": case["name"], "source": case["source"], **failure})
-            native_xml = xml_geometry_difference(case, observed, absolute=True)
-            taffy_xml = xml_geometry_difference(case, reference, absolute=False)
+            native_geometry, native_metrics = xml_differences(case, observed, absolute=True)
+            taffy_geometry, taffy_metrics = xml_differences(case, reference, absolute=False)
+            native_xml = native_geometry[0] if native_geometry else None
+            taffy_xml = taffy_geometry[0] if taffy_geometry else None
+            for node_expected in case["xml_expected"]:
+                assertion_counts.update(node_expected.keys())
             if "error" not in observed:
                 groups[category]["native_xml_geometry_comparisons"] += 1
             if "error" not in reference:
@@ -130,6 +100,9 @@ def audit(document, native, taffy, group=None, progress=True):
             if native_xml is not None or taffy_xml is not None:
                 xml_failures.append({"name": case["name"], "source": case["source"],
                                      "native": native_xml, "taffy": taffy_xml})
+            if native_metrics or taffy_metrics:
+                xml_metrics.append({"name": case["name"], "source": case["source"],
+                                    "native": native_metrics, "taffy": taffy_metrics})
         if progress:
             print(f"Audited {start + len(batch)}/{len(selected)}, Taffy differences/errors {len(failures)}",
                   flush=True)
@@ -138,7 +111,9 @@ def audit(document, native, taffy, group=None, progress=True):
             "total": len(selected), "passed": len(selected) - len(failures),
             "groups": {key: dict(value) for key, value in sorted(groups.items())},
             "failures": failures,
-            "xml_geometry_differences": xml_failures}
+            "xml_assertions": dict(sorted(assertion_counts.items())),
+            "xml_geometry_differences": xml_failures,
+            "xml_metric_differences": xml_metrics}
 
 
 def main():

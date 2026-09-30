@@ -15,7 +15,10 @@ add_executable(axisly_css_tree_tests css/css_tree_tests.cpp)
 target_link_libraries(axisly_css_tree_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_tree_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_css_tree_tests)
-foreach(behavior IN ITEMS leaf_and_block leaf_available_constraints topology_and_hidden intrinsic_queries intrinsic_container_invalidation errors_and_exception_atomicity cache_and_dirty inherited_float_invalidation plain_block_single_measure multi_query_leaf_cache)
+foreach(behavior IN ITEMS leaf_and_block leaf_available_constraints topology_and_hidden
+        intrinsic_queries rtl_root_coordinates intrinsic_container_invalidation
+        errors_and_exception_atomicity cache_and_dirty inherited_float_invalidation
+        plain_block_single_measure multi_query_leaf_cache)
     add_test(NAME axisly.css.tree.${behavior} COMMAND axisly_css_tree_tests ${behavior})
 endforeach()
 

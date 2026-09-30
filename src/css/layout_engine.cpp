@@ -291,18 +291,15 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
             constraints.known_height_is_final = constraints.known_height.has_value();
         }
         auto fragment = layout(root, constraints, 1);
-        result.size = fragment.size;
-        result.nodes = std::move(fragment).take_nodes();
-        result.grid_tracks = std::move(fragment.grid_tracks);
         if (get(root).style.box.direction == Direction::Rtl
             && available.width.kind == AvailableKind::Definite) {
             const Unit root_x = checked(static_cast<double>(available.width.value)
-                - result.size.width, root);
-            for (auto& layout : result.nodes) {
-                layout.border_box.x = checked(static_cast<double>(layout.border_box.x)
-                    + root_x, layout.node);
-            }
+                - fragment.size.width, root);
+            translate(fragment, root_x, 0, root);
         }
+        result.size = fragment.size;
+        result.nodes = std::move(fragment).take_nodes();
+        result.grid_tracks = std::move(fragment.grid_tracks);
         compute_scrollable_overflow(result.nodes, nodes_);
     } catch (const LayoutFailure& error) {
         result.error = {error.code, error.node, error.what()};

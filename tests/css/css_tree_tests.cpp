@@ -119,6 +119,43 @@ void topology_and_hidden() {
         "Removing a subtree must invalidate all descendants");
 }
 
+void rtl_root_coordinates() {
+    for (const auto display : {Display::Block, Display::FlowRoot, Display::Flex, Display::Grid}) {
+        LayoutTree rtl_tree;
+        Style root_style;
+        root_style.display = display;
+        root_style.box.direction = Direction::Rtl;
+        root_style.box.size = {Length::length(60), Length::length(40)};
+        root_style.box.padding = {Length::length(4), Length::length(4),
+            Length::length(4), Length::length(4)};
+        root_style.box.border = {Length::length(2), Length::length(2),
+            Length::length(2), Length::length(2)};
+        const auto root = rtl_tree.create_node(root_style);
+        Style child_style;
+        child_style.display = Display::Block;
+        child_style.box.size = {Length::length(20), Length::length(12)};
+        child_style.box.padding = {Length::length(1), Length::length(1),
+            Length::length(1), Length::length(1)};
+        child_style.box.border = child_style.box.padding;
+        const auto child = rtl_tree.create_node(child_style);
+        rtl_tree.append_child(root, child);
+        // Replay the first available space after a resize to exercise both
+        // cached local fragments and published root-relative coordinates.
+        for (const Unit width : {100.f, 140.f, 100.f}) {
+            const auto& shifted = rtl_tree.compute(root,
+                {AvailableSpace::definite(width), AvailableSpace::definite(100)});
+            require(shifted.succeeded()
+                && shifted.find(root)->border_box.x == width - 60
+                && shifted.find(root)->content_box.x == width - 54,
+                "RTL root shift must translate border and content boxes together");
+            const auto* nested = shifted.find(child);
+            require(nested && nested->content_box.x == nested->border_box.x + 2
+                && nested->content_box.y == nested->border_box.y + 2,
+                "RTL descendant content box must remain root-relative after cache replay");
+        }
+    }
+}
+
 void intrinsic_queries() {
     LayoutTree tree;
     Style style;
@@ -424,6 +461,7 @@ int main(int argc, char** argv) {
         else if (name == "leaf_available_constraints") leaf_available_constraints();
         else if (name == "topology_and_hidden") topology_and_hidden();
         else if (name == "intrinsic_queries") intrinsic_queries();
+        else if (name == "rtl_root_coordinates") rtl_root_coordinates();
         else if (name == "intrinsic_container_invalidation") intrinsic_container_invalidation();
         else if (name == "errors_and_exception_atomicity") errors_and_exception_atomicity();
         else if (name == "cache_and_dirty") cache_and_dirty();

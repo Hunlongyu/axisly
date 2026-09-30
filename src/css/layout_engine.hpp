@@ -21,6 +21,9 @@ enum class FragmentDetail { Size, Baseline, Full };
 
 struct Constraints {
     std::optional<Unit> known_width, known_height; // border-box
+    // A parent can supply a provisional item size for the child's own
+    // min/max resolution. Root Block sizing already resolves its bounds.
+    bool known_width_is_final{}, known_height_is_final{};
     // A known size can come from a parent's content calculation. Flex must
     // retain that distinction when collecting its own lines.
     bool known_width_is_definite{true}, known_height_is_definite{true};

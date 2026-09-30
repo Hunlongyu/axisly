@@ -182,6 +182,40 @@ Release／Debug／MSVC ASan 各通过 296/296，包含 9,216 组混合树差分�
 344/344 项；GeeyoouUI Release／Debug／MSVC ASan 各通过 296/296 项，
 安装消费者通过 1/1 项，基准 smoke 通过 4/4 项。
 
+## 根 Block 已知尺寸阶段复核
+
+根 Block 现在先选取过约束 min/max、样式尺寸或确定的可用宽度，并把
+已最终确定的尺寸轴传入子算法；普通 Flex 子项仍按自身 min/max 处理
+父级传入的暂定尺寸。720 组根纵横比差分及原有差分均通过。基准输入、
+计时边界与上节相同，仍为 20 帧 × 9 批；同一最终二进制另重复计时一次。
+
+| 后端／叶子 | 场景 | 首轮 µs | 复轮 µs | C++ 申请／帧 |
+| --- | --- | ---: | ---: | ---: |
+| 合成／384 | 首次 | 11277.64 | 8592.32 | 40188 |
+| 合成／384 | 单叶编辑 | 366.65 | 318.28 | 1731.6 |
+| DirectWrite／96 | 首次 | 4391.42 | 6275.79 | 10572 |
+| DirectWrite／96 | 单叶编辑 | 200.80 | 278.87 | 957.6 |
+
+两轮相同输入和二进制的计时差异很大，不能将它归因于这次布局修改。
+分配次数、测量次数及节点布局次数保持一致；真实文字首次布局的
+性能问题仍未收尾。参考 Release／Debug 各通过 346/346，MSVC ASan
+通过 345/345；GeeyoouUI 三种配置各通过 296/296，独立安装消费
+通过 1/1，基准 smoke 通过 4/4。
+
+原始记录：[合成首轮时间汇总](benchmarks/css-root-ratio-2026-09-30/timing-summary.csv)、
+[逐批时间](benchmarks/css-root-ratio-2026-09-30/timing-raw.csv)、
+[复轮时间汇总](benchmarks/css-root-ratio-2026-09-30/timing-repeat-summary.csv)、
+[复轮逐批时间](benchmarks/css-root-ratio-2026-09-30/timing-repeat-raw.csv)、
+[C++ 分配汇总](benchmarks/css-root-ratio-2026-09-30/allocations-summary.csv)、
+[逐批分配](benchmarks/css-root-ratio-2026-09-30/allocations-raw.csv)、
+[DirectWrite 首轮时间汇总](benchmarks/css-root-ratio-2026-09-30/directwrite-timing-summary.csv)、
+[逐批时间](benchmarks/css-root-ratio-2026-09-30/directwrite-timing-raw.csv)、
+[复轮时间汇总](benchmarks/css-root-ratio-2026-09-30/directwrite-timing-repeat-summary.csv)、
+[复轮逐批时间](benchmarks/css-root-ratio-2026-09-30/directwrite-timing-repeat-raw.csv)、
+[DirectWrite 分配汇总](benchmarks/css-root-ratio-2026-09-30/directwrite-allocations-summary.csv)、
+[逐批分配](benchmarks/css-root-ratio-2026-09-30/directwrite-allocations-raw.csv)、
+[环境与可执行文件哈希](benchmarks/css-root-ratio-2026-09-30/environment.json)。
+
 ## 验证范围
 
 初始基线的 Release、Debug 参考构建各通过 333/333 项；ASan 通过

@@ -48,3 +48,9 @@ MSVC ASan 宿主，各通过 296/296 项。Release Showcase 遍历 19 页 × 3
 CSS 混合页截图 SHA-256 与之前相同。
 [本轮验证记录](validation-ratio-deep.json)和
 [Showcase 摘要](showcase-ratio-deep-summary.json)保存了结果。
+
+根 Block 已知尺寸选择重构后，Release／Debug／MSVC ASan 宿主再次各通过
+296/296 项；安装前缀独立消费者通过 1/1。Release Showcase 的 19 页 × 3
+配置及原生 CSS 混合页继续通过，截图 SHA-256 未变。
+[本轮验证记录](validation-root-ratio.json)和
+[Showcase 摘要](showcase-root-ratio-summary.json)保存了结果。

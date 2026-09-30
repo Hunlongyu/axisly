@@ -220,17 +220,50 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available) {
         constraints.containing_width = available.width.definite_value();
         constraints.containing_height = available.height.definite_value();
         const auto& root_node = get(root);
-        if ((root_node.style.display == Display::Block
-                || root_node.style.display == Display::FlowRoot)
-            && available.width.kind == AvailableKind::Definite) {
+        if (root_node.style.display == Display::Block
+            || root_node.style.display == Display::FlowRoot) {
             const auto root_box = resolve_layout_box(root_node,
                 constraints.containing_width, constraints.containing_height);
-            if (!root_box.preferred.width) {
-                const auto margin = edges(root_box.margin, root);
-                constraints.known_width = std::max(Unit{0}, checked(
-                    static_cast<double>(available.width.value)
-                        - margin.left - margin.right, root));
-            }
+            const auto margin = edges(root_box.margin, root);
+            const auto padding = edges(root_box.padding, root);
+            const auto border = edges(root_box.border, root);
+            const Unit minimum_border_width = checked(static_cast<double>(padding.left)
+                + padding.right + border.left + border.right, root);
+            const Unit minimum_border_height = checked(static_cast<double>(padding.top)
+                + padding.bottom + border.top + border.bottom, root);
+            const auto known_axis = [](std::optional<Unit> preferred,
+                                       std::optional<Unit> minimum,
+                                       std::optional<Unit> maximum,
+                                       std::optional<Unit> available_axis,
+                                       Unit decoration) -> std::optional<Unit> {
+                // Root Block sizing picks an overconstrained min/max pair
+                // before the styled size, then falls back to available width.
+                // The selected dimensions are passed to Block as parent-known
+                // border-box sizes and are not clamped a second time there.
+                if (minimum && maximum && *maximum <= *minimum) {
+                    return std::max(*minimum, decoration);
+                }
+                if (preferred) {
+                    return std::max(constrain_axis(*preferred, minimum, maximum),
+                        decoration);
+                }
+                if (available_axis) return std::max(*available_axis, decoration);
+                return std::nullopt;
+            };
+            const std::optional<Unit> available_border_width =
+                available.width.kind == AvailableKind::Definite
+                    ? std::optional<Unit>(std::max(Unit{0}, checked(
+                        static_cast<double>(available.width.value)
+                            - margin.left - margin.right, root)))
+                    : std::nullopt;
+            constraints.known_width = known_axis(root_box.preferred.width,
+                root_box.minimum.width, root_box.maximum.width,
+                available_border_width, minimum_border_width);
+            constraints.known_height = known_axis(root_box.preferred.height,
+                root_box.minimum.height, root_box.maximum.height,
+                std::nullopt, minimum_border_height);
+            constraints.known_width_is_final = constraints.known_width.has_value();
+            constraints.known_height_is_final = constraints.known_height.has_value();
         }
         auto fragment = layout(root, constraints, 1);
         result.size = fragment.size;

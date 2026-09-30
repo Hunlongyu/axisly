@@ -71,7 +71,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         ? checked(static_cast<double>(block_content_based_width(node,
             subtract_decoration(constraints.available.width, *decoration_width),
             depth)) + *decoration_width, node.id) : Unit{0};
-    const Unit outer_width = constrain_axis(
+    const Unit outer_width = constraints.known_width_is_final && constraints.known_width
+        ? *constraints.known_width : constrain_axis(
         preferred_width.value_or(content_based_width
             ? measured_width : available_width.value_or(Unit{0})),
         box.minimum.width, box.maximum.width);
@@ -90,7 +91,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const std::optional<Unit> child_percentage_width = !content_based_width
         ? std::optional<Unit>(content_width) : std::nullopt;
     auto preferred_height = requested.height;
-    if (preferred_height) {
+    if (preferred_height && !constraints.known_height_is_final) {
         *preferred_height = constrain_axis(*preferred_height,
             box.minimum.height, box.maximum.height);
     }
@@ -411,7 +412,16 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         preferred_height ? *preferred_height
             : intrinsic_outer_height,
     };
-    candidate = constrain_size(candidate, box);
+    // A finalized border-box axis has already applied style bounds. A
+    // provisional parent item size still needs this node's own min/max.
+    if (!constraints.known_width_is_final) {
+        candidate.width = constrain_axis(candidate.width,
+            box.minimum.width, box.maximum.width);
+    }
+    if (!constraints.known_height_is_final) {
+        candidate.height = constrain_axis(candidate.height,
+            box.minimum.height, box.maximum.height);
+    }
     if (node.style.align_content) {
         const Unit free = checked(static_cast<double>(candidate.height)
             - intrinsic_outer_height, node.id);

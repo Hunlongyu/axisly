@@ -4,6 +4,7 @@
 #include "layout_fragment.hpp"
 
 #include <stdexcept>
+#include <deque>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -53,7 +54,9 @@ struct CacheEntry {
     Constraints constraints;
     Fragment fragment;
 };
-using CacheMap = std::unordered_map<std::uint64_t, std::vector<CacheEntry>>;
+// Entries contain an inline root. Segmented storage avoids reserving large
+// unused roots when a per-node query list grows through different constraints.
+using CacheMap = std::unordered_map<std::uint64_t, std::deque<CacheEntry>>;
 
 struct MeasurementCacheEntry {
     MeasureRequest request;

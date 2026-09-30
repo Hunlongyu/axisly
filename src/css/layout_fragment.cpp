@@ -13,11 +13,7 @@ void Fragment::append_nodes(Fragment&& child) {
         std::make_move_iterator(child.descendants.end()));
 }
 std::vector<NodeLayout> Fragment::take_nodes() && {
-    std::vector<NodeLayout> nodes;
-    nodes.reserve(node_count());
-    if (root) nodes.push_back(std::move(*root));
-    nodes.insert(nodes.end(), std::make_move_iterator(descendants.begin()),
-        std::make_move_iterator(descendants.end()));
-    return nodes;
+    if (root) descendants.insert(descendants.begin(), std::move(*root));
+    return std::move(descendants);
 }
 } // namespace axisly::css::detail

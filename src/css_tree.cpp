@@ -221,6 +221,17 @@ const LayoutResult& LayoutTree::compute(NodeId root, AvailableSize available) & 
         constexpr std::size_t entries_per_node = 8;
         for (auto& [id, staged] : std::move(engine).take_updates()) {
             auto& resident = impl_->cache[id];
+            if (resident.empty()) {
+                std::size_t staged_count{};
+                for (const auto& entry : staged) staged_count += entry.fragment.node_count();
+                if (staged_count <= impl_->limits.maximum_cached_layouts - impl_->cached_layouts) {
+                    // Transfer the entire accepted query group. Reconstructing
+                    // an empty resident list duplicates its storage at peak.
+                    resident = std::move(staged);
+                    impl_->cached_layouts += staged_count;
+                    continue;
+                }
+            }
             for (auto& entry : staged) {
                 const auto match = std::find_if(resident.begin(), resident.end(),
                     [&](const detail::CacheEntry& cached) {

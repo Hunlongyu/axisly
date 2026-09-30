@@ -190,13 +190,13 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         checked(static_cast<double>(border.left)
             + (parent.style.box.direction == Direction::Rtl ? parent_box.scrollbar.width : 0), parent.id),
         border.top,
-        std::max(Unit{0}, checked(static_cast<double>(parent_size.width)
-            - border.left - border.right - parent_box.scrollbar.width, parent.id)),
-        std::max(Unit{0}, checked(static_cast<double>(parent_size.height)
-            - border.top - border.bottom - parent_box.scrollbar.height, parent.id)),
+        checked(static_cast<double>(parent_size.width)
+            - border.left - border.right - parent_box.scrollbar.width, parent.id),
+        checked(static_cast<double>(parent_size.height)
+            - border.top - border.bottom - parent_box.scrollbar.height, parent.id),
     });
-    const Unit containing_width = containing.width;
-    const Unit containing_height = containing.height;
+    const Unit containing_width = std::max(Unit{0}, containing.width);
+    const Unit containing_height = std::max(Unit{0}, containing.height);
     const auto& inset = child.style.inset;
     const auto left = inset_value(inset.left, containing_width, child.id);
     const auto right = inset_value(inset.right, containing_width, child.id);
@@ -230,7 +230,7 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         ? parent_size.height : containing_height;
     const auto horizontal = solve_absolute_axis({
         .start = left, .end = right,
-        .containing_size = containing_width, .item_size = fragment.size.width,
+        .containing_size = containing.width, .item_size = fragment.size.width,
         .start_margin = margin.left, .end_margin = margin.right,
         .auto_start = child_box.margin.left.kind == EdgeKind::Auto,
         .auto_end = child_box.margin.right.kind == EdgeKind::Auto,
@@ -240,7 +240,7 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     });
     const auto vertical = solve_absolute_axis({
         .start = top, .end = bottom,
-        .containing_size = containing_height, .item_size = fragment.size.height,
+        .containing_size = containing.height, .item_size = fragment.size.height,
         .start_margin = margin.top, .end_margin = margin.bottom,
         .auto_start = child_box.margin.top.kind == EdgeKind::Auto,
         .auto_end = child_box.margin.bottom.kind == EdgeKind::Auto,
@@ -251,8 +251,8 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     auto placed_vertical = vertical;
     const bool static_x = !left && !right;
     const bool static_y = !top && !bottom;
-    const Unit content_width = content.width;
-    const Unit content_height = content.height;
+    const Unit content_width = containing.width - padding.left - padding.right;
+    const Unit content_height = containing.height - padding.top - padding.bottom;
     if (parent.style.display == Display::Flex && (static_x || static_y)) {
         const bool row = parent.style.flex_direction == FlexDirection::Row
             || parent.style.flex_direction == FlexDirection::RowReverse;

@@ -476,7 +476,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             && (cross_alignment.position != ItemPosition::Stretch
                 || cross_auto_margin);
         const auto main_decoration = row
-            ? child_box.horizontal_decoration() : child_box.vertical_decoration();
+            ? child_box.horizontal_padding_border() : child_box.vertical_padding_border();
         if (!main_decoration) {
             throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, id,
                 "Flex item decoration requires a definite containing inline size");
@@ -724,10 +724,14 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             inner_height = std::max(Unit{0}, *border_height - *deco_height);
         }
     }
-    const Unit main_size = row ? *inner_width : *inner_height;
+    // Measurement space is nonnegative. Alignment and flexible lengths use
+    // the physical space, which can be negative when the gutter is larger
+    // than the specified border box.
+    const Unit main_size = row ? *border_width - *deco_width
+        : *border_height - *deco_height;
     if (!main_available) {
         main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
-            main_size, node.id);
+            std::max(Unit{0}, main_size), node.id);
     }
     for (auto& line : lines) {
         resolve_flexible_lengths(line, items, main_size, main_gap, row);
@@ -770,8 +774,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 const auto cross_probe = layout_size(item.id, final_constraints, depth + 1);
                 cross_measured = axis(cross_probe.size, row, false);
             }
-            const auto decoration = row ? item.box.vertical_decoration()
-                : item.box.horizontal_decoration();
+            const auto decoration = row ? item.box.vertical_padding_border()
+                : item.box.horizontal_padding_border();
             const Unit cross_size = std::max(constrain_axis(cross_measured,
                 cross_min, cross_max), decoration.value_or(Unit{0}));
             if (row) final_constraints.known_height = cross_size;
@@ -843,7 +847,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             }
         }
     }
-    const Unit cross_size = row ? *inner_height : *inner_width;
+    const Unit cross_size = row ? *border_height - *deco_height
+        : *border_width - *deco_width;
     const bool wraps = node.style.flex_wrap != FlexWrap::NoWrap;
     // A wrapped container can have one line. Its cross size still comes from
     // the items; align-content then distributes the remaining space.

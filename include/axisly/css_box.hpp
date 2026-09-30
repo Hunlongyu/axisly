@@ -72,6 +72,10 @@ struct ResolvedBox {
     BoxSizing box_sizing{BoxSizing::BorderBox};
     Direction direction{Direction::Ltr};
     bool replaced{};
+    // Padding and border set the minimum border-box size. A scrollbar reserves
+    // content space but does not enlarge that minimum.
+    [[nodiscard]] std::optional<Unit> horizontal_padding_border() const;
+    [[nodiscard]] std::optional<Unit> vertical_padding_border() const;
     [[nodiscard]] std::optional<Unit> horizontal_decoration() const;
     [[nodiscard]] std::optional<Unit> vertical_decoration() const;
 };

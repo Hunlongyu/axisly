@@ -91,6 +91,75 @@ void scrollbars_and_negative_margin() {
         "A single automatic Block absolute margin may absorb negative space");
 }
 
+void small_scrollbar_boxes() {
+    const AvailableSize available{AvailableSpace::max_content(), AvailableSpace::max_content()};
+    for (const auto display : {Display::Block, Display::Flex, Display::Grid}) {
+        for (const auto direction : {Direction::Ltr, Direction::Rtl}) {
+            for (const auto position : {Position::Relative, Position::Absolute}) {
+                LayoutTree tree;
+                Style parent;
+                parent.display = display;
+                parent.box.direction = direction;
+                parent.box.size = {Length::length(2), Length::length(4)};
+                parent.overflow_x = parent.overflow_y = Overflow::Scroll;
+                parent.scrollbar_width = 15;
+                const auto root = tree.create_node(parent);
+                Style item;
+                item.position = position;
+                item.box.size = {Length::length(0), Length::length(0)};
+                if (position == Position::Absolute) {
+                    item.inset.right = Length::length(0);
+                    item.inset.top = Length::length(0);
+                }
+                const auto child = tree.create_node(item);
+                tree.append_child(root, child);
+                const auto& result = tree.compute(root, available);
+                const Unit x = position == Position::Absolute && display == Display::Grid
+                    ? (direction == Direction::Rtl ? 15.0f : 0.0f)
+                    : position == Position::Absolute ? (direction == Direction::Rtl ? 2.0f : -13.0f)
+                    : direction == Direction::Rtl ? 2.0f : 0.0f;
+                require(result.succeeded() && result.find(root)->border_box == Rect{0, 0, 2, 4}
+                    && result.find(child)->border_box == Rect{x, 0, 0, 0},
+                    "A gutter must reserve content space without enlarging a small specified box");
+            }
+        }
+    }
+    for (const auto direction : {Direction::Ltr, Direction::Rtl}) {
+        LayoutTree tree;
+        Style parent;
+        parent.display = Display::Flex;
+        parent.box.direction = direction;
+        parent.box.size = {Length::length(2), Length::length(4)};
+        parent.overflow_x = parent.overflow_y = Overflow::Scroll;
+        parent.scrollbar_width = 15;
+        parent.justify_content = ContentAlignment{ContentPosition::Center};
+        parent.align_items = ItemAlignment{ItemPosition::Center};
+        const auto root = tree.create_node(parent);
+        Style item;
+        item.position = Position::Absolute;
+        const auto child = tree.create_node(item);
+        tree.append_child(root, child);
+        const auto& result = tree.compute(root, available);
+        require(result.succeeded() && result.find(child)->border_box
+            == Rect{direction == Direction::Rtl ? 8.5f : -6.5f, -5.5f, 0, 0},
+            "Static center alignment must retain negative physical free space");
+    }
+    LayoutTree tree;
+    Style parent;
+    parent.display = Display::Flex;
+    parent.box.size = {Length::length(2), Length::length(4)};
+    const auto root = tree.create_node(parent);
+    Style item;
+    item.flex_grow = 1;
+    item.overflow_x = item.overflow_y = Overflow::Scroll;
+    item.scrollbar_width = 15;
+    const auto child = tree.create_node(item);
+    tree.append_child(root, child);
+    const auto& result = tree.compute(root, available);
+    require(result.succeeded() && result.find(child)->border_box == Rect{0, 0, 2, 4},
+        "A scrolling Flex item's minimum size is padding plus border, without its gutter");
+}
+
 void grid_area_edges() {
     for (const auto direction : {Direction::Ltr, Direction::Rtl}) {
         LayoutTree tree;
@@ -167,6 +236,7 @@ int main(int argc, char** argv) {
         if (name == "ratio_and_content") ratio_and_content();
         else if (name == "scrollbars_and_negative_margin") scrollbars_and_negative_margin();
         else if (name == "grid_area_edges") grid_area_edges();
+        else if (name == "small_scrollbar_boxes") small_scrollbar_boxes();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

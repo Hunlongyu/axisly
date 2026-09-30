@@ -83,7 +83,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         : resolve_layout_box(node, outer_width, constraints.containing_height);
     const auto flow_decoration_width = flow_box.horizontal_decoration();
     const auto flow_decoration_height = flow_box.vertical_decoration();
-    const Unit content_width = std::max(Unit{0}, outer_width - *flow_decoration_width);
+    const Unit positioning_width = outer_width - *flow_decoration_width;
+    const Unit content_width = std::max(Unit{0}, positioning_width);
     // An intrinsic outer width provides space for placement, but it does not
     // turn the containing block into a definite percentage basis for children.
     // A content-based width is known only after intrinsic child measurement.
@@ -115,7 +116,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         const bool auto_left = child_box.margin.left.kind == EdgeKind::Auto;
         const bool auto_right = child_box.margin.right.kind == EdgeKind::Auto;
         Unit used_left = margin.left, used_right = margin.right;
-        const Unit horizontal_free = checked(static_cast<double>(content_width)
+        const Unit horizontal_free = checked(static_cast<double>(positioning_width)
             - fragment.size.width - margin.left - margin.right, child_id);
         if (horizontal_free > 0 && (auto_left || auto_right)) {
             const Unit share = checked(static_cast<double>(horizontal_free)
@@ -127,10 +128,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         const bool rtl = node.style.box.direction == Direction::Rtl;
         Unit x = rtl
-            ? checked(static_cast<double>(content_width)
+            ? checked(static_cast<double>(positioning_width)
                 - fragment.size.width - used_right, child_id)
             : used_left;
-        const Unit free_align = checked(static_cast<double>(content_width)
+        const Unit free_align = checked(static_cast<double>(positioning_width)
             - fragment.size.width - used_left - used_right, child_id);
         if (free_align > 0) {
             if ((node.style.text_align == TextAlign::LegacyLeft && rtl)

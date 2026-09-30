@@ -91,13 +91,21 @@ std::optional<Unit> ResolvedEdges::vertical() const {
     return t && b ? std::optional<Unit>(safe_add(*t, *b)) : std::nullopt;
 }
 
+std::optional<Unit> ResolvedBox::horizontal_padding_border() const {
+    return decoration(padding, border, true);
+}
+
+std::optional<Unit> ResolvedBox::vertical_padding_border() const {
+    return decoration(padding, border, false);
+}
+
 std::optional<Unit> ResolvedBox::horizontal_decoration() const {
-    const auto value = decoration(padding, border, true);
+    const auto value = horizontal_padding_border();
     return value ? std::optional<Unit>(safe_add(*value, scrollbar.width)) : std::nullopt;
 }
 
 std::optional<Unit> ResolvedBox::vertical_decoration() const {
-    const auto value = decoration(padding, border, false);
+    const auto value = vertical_padding_border();
     return value ? std::optional<Unit>(safe_add(*value, scrollbar.height)) : std::nullopt;
 }
 

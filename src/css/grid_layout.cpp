@@ -432,9 +432,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         result.nodes.push_back(make_layout(node, candidate, box));
         return result;
     }
-    align_tracks(track_columns, *inner_width,
+    const Unit positioning_width = (constraints.preserve_known_grid_size
+        ? *border_width : candidate.width) - *decoration_width;
+    const Unit positioning_height = (constraints.preserve_known_grid_size
+        ? *border_height : candidate.height) - *decoration_height;
+    align_tracks(track_columns, positioning_width,
         node.style.justify_content.value_or(ContentAlignment{}), node.id);
-    align_tracks(track_rows, *inner_height,
+    align_tracks(track_rows, positioning_height,
         node.style.align_content.value_or(ContentAlignment{}), node.id);
     Fragment result;
     result.size = candidate;
@@ -462,7 +466,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             const auto size = track_columns.tracks[i].size;
             report.columns.push_back(size);
             const auto inline_start = track_columns.offsets[i];
-            const auto start = physical_track_start(content_x, *inner_width,
+            const auto start = physical_track_start(content_x, positioning_width,
                 inline_start, size, node.style.box.direction, node.id);
             report.column_positions.push_back({start,
                 checked(static_cast<double>(start) + size, node.id)});
@@ -519,7 +523,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                     - box.scrollbar.height)};
             area = resolve_absolute_grid_area(absolute_rows[i], absolute_columns[i],
                 track_rows, track_columns, area,
-                {content_x, content_y, *inner_width, *inner_height},
+                {content_x, content_y, positioning_width, positioning_height},
                 node.style.box.direction, id);
             fragments[i] = absolute(node, id, candidate, box, depth, area);
             continue;
@@ -645,7 +649,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 child.style.box.direction, id)), id);
         child_fragment.nodes.front().margin = {used_left, used_top, used_right, used_bottom};
         if (node.style.box.direction == Direction::Rtl) {
-            x = checked(static_cast<double>(*inner_width) - x - child_fragment.size.width, id);
+            x = checked(static_cast<double>(positioning_width) - x - child_fragment.size.width, id);
         }
         translate(child_fragment,
             checked(static_cast<double>(content_x) + x, id),

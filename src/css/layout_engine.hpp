@@ -76,6 +76,7 @@ using MeasurementCacheMap =
     std::unordered_map<std::uint64_t, std::vector<MeasurementCacheEntry>>;
 
 struct BlockContext;
+struct PositionedItemInput;
 
 [[nodiscard]] Unit checked(double value, NodeId id);
 [[nodiscard]] Unit edge(const ResolvedEdge& value, NodeId id);
@@ -89,6 +90,7 @@ struct BlockContext;
     std::optional<Unit> containing_width, std::optional<Unit> containing_height);
 [[nodiscard]] Unit content_origin_x(const ResolvedBox& box,
     Insets border, Insets padding, NodeId node);
+void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box);
 [[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
     const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
     std::optional<Unit> last_baseline = std::nullopt);
@@ -162,6 +164,8 @@ private:
         Size parent_size, const ResolvedBox& parent_box, std::size_t depth,
         std::optional<Rect> containing_override = std::nullopt,
         std::optional<Unit> static_block_y = std::nullopt);
+    [[nodiscard]] Fragment positioned_item(const LayoutNode& child,
+        const ResolvedBox& box, const PositionedItemInput& input, std::size_t depth);
     [[nodiscard]] Measurement measure(const LayoutNode& node, const MeasureRequest& request);
 };
 

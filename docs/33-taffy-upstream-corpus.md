@@ -108,4 +108,27 @@ Release／Debug 各通过 349/349，MSVC ASan 通过 348/348；宿主三种
 [Grid 边界对照](reference-validation/taffy-upstream-2026-09-30/grid-limits.json)。
 Release／Debug 各通过 350/350；独立超大 Grid 断言在 MSVC ASan 下
 通过 1/1，覆盖源顺序、正方向裁切、双向 20000 条轨道和部分自动重复。
-完整 ASan 门禁继续执行，宿主与性能在后续组合阶段复核。
+完整 MSVC ASan 门禁随后通过 349/349（同一源码阶段与二进制，未改
+超时或断言）。宿主与性能在后续组合阶段复核。
+
+## 绝对定位尺寸和 Grid 区域分层
+
+`positioned_item_layout.cpp` 将项目外盒解析、关键字查询、inset 填充、
+比例传递、min/max 钳制、未定轴测量和最终子树布局分成明确步骤。
+Block／Flex 使用内容尺寸查询，Grid 保留固有尺寸查询；Flex 子树的
+包含块与样式／inset 的解析区域分别传入。最终两轴尺寸传给子树，
+内容的自然溢出独立保留。定位包含块扣除滚动条，Block 的单个自动
+外边距可以吸收负空间。
+
+`grid_positioned_area.cpp` 独立解析两侧网格线；未指定或不在已有网格
+内的端点使用相应的 padding-box 边界，绝对定位不创建隐式轨道。
+间隙使用相邻轨道的真实起止边缘，折叠 auto-fit 轨道保留物理 RTL 位置。
+三组独立数值断言覆盖三种父布局、最终测量约束、自然溢出、滚动条、
+负自动边距、单端点网格区域、无效端点及折叠轨道。
+
+全量上游重放通过 **5806/6020**，较 Grid 边界阶段新增通过 130 项，
+没有新增失败或原生错误；余下 214 项布局差异继续修复。
+[本阶段完整报告](reference-validation/taffy-upstream-2026-09-30/positioned-grid-area.json)
+保留全部失败及 XML 对照。Release／Debug 门禁各通过 353/353。
+定位、Grid 区域、滚动条及树查询的 MSVC ASan 检查通过 8/8；
+该阶段使用定向 ASan 检查，未将上一阶段的完整通过数计为本阶段结果。

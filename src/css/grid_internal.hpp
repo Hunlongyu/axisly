@@ -20,6 +20,10 @@ struct AxisPlacement {
     std::int32_t span{1};
 };
 
+struct AbsoluteGridPlacement {
+    std::optional<std::int32_t> start, end;
+};
+
 struct AxisEstimate {
     std::int32_t minimum_line{};
     std::int32_t maximum_line{};
@@ -87,6 +91,12 @@ void apply_grid_template_areas(const GridStyle& style,
     ExpandedTemplate& rows, ExpandedTemplate& columns);
 [[nodiscard]] AxisPlacement resolve_grid_placement(const GridPlacement& value,
     const ExpandedTemplate& axis);
+[[nodiscard]] AbsoluteGridPlacement resolve_absolute_grid_placement(
+    const GridPlacement& value, const ExpandedTemplate& axis);
+[[nodiscard]] Rect resolve_absolute_grid_area(const AbsoluteGridPlacement& rows,
+    const AbsoluteGridPlacement& columns, const TrackAxis& row_tracks,
+    const TrackAxis& column_tracks, Rect padding_box, Rect content_box,
+    Direction direction, NodeId id);
 [[nodiscard]] AxisEstimate estimate_grid_axis(const GridPlacement& value,
     std::int32_t explicit_count);
 [[nodiscard]] GridExtent place_grid_items(std::vector<Placement>& placements,

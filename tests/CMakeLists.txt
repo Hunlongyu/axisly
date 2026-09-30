@@ -39,6 +39,14 @@ foreach(contract IN ITEMS geometry tracks invalid_tracks ranges invalid_ranges g
     add_test(NAME axisly.${contract} COMMAND axisly_contract_tests ${contract})
 endforeach()
 
+add_executable(axisly_css_positioned_tests css/css_positioned_tests.cpp)
+target_link_libraries(axisly_css_positioned_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_css_positioned_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_positioned_tests)
+foreach(behavior IN ITEMS ratio_and_content scrollbars_and_negative_margin grid_area_edges)
+    add_test(NAME axisly.css.positioned.${behavior} COMMAND axisly_css_positioned_tests ${behavior})
+endforeach()
+
 add_executable(axisly_fixed_tests fixed/fixed_tests.cpp)
 target_link_libraries(axisly_fixed_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_fixed_tests PROPERTIES CXX_EXTENSIONS OFF)

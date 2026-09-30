@@ -1,4 +1,4 @@
-#include "layout_engine.hpp"
+#include "positioned_item_layout.hpp"
 
 #include <algorithm>
 
@@ -123,17 +123,23 @@ AbsoluteAxis solve_absolute_axis(const AbsoluteAxisInput& input) {
     Unit end_margin = input.end_margin;
     const Unit specified_start_margin = start_margin;
     const Unit specified_end_margin = end_margin;
-    const bool distribute_auto_margins = input.margin_mode == AbsoluteMarginMode::GridArea
+    const bool distribute_auto_margins = input.margin_mode != AbsoluteMarginMode::FlexContainer
         || (input.start && input.end);
     if (distribute_auto_margins) {
         double free = static_cast<double>(input.auto_margin_basis)
             - input.item_size - start_margin - end_margin;
         if (input.margin_mode == AbsoluteMarginMode::InsetConstrained) {
-            free -= *input.start + *input.end;
+            const Unit budget = input.end ? input.containing_size
+                - *input.end - input.start.value_or(0) : input.item_size;
+            free = static_cast<double>(budget) - input.item_size
+                - (input.start ? start_margin : 0) - (input.end ? end_margin : 0);
         }
-        if (free > 0 && (input.auto_start || input.auto_end)) {
+        const int auto_count = static_cast<int>(input.auto_start) + static_cast<int>(input.auto_end);
+        const bool negative_single_margin = input.margin_mode == AbsoluteMarginMode::InsetConstrained
+            && auto_count == 1;
+        if (auto_count && (free > 0 || negative_single_margin)) {
             const Unit share = checked(free
-                / (static_cast<int>(input.auto_start) + static_cast<int>(input.auto_end)), input.node);
+                / auto_count, input.node);
             if (input.auto_start) start_margin = share;
             if (input.auto_end) end_margin = share;
         }
@@ -181,11 +187,13 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     const auto& child = get(child_id);
     const auto border = edges(parent_box.border, parent.id);
     const Rect containing = containing_override.value_or(Rect{
-        border.left, border.top,
+        checked(static_cast<double>(border.left)
+            + (parent.style.box.direction == Direction::Rtl ? parent_box.scrollbar.width : 0), parent.id),
+        border.top,
         std::max(Unit{0}, checked(static_cast<double>(parent_size.width)
-            - border.left - border.right, parent.id)),
+            - border.left - border.right - parent_box.scrollbar.width, parent.id)),
         std::max(Unit{0}, checked(static_cast<double>(parent_size.height)
-            - border.top - border.bottom, parent.id)),
+            - border.top - border.bottom - parent_box.scrollbar.height, parent.id)),
     });
     const Unit containing_width = containing.width;
     const Unit containing_height = containing.height;
@@ -200,24 +208,17 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, child.id, error.what());
     }
     const auto margin = edges(child_box.margin, child.id);
-    Constraints constraints;
-    constraints.containing_width = containing_width;
-    constraints.containing_height = containing_height;
-    constraints.available = {AvailableSpace::definite(containing_width),
-        AvailableSpace::definite(containing_height)};
-    constraints.content_based_width = child.style.box.size.width.kind()
-        == LengthKind::Auto && !(left && right);
-    if (left && right && child.style.box.size.width.kind() == LengthKind::Auto) {
-        constraints.known_width = std::max(Unit{0}, checked(
-            static_cast<double>(containing_width) - *left - *right
-            - margin.left - margin.right, child.id));
-    }
-    if (top && bottom && child.style.box.size.height.kind() == LengthKind::Auto) {
-        constraints.known_height = std::max(Unit{0}, checked(
-            static_cast<double>(containing_height) - *top - *bottom
-            - margin.top - margin.bottom, child.id));
-    }
-    auto fragment = layout(child_id, constraints, depth + 1);
+    const auto padding = edges(parent_box.padding, parent.id);
+    const Size content{
+        std::max(Unit{0}, containing_width - padding.left - padding.right),
+        std::max(Unit{0}, containing_height - padding.top - padding.bottom)};
+    const bool flex = parent.style.display == Display::Flex;
+    auto fragment = positioned_item(child, child_box, {
+        .parent_display = parent.style.display,
+        .area = {containing_width, containing_height},
+        .containing_block = flex ? content : Size{containing_width, containing_height},
+        .available = flex ? parent_size : Size{containing_width, containing_height},
+        .start_inset = {left, top}, .end_inset = {right, bottom}}, depth);
     const auto margin_mode = parent.style.display == Display::Flex
         ? AbsoluteMarginMode::FlexContainer
         : parent.style.display == Display::Grid
@@ -250,13 +251,8 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     auto placed_vertical = vertical;
     const bool static_x = !left && !right;
     const bool static_y = !top && !bottom;
-    const auto padding = edges(parent_box.padding, parent.id);
-    const Unit content_width = std::max(Unit{0}, checked(
-        static_cast<double>(containing_width) - padding.left - padding.right
-            - parent_box.scrollbar.width, parent.id));
-    const Unit content_height = std::max(Unit{0}, checked(
-        static_cast<double>(containing_height) - padding.top - padding.bottom
-            - parent_box.scrollbar.height, parent.id));
+    const Unit content_width = content.width;
+    const Unit content_height = content.height;
     if (parent.style.display == Display::Flex && (static_x || static_y)) {
         const bool row = parent.style.flex_direction == FlexDirection::Row
             || parent.style.flex_direction == FlexDirection::RowReverse;
@@ -278,7 +274,6 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                     child.style.box.direction, cross_reverse,
                     fragment.size.width + margin.left + margin.right > content_width);
             placed_horizontal.offset = checked(static_cast<double>(padding.left)
-                + (rtl ? parent_box.scrollbar.width : 0)
                 + static_offset(placement, content_width, fragment.size.width,
                     margin.left, margin.right, child.id), child.id);
         }
@@ -318,8 +313,6 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
         || parent.style.display == Display::FlowRoot) && (static_x || static_y)) {
         if (static_x) {
             placed_horizontal.offset = checked(static_cast<double>(padding.left)
-                + (parent.style.box.direction == Direction::Rtl
-                    ? parent_box.scrollbar.width : 0)
                 + static_offset(writing_start(true, parent.style.box.direction),
                     content_width, fragment.size.width, margin.left, margin.right,
                     child.id), child.id);

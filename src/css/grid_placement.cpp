@@ -111,6 +111,24 @@ AxisPlacement resolve_grid_placement(const GridPlacement& value, const ExpandedT
     return {std::nullopt, span};
 }
 
+AbsoluteGridPlacement resolve_absolute_grid_placement(const GridPlacement& value,
+    const ExpandedTemplate& axis) {
+    const auto resolved = resolve_grid_placement(value, axis);
+    if (!resolved.start) return {};
+    const auto definite = [](const GridLine& line) {
+        return line.kind() == GridLineKind::Index || line.kind() == GridLineKind::NamedIndex;
+    };
+    const bool start_definite = definite(value.start);
+    const bool end_definite = definite(value.end);
+    if (start_definite && value.end.kind() == GridLineKind::Auto) {
+        return {resolved.start, std::nullopt};
+    }
+    if (end_definite && value.start.kind() == GridLineKind::Auto) {
+        return {std::nullopt, *resolved.start + resolved.span};
+    }
+    return {resolved.start, *resolved.start + resolved.span};
+}
+
 AxisEstimate estimate_grid_axis(const GridPlacement& value, std::int32_t explicit_count) {
     // Taffy's initial grid extent is computed before named lines are resolved.
     // A named endpoint therefore contributes no definite bound at this stage.

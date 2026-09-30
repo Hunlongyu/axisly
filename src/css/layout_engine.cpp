@@ -127,6 +127,19 @@ NodeLayout make_layout(const LayoutNode& node, Size size, const ResolvedBox& res
         last_baseline ? std::optional<Unit>(*last_baseline + top) : std::nullopt};
 }
 
+void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box) {
+    fragment.size = size;
+    auto& layout = fragment.nodes.front();
+    layout.border_box.width = size.width;
+    layout.border_box.height = size.height;
+    const auto padding = edges(box.padding, layout.node);
+    const auto border = edges(box.border, layout.node);
+    layout.content_box.width = std::max(Unit{0}, content_axis(size.width,
+        padding.left, padding.right, border.left, border.right) - box.scrollbar.width);
+    layout.content_box.height = std::max(Unit{0}, content_axis(size.height,
+        padding.top, padding.bottom, border.top, border.bottom) - box.scrollbar.height);
+}
+
 void translate(Fragment& fragment, Unit x, Unit y, NodeId node) {
     for (auto& layout : fragment.nodes) {
         layout.border_box.x = checked(static_cast<double>(layout.border_box.x) + x, node);

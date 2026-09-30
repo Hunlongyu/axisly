@@ -1,0 +1,876 @@
+[0/1] Re-running CMake...
+{"cases": 6020, "groups": {"block": 940, "blockflex": 44, "blockgrid": 56, "contain": 32, "flex": 2648, "float": 88, "grid": 2132, "gridflex": 24, "leaf": 56}}
+Generated 6020 typed fixtures in 62 sources
+-- Configuring done (5.5s)
+-- Generating done (0.2s)
+-- Build files have been written to: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/reference-release
+[1/97] Building CXX object CMakeFiles\axisly.dir\src\css\leaf_layout.cpp.obj
+[2/97] Building CXX object CMakeFiles\axisly.dir\src\css\layout_fragment.cpp.obj
+[3/97] Building CXX object CMakeFiles\axisly.dir\src\css\layout_cache.cpp.obj
+[4/97] Building CXX object CMakeFiles\axisly.dir\src\css_tree.cpp.obj
+[5/97] Building CXX object CMakeFiles\axisly.dir\src\css\layout_engine.cpp.obj
+[6/97] Building CXX object CMakeFiles\axisly.dir\src\css\block_layout.cpp.obj
+[7/97] Building CXX object CMakeFiles\axisly.dir\src\css\block_flow_state.cpp.obj
+[8/97] Building CXX object CMakeFiles\axisly.dir\src\css\block_item_sizing.cpp.obj
+[9/97] Building CXX object CMakeFiles\axisly.dir\src\css\block_intrinsic_width.cpp.obj
+[10/97] Building CXX object CMakeFiles\axisly.dir\src\css\block_float_context.cpp.obj
+[11/97] Building CXX object CMakeFiles\axisly.dir\src\css\flex_item_sizing.cpp.obj
+[12/97] Building CXX object CMakeFiles\axisly.dir\src\css\flex_layout.cpp.obj
+[13/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_placement.cpp.obj
+[14/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_positioned_area.cpp.obj
+[15/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_template.cpp.obj
+[16/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_item_sizing.cpp.obj
+[17/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_item_contribution.cpp.obj
+[18/97] Building CXX object CMakeFiles\axisly.dir\src\css\positioned_layout.cpp.obj
+[19/97] Building CXX object CMakeFiles\axisly.dir\src\css\positioned_item_layout.cpp.obj
+[20/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_geometry.cpp.obj
+[21/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_layout.cpp.obj
+[22/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_track.cpp.obj
+[23/97] Building CXX object CMakeFiles\axisly.dir\src\css\grid_track_sizing.cpp.obj
+[24/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_grid.cpp.obj
+[25/97] Building CXX object CMakeFiles\axisly.dir\src\css\overflow_layout.cpp.obj
+[26/97] Linking CXX static library axisly.lib
+[27/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_measurement.cpp.obj
+[28/97] Linking CXX executable axisly_api_example.exe
+[29/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_layout.cpp.obj
+[30/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_result.cpp.obj
+[31/97] Linking CXX executable axisly_weighted_example.exe
+[32/97] Linking CXX executable axisly_alignment_example.exe
+[33/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_cache.cpp.obj
+[34/97] Linking CXX executable axisly_measurement_example.exe
+[35/97] Linking CXX executable axisly_spanning_example.exe
+[36/97] Linking CXX executable axisly_range_example.exe
+[37/97] Linking CXX executable axisly_nested_example.exe
+[38/97] Linking CXX executable axisly_retained_example.exe
+[39/97] Building CXX object tests\CMakeFiles\axisly_css_tree_tests.dir\css\css_tree_tests.cpp.obj
+[40/97] Linking CXX executable tests\axisly_contract_tests.exe
+[41/97] Linking CXX executable tests\axisly_css_foundation_tests.exe
+[42/97] Linking CXX executable tests\axisly_css_block_flow_tests.exe
+[43/97] Linking CXX executable tests\axisly_css_flex_tests.exe
+[44/97] Linking CXX executable tests\axisly_css_calc_layout_tests.exe
+[45/97] Linking CXX executable tests\axisly_css_tree_tests.exe
+[46/97] Linking CXX executable tests\axisly_css_flex_sizing_tests.exe
+[47/97] Linking CXX executable tests\axisly_css_grid_tests.exe
+[48/97] Linking CXX executable tests\axisly_css_grid_contribution_tests.exe
+[49/97] Linking CXX executable tests\axisly_css_positioned_tests.exe
+[50/97] Linking CXX executable tests\axisly_fixed_tests.exe
+[51/97] Linking CXX executable tests\axisly_weighted_tests.exe
+[52/97] Linking CXX executable tests\axisly_alignment_tests.exe
+[53/97] Linking CXX executable tests\axisly_measurement_tests.exe
+[54/97] Linking CXX executable tests\axisly_spanning_tests.exe
+[55/97] Linking CXX executable tests\axisly_range_tests.exe
+[56/97] Linking CXX executable tests\axisly_nested_tests.exe
+[57/97] Linking CXX executable tests\axisly_cache_tests.exe
+[58/97] Linking CXX executable tests\axisly_advanced_tests.exe
+[59/97] Linking CXX executable tests\axisly_tree_tests.exe
+[60/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_measurement_cache.cpp.obj
+[61/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_rounding.cpp.obj
+[62/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_css_values.cpp.obj
+[63/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_tree.cpp.obj
+[64/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_css_box.cpp.obj
+[65/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_css_measurement.cpp.obj
+[66/97] Linking CXX executable tests\reference\axisly_reference_native.exe
+[67/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_css_grid.cpp.obj
+[68/97] Linking CXX executable tests\reference\axisly_css_reference_native.exe
+[69/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_css_style.cpp.obj
+[70/97] Linking CXX executable tests\reference\axisly_upstream_native.exe
+[71/97] Linking CXX executable tests\reference\axisly_calc_matrix_native.exe
+[72/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_css_tree.cpp.obj
+[73/97] Linking CXX executable tests\reference\axisly_calc_tracks_native.exe
+[74/97] Linking CXX executable tests\reference\axisly_overflow_matrix_native.exe
+[75/97] Building CXX object tests\CMakeFiles\axisly_header_checks.dir\header_axisly.cpp.obj
+[76/97] Linking CXX executable tests\reference\axisly_contain_matrix_native.exe
+[77/97] Linking CXX executable tests\reference\axisly_scrollbar_matrix_native.exe
+[78/97] Linking CXX executable tests\reference\axisly_flex_matrix_native.exe
+[79/97] Linking CXX executable tests\reference\axisly_flex_bounds_native.exe
+[80/97] Linking CXX executable tests\reference\axisly_flex_factors_native.exe
+[81/97] Linking CXX executable tests\reference\axisly_mixed_nested_native.exe
+[82/97] Linking CXX executable tests\reference\axisly_block_float_matrix_native.exe
+[83/97] Linking CXX executable tests\reference\axisly_grid_matrix_native.exe
+[84/97] Linking CXX executable tests\reference\axisly_grid_line_matrix_native.exe
+[85/97] Linking CXX executable tests\reference\axisly_grid_repeat_matrix_native.exe
+[86/97] Linking CXX executable tests\reference\axisly_grid_area_matrix_native.exe
+[87/97] Linking CXX executable tests\reference\axisly_grid_triple_span_native.exe
+[88/97] Linking CXX executable tests\reference\axisly_ratio_matrix_native.exe
+[89/97] Linking CXX executable tests\reference\axisly_intrinsic_size_native.exe
+[90/97] Linking CXX executable tests\reference\axisly_ratio_deep_matrix_native.exe
+[91/97] Linking CXX executable tests\reference\axisly_root_ratio_matrix_native.exe
+[92/97] Linking CXX executable tests\reference\axisly_replaced_leaf_matrix_native.exe
+[93/97] Linking CXX executable tests\reference\axisly_item_alignment_matrix_native.exe
+[94/97] Linking CXX executable tests\reference\axisly_baseline_matrix_native.exe
+[95/97] Linking CXX executable tests\reference\axisly_content_alignment_matrix_native.exe
+[96/97] Linking CXX executable tests\reference\axisly_position_matrix_native.exe
+Test project C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/reference-release
+        Start 328: axisly.reference.upstream
+        Start 329: axisly.reference.calc_matrix
+        Start 330: axisly.reference.calc_tracks
+        Start 359: axisly.reference.grid_area_matrix
+  1/383 Test #330: axisly.reference.calc_tracks ...........................   Passed    1.61 sec
+        Start 376: axisly.reference.ratio_deep_matrix
+  2/383 Test #329: axisly.reference.calc_matrix ...........................   Passed    1.85 sec
+        Start 378: axisly.reference.replaced_leaf_matrix
+  3/383 Test #378: axisly.reference.replaced_leaf_matrix ..................   Passed    0.77 sec
+        Start 360: axisly.reference.grid_line_matrix.0
+  4/383 Test #376: axisly.reference.ratio_deep_matrix .....................   Passed    1.64 sec
+        Start 382: axisly.reference.position_matrix
+  5/383 Test #382: axisly.reference.position_matrix .......................   Passed    1.50 sec
+        Start 381: axisly.reference.content_alignment_matrix
+  6/383 Test #360: axisly.reference.grid_line_matrix.0 ....................   Passed    3.27 sec
+        Start 357: axisly.reference.grid_matrix
+  7/383 Test #359: axisly.reference.grid_area_matrix ......................   Passed    6.11 sec
+        Start 374: axisly.reference.intrinsic_size
+  8/383 Test #381: axisly.reference.content_alignment_matrix ..............   Passed    1.85 sec
+        Start 358: axisly.reference.grid_repeat_matrix
+  9/383 Test #374: axisly.reference.intrinsic_size ........................   Passed    4.77 sec
+        Start 336: axisly.reference.css_tree
+ 10/383 Test #357: axisly.reference.grid_matrix ...........................   Passed    7.92 sec
+        Start 355: axisly.reference.mixed_nested_auto-definite
+ 11/383 Test #358: axisly.reference.grid_repeat_matrix ....................   Passed    8.71 sec
+        Start  10: axisly.css.tree.rtl_root_coordinates
+ 12/383 Test  #10: axisly.css.tree.rtl_root_coordinates ...................   Passed    0.53 sec
+        Start 352: axisly.reference.mixed_nested_definite
+ 13/383 Test #355: axisly.reference.mixed_nested_auto-definite ............   Passed    5.10 sec
+        Start 379: axisly.reference.item_alignment_matrix
+ 14/383 Test #352: axisly.reference.mixed_nested_definite .................   Passed    4.07 sec
+        Start 377: axisly.reference.root_ratio_matrix
+ 15/383 Test #379: axisly.reference.item_alignment_matrix .................   Passed    2.28 sec
+        Start 368: axisly.reference.grid_line_matrix.8
+ 16/383 Test #377: axisly.reference.root_ratio_matrix .....................   Passed    1.95 sec
+        Start 327: axisly.reference.upstream_expectations
+ 17/383 Test #327: axisly.reference.upstream_expectations .................   Passed    0.84 sec
+        Start 370: axisly.reference.grid_line_matrix.10
+ 18/383 Test #368: axisly.reference.grid_line_matrix.8 ....................   Passed    3.84 sec
+        Start 362: axisly.reference.grid_line_matrix.2
+ 19/383 Test #370: axisly.reference.grid_line_matrix.10 ...................   Passed    3.45 sec
+        Start 369: axisly.reference.grid_line_matrix.9
+ 20/383 Test #328: axisly.reference.upstream ..............................   Passed   27.61 sec
+        Start 366: axisly.reference.grid_line_matrix.6
+ 21/383 Test #362: axisly.reference.grid_line_matrix.2 ....................   Passed    3.38 sec
+        Start 371: axisly.reference.grid_line_matrix.11
+ 22/383 Test #369: axisly.reference.grid_line_matrix.9 ....................   Passed    3.33 sec
+        Start 365: axisly.reference.grid_line_matrix.5
+ 23/383 Test #366: axisly.reference.grid_line_matrix.6 ....................   Passed    3.92 sec
+        Start 361: axisly.reference.grid_line_matrix.1
+ 24/383 Test #371: axisly.reference.grid_line_matrix.11 ...................   Passed    5.07 sec
+        Start 344: axisly.reference.flex_auto-definite_matrix
+ 25/383 Test #365: axisly.reference.grid_line_matrix.5 ....................   Passed    5.44 sec
+        Start 367: axisly.reference.grid_line_matrix.7
+ 26/383 Test #361: axisly.reference.grid_line_matrix.1 ....................   Passed    4.51 sec
+        Start 364: axisly.reference.grid_line_matrix.4
+ 27/383 Test #344: axisly.reference.flex_auto-definite_matrix .............   Passed    3.18 sec
+        Start 363: axisly.reference.grid_line_matrix.3
+ 28/383 Test #367: axisly.reference.grid_line_matrix.7 ....................   Passed    3.01 sec
+        Start 375: axisly.reference.ratio_matrix
+ 29/383 Test #364: axisly.reference.grid_line_matrix.4 ....................   Passed    2.94 sec
+        Start 373: axisly.reference.grid_triple_span
+ 30/383 Test #363: axisly.reference.grid_line_matrix.3 ....................   Passed    2.66 sec
+        Start 353: axisly.reference.mixed_nested_max-content
+ 31/383 Test #375: axisly.reference.ratio_matrix ..........................   Passed    1.28 sec
+        Start 354: axisly.reference.mixed_nested_min-content
+ 32/383 Test #373: axisly.reference.grid_triple_span ......................   Passed    1.89 sec
+        Start 326: axisly.reference.upstream_adapter
+ 33/383 Test #326: axisly.reference.upstream_adapter ......................   Passed    0.70 sec
+        Start 333: axisly.reference.advanced
+ 34/383 Test #353: axisly.reference.mixed_nested_max-content ..............   Passed    2.44 sec
+        Start   3: axisly.css.foundation.value_ownership
+ 35/383 Test #354: axisly.reference.mixed_nested_min-content ..............   Passed    2.47 sec
+        Start 340: axisly.reference.ratio_scrollbar_matrix
+ 36/383 Test   #3: axisly.css.foundation.value_ownership ..................   Passed    0.16 sec
+        Start 347: axisly.reference.flex_bounds_min-content
+ 37/383 Test #336: axisly.reference.css_tree ..............................   Passed   31.87 sec
+        Start 339: axisly.reference.scrollbar_matrix
+ 38/383 Test #340: axisly.reference.ratio_scrollbar_matrix ................   Passed    0.58 sec
+        Start 380: axisly.reference.baseline_matrix
+ 39/383 Test #347: axisly.reference.flex_bounds_min-content ...............   Passed    0.93 sec
+        Start  38: axisly.css.calc.late_flex_item_basis
+ 40/383 Test #339: axisly.reference.scrollbar_matrix ......................   Passed    0.65 sec
+        Start 337: axisly.reference.overflow_matrix
+ 41/383 Test  #38: axisly.css.calc.late_flex_item_basis ...................   Passed    0.16 sec
+        Start  23: axisly.css.block.minimum_and_collapsed_margins
+ 42/383 Test #380: axisly.reference.baseline_matrix .......................   Passed    0.71 sec
+        Start  52: axisly.css.grid.percentage_grid_areas
+ 43/383 Test  #23: axisly.css.block.minimum_and_collapsed_margins .........   Passed    0.31 sec
+        Start  42: axisly.css.flex.item_size_stages
+ 44/383 Test  #52: axisly.css.grid.percentage_grid_areas ..................   Passed    0.28 sec
+ 45/383 Test #337: axisly.reference.overflow_matrix .......................   Passed    0.47 sec
+        Start 346: axisly.reference.flex_bounds_max-content
+        Start  37: axisly.css.flex.small_factors_gap
+ 46/383 Test  #42: axisly.css.flex.item_size_stages .......................   Passed    0.33 sec
+        Start 338: axisly.reference.contain_matrix
+ 47/383 Test  #37: axisly.css.flex.small_factors_gap ......................   Passed    0.19 sec
+        Start 341: axisly.reference.flex_matrix
+ 48/383 Test #333: axisly.reference.advanced ..............................   Passed    2.70 sec
+        Start 343: axisly.reference.flex_min-content_matrix
+ 49/383 Test #338: axisly.reference.contain_matrix ........................   Passed    0.45 sec
+        Start 342: axisly.reference.flex_max-content_matrix
+ 50/383 Test #346: axisly.reference.flex_bounds_max-content ...............   Passed    0.67 sec
+        Start 351: axisly.reference.flex_factors_auto-definite
+ 51/383 Test #351: axisly.reference.flex_factors_auto-definite ............   Passed    0.55 sec
+        Start 372: axisly.reference.grid_span_matrix
+ 52/383 Test #341: axisly.reference.flex_matrix ...........................   Passed    1.07 sec
+        Start 332: axisly.reference.harness
+ 53/383 Test #343: axisly.reference.flex_min-content_matrix ...............   Passed    1.02 sec
+        Start 334: axisly.reference.advanced_harness
+ 54/383 Test #342: axisly.reference.flex_max-content_matrix ...............   Passed    1.02 sec
+        Start  67: axisly.css.positioned.small_scrollbar_boxes
+ 55/383 Test  #67: axisly.css.positioned.small_scrollbar_boxes ............   Passed    0.17 sec
+        Start 356: axisly.reference.block_float_matrix
+ 56/383 Test #372: axisly.reference.grid_span_matrix ......................   Passed    0.88 sec
+        Start  51: axisly.css.grid.overlarge_grid
+ 57/383 Test  #51: axisly.css.grid.overlarge_grid .........................   Passed    0.18 sec
+        Start 345: axisly.reference.flex_bounds_matrix
+ 58/383 Test #356: axisly.reference.block_float_matrix ....................   Passed    0.65 sec
+        Start 383: axisly.reference.calc
+ 59/383 Test #332: axisly.reference.harness ...............................   Passed    1.44 sec
+        Start 331: axisly.reference.compare
+ 60/383 Test #334: axisly.reference.advanced_harness ......................   Passed    1.40 sec
+        Start 348: axisly.reference.flex_factors_matrix
+ 61/383 Test #345: axisly.reference.flex_bounds_matrix ....................   Passed    0.60 sec
+        Start 350: axisly.reference.flex_factors_min-content
+ 62/383 Test #348: axisly.reference.flex_factors_matrix ...................   Passed    0.43 sec
+        Start 349: axisly.reference.flex_factors_max-content
+ 63/383 Test #383: axisly.reference.calc ..................................   Passed    0.72 sec
+        Start 335: axisly.reference.tree
+ 64/383 Test #350: axisly.reference.flex_factors_min-content ..............   Passed    0.50 sec
+        Start  18: axisly.css.tree.node_storage_lifecycle
+ 65/383 Test  #18: axisly.css.tree.node_storage_lifecycle .................   Passed    0.10 sec
+        Start  36: axisly.css.flex.wpt_single_line_wrap
+ 66/383 Test  #36: axisly.css.flex.wpt_single_line_wrap ...................   Passed    0.08 sec
+        Start  17: axisly.css.tree.deep_flex_query_budget
+ 67/383 Test  #17: axisly.css.tree.deep_flex_query_budget .................   Passed    0.04 sec
+        Start  19: axisly.css.tree.cache_failure_rollback
+ 68/383 Test  #19: axisly.css.tree.cache_failure_rollback .................   Passed    0.02 sec
+        Start  40: axisly.css.calc.query_stage_cache
+ 69/383 Test  #40: axisly.css.calc.query_stage_cache ......................   Passed    0.03 sec
+        Start  21: axisly.css.tree.container_scrollbar_ratio_bounds
+ 70/383 Test  #21: axisly.css.tree.container_scrollbar_ratio_bounds .......   Passed    0.02 sec
+        Start  20: axisly.css.tree.cached_subtree_depth_limit
+ 71/383 Test #349: axisly.reference.flex_factors_max-content ..............   Passed    0.54 sec
+        Start  64: axisly.css.positioned.ratio_and_content
+ 72/383 Test  #20: axisly.css.tree.cached_subtree_depth_limit .............   Passed    0.02 sec
+        Start  43: axisly.css.flex.baseline_auto_margins
+ 73/383 Test  #64: axisly.css.positioned.ratio_and_content ................   Passed    0.02 sec
+        Start  55: axisly.css.grid.cross_axis_measurement
+ 74/383 Test  #43: axisly.css.flex.baseline_auto_margins ..................   Passed    0.02 sec
+        Start  53: axisly.css.grid.intrinsic_growth_limits
+ 75/383 Test  #55: axisly.css.grid.cross_axis_measurement .................   Passed    0.03 sec
+        Start  66: axisly.css.positioned.grid_area_edges
+ 76/383 Test  #53: axisly.css.grid.intrinsic_growth_limits ................   Passed    0.02 sec
+        Start  24: axisly.css.block.floating_margin_struts
+ 77/383 Test  #66: axisly.css.positioned.grid_area_edges ..................   Passed    0.02 sec
+        Start  25: axisly.css.block.formatting_context_slots
+ 78/383 Test  #24: axisly.css.block.floating_margin_struts ................   Passed    0.02 sec
+        Start  44: axisly.css.flex.balanced_measurement_budget
+ 79/383 Test  #25: axisly.css.block.formatting_context_slots ..............   Passed    0.02 sec
+        Start   7: axisly.css.tree.leaf_available_constraints
+ 80/383 Test  #44: axisly.css.flex.balanced_measurement_budget ............   Passed    0.02 sec
+        Start  26: axisly.css.block.percentage_item_stages
+ 81/383 Test   #7: axisly.css.tree.leaf_available_constraints .............   Passed    0.03 sec
+        Start  91: axisly.weighted.equal_weights
+ 82/383 Test #331: axisly.reference.compare ...............................   Passed    1.24 sec
+ 83/383 Test  #26: axisly.css.block.percentage_item_stages ................   Passed    0.12 sec
+        Start  41: axisly.css.calc.numeric_recovery
+        Start  39: axisly.css.calc.intrinsic_known_height
+ 84/383 Test  #91: axisly.weighted.equal_weights ..........................   Passed    0.13 sec
+        Start 234: axisly.nested.lambda_capture
+ 85/383 Test  #41: axisly.css.calc.numeric_recovery .......................   Passed    0.15 sec
+ 86/383 Test  #39: axisly.css.calc.intrinsic_known_height .................   Passed    0.14 sec
+        Start 203: axisly.range.fixed_fixed
+        Start  54: axisly.css.grid.baseline_track_sizes
+ 87/383 Test #335: axisly.reference.tree ..................................   Passed    1.02 sec
+ 88/383 Test #234: axisly.nested.lambda_capture ...........................   Passed    0.24 sec
+        Start 168: axisly.spanning.fixed_columns
+        Start  65: axisly.css.positioned.scrollbars_and_negative_margin
+ 89/383 Test #203: axisly.range.fixed_fixed ...............................   Passed    0.23 sec
+ 90/383 Test  #54: axisly.css.grid.baseline_track_sizes ...................   Passed    0.13 sec
+        Start 268: axisly.cache.reuse
+        Start 135: axisly.measurement.empty_content
+ 91/383 Test #168: axisly.spanning.fixed_columns ..........................   Passed    0.33 sec
+ 92/383 Test  #65: axisly.css.positioned.scrollbars_and_negative_margin ...   Passed    0.22 sec
+        Start 113: axisly.alignment.defaults
+        Start   1: axisly.retained.example
+ 93/383 Test #268: axisly.cache.reuse .....................................   Passed    0.42 sec
+        Start  56: axisly.geometry
+ 94/383 Test #135: axisly.measurement.empty_content .......................   Passed    0.42 sec
+ 95/383 Test #113: axisly.alignment.defaults ..............................   Passed    0.31 sec
+        Start 293: axisly.advanced.placement_row
+        Start   2: axisly.css.foundation.values
+ 96/383 Test   #1: axisly.retained.example ................................   Passed    0.35 sec
+ 97/383 Test #293: axisly.advanced.placement_row ..........................   Passed    0.13 sec
+        Start 314: axisly.tree.flat_equivalence
+        Start  68: axisly.fixed.one_cell
+ 98/383 Test  #56: axisly.geometry ........................................   Passed    0.44 sec
+ 99/383 Test   #2: axisly.css.foundation.values ...........................   Passed    0.24 sec
+100/383 Test #314: axisly.tree.flat_equivalence ...........................   Passed    0.21 sec
+        Start  35: axisly.css.flex.wpt_scaled_flex_shrink
+        Start  16: axisly.css.tree.multi_query_leaf_cache
+        Start  34: axisly.css.flex.wpt_scroll_cross_size
+101/383 Test  #35: axisly.css.flex.wpt_scaled_flex_shrink .................   Passed    0.04 sec
+102/383 Test  #16: axisly.css.tree.multi_query_leaf_cache .................   Passed    0.03 sec
+        Start  27: axisly.css.flex.row_grow
+        Start  11: axisly.css.tree.intrinsic_container_invalidation
+103/383 Test  #68: axisly.fixed.one_cell ..................................   Passed    0.18 sec
+104/383 Test  #34: axisly.css.flex.wpt_scroll_cross_size ..................   Passed    0.04 sec
+105/383 Test  #27: axisly.css.flex.row_grow ...............................   Passed    0.03 sec
+        Start 307: axisly.advanced.rounding_shared_edges
+        Start  57: axisly.tracks
+        Start 292: axisly.cache.prepared_randomized_spans
+106/383 Test  #11: axisly.css.tree.intrinsic_container_invalidation .......   Passed    0.09 sec
+        Start  79: axisly.fixed.invalid_container
+107/383 Test  #57: axisly.tracks ..........................................   Passed    0.07 sec
+        Start  15: axisly.css.tree.plain_block_single_measure
+108/383 Test #307: axisly.advanced.rounding_shared_edges ..................   Passed    0.10 sec
+        Start 279: axisly.cache.advisory_dimensions
+109/383 Test #292: axisly.cache.prepared_randomized_spans .................   Passed    0.04 sec
+110/383 Test  #79: axisly.fixed.invalid_container .........................   Passed    0.03 sec
+111/383 Test  #15: axisly.css.tree.plain_block_single_measure .............   Passed    0.02 sec
+        Start 211: axisly.range.fixed_floor_priority
+        Start 142: axisly.measurement.rigid_content
+        Start 101: axisly.weighted.maximum_freeze
+112/383 Test #279: axisly.cache.advisory_dimensions .......................   Passed    0.04 sec
+113/383 Test #211: axisly.range.fixed_floor_priority ......................   Passed    0.03 sec
+        Start   6: axisly.css.tree.leaf_and_block
+        Start  85: axisly.fixed.duplicate_ids
+114/383 Test #142: axisly.measurement.rigid_content .......................   Passed    0.04 sec
+115/383 Test   #6: axisly.css.tree.leaf_and_block .........................   Passed    0.02 sec
+        Start 133: axisly.alignment.deterministic
+        Start 266: axisly.nested.fractional_offsets
+116/383 Test #101: axisly.weighted.maximum_freeze .........................   Passed    0.07 sec
+        Start 118: axisly.alignment.all_axis_pairs
+117/383 Test  #85: axisly.fixed.duplicate_ids .............................   Passed    0.05 sec
+118/383 Test #133: axisly.alignment.deterministic .........................   Passed    0.04 sec
+        Start  72: axisly.fixed.gaps
+        Start 287: axisly.cache.span_growth_shrink
+119/383 Test #266: axisly.nested.fractional_offsets .......................   Passed    0.05 sec
+        Start  14: axisly.css.tree.inherited_float_invalidation
+120/383 Test #118: axisly.alignment.all_axis_pairs ........................   Passed    0.04 sec
+121/383 Test  #72: axisly.fixed.gaps ......................................   Passed    0.03 sec
+        Start 286: axisly.cache.randomized_updates
+        Start 252: axisly.nested.overflowing_child
+122/383 Test #287: axisly.cache.span_growth_shrink ........................   Passed    0.04 sec
+123/383 Test  #14: axisly.css.tree.inherited_float_invalidation ...........   Passed    0.03 sec
+        Start 120: axisly.alignment.asymmetric_margins
+        Start 186: axisly.spanning.duplicate_spans
+124/383 Test #286: axisly.cache.randomized_updates ........................   Passed    0.04 sec
+        Start 243: axisly.nested.width_reflow
+125/383 Test #252: axisly.nested.overflowing_child ........................   Passed    0.04 sec
+126/383 Test #120: axisly.alignment.asymmetric_margins ....................   Passed    0.03 sec
+        Start  62: axisly.measurement
+        Start  78: axisly.fixed.identity_and_order
+127/383 Test #186: axisly.spanning.duplicate_spans ........................   Passed    0.04 sec
+        Start 215: axisly.range.mixed_growth
+128/383 Test #243: axisly.nested.width_reflow .............................   Passed    0.04 sec
+129/383 Test  #62: axisly.measurement .....................................   Passed    0.03 sec
+        Start 276: axisly.cache.content_version
+        Start 219: axisly.range.span_cascade
+130/383 Test  #78: axisly.fixed.identity_and_order ........................   Passed    0.04 sec
+        Start 167: axisly.measurement.randomized_invariants
+131/383 Test #215: axisly.range.mixed_growth ..............................   Passed    0.05 sec
+132/383 Test #276: axisly.cache.content_version ...........................   Passed    0.04 sec
+        Start  69: axisly.fixed.multiple_columns
+        Start 205: axisly.range.fixed_weighted
+133/383 Test #219: axisly.range.span_cascade ..............................   Passed    0.05 sec
+        Start 257: axisly.nested.duplicate_local_ids
+134/383 Test #167: axisly.measurement.randomized_invariants ...............   Passed    0.04 sec
+135/383 Test  #69: axisly.fixed.multiple_columns ..........................   Passed    0.03 sec
+        Start 178: axisly.spanning.fixed_content
+        Start  88: axisly.fixed.duplicate_randomized
+136/383 Test #205: axisly.range.fixed_weighted ............................   Passed    0.04 sec
+        Start 164: axisly.measurement.reentrant
+137/383 Test #257: axisly.nested.duplicate_local_ids ......................   Passed    0.06 sec
+138/383 Test #178: axisly.spanning.fixed_content ..........................   Passed    0.05 sec
+        Start 177: axisly.spanning.existing_content
+        Start 195: axisly.spanning.invalid_spans
+139/383 Test  #88: axisly.fixed.duplicate_randomized ......................   Passed    0.05 sec
+        Start  82: axisly.fixed.invalid_span
+140/383 Test #164: axisly.measurement.reentrant ...........................   Passed    0.05 sec
+        Start 159: axisly.measurement.input_validation
+141/383 Test #177: axisly.spanning.existing_content .......................   Passed    0.04 sec
+142/383 Test #195: axisly.spanning.invalid_spans ..........................   Passed    0.03 sec
+        Start 232: axisly.range.compatibility_reference
+        Start 202: axisly.spanning.randomized_invariants
+143/383 Test  #82: axisly.fixed.invalid_span ..............................   Passed    0.04 sec
+        Start 103: axisly.weighted.cascading_bounds
+144/383 Test #159: axisly.measurement.input_validation ....................   Passed    0.04 sec
+        Start 214: axisly.range.padding_gaps
+145/383 Test #232: axisly.range.compatibility_reference ...................   Passed    0.04 sec
+        Start  89: axisly.fixed.numeric_overflow
+146/383 Test #202: axisly.spanning.randomized_invariants ..................   Passed    0.04 sec
+147/383 Test #103: axisly.weighted.cascading_bounds .......................   Passed    0.03 sec
+        Start 207: axisly.range.content_content
+        Start 156: axisly.measurement.invalid_intrinsic
+148/383 Test #214: axisly.range.padding_gaps ..............................   Passed    0.04 sec
+        Start  93: axisly.weighted.ratio_one_two_three
+149/383 Test  #89: axisly.fixed.numeric_overflow ..........................   Passed    0.04 sec
+150/383 Test #207: axisly.range.content_content ...........................   Passed    0.03 sec
+        Start 235: axisly.nested.lambda_move_only
+        Start 110: axisly.weighted.resize_and_determinism
+151/383 Test #156: axisly.measurement.invalid_intrinsic ...................   Passed    0.04 sec
+        Start 230: axisly.range.extreme_weights
+152/383 Test  #93: axisly.weighted.ratio_one_two_three ....................   Passed    0.04 sec
+153/383 Test #235: axisly.nested.lambda_move_only .........................   Passed    0.03 sec
+        Start 128: axisly.alignment.cell_rectangles
+        Start 115: axisly.alignment.center
+154/383 Test #110: axisly.weighted.resize_and_determinism .................   Passed    0.05 sec
+        Start 149: axisly.measurement.alignment_width
+155/383 Test #230: axisly.range.extreme_weights ...........................   Passed    0.05 sec
+156/383 Test #128: axisly.alignment.cell_rectangles .......................   Passed    0.04 sec
+        Start 246: axisly.nested.three_levels
+        Start 104: axisly.weighted.all_capped
+157/383 Test #115: axisly.alignment.center ................................   Passed    0.05 sec
+        Start 155: axisly.measurement.callback_order
+158/383 Test #149: axisly.measurement.alignment_width .....................   Passed    0.06 sec
+159/383 Test #246: axisly.nested.three_levels .............................   Passed    0.05 sec
+        Start 267: axisly.nested.randomized_final_layout
+        Start 237: axisly.nested.lambda_raw_compatibility
+160/383 Test #104: axisly.weighted.all_capped .............................   Passed    0.06 sec
+        Start 176: axisly.spanning.content_minimum
+161/383 Test #155: axisly.measurement.callback_order ......................   Passed    0.05 sec
+        Start  90: axisly.fixed.deterministic
+162/383 Test #267: axisly.nested.randomized_final_layout ..................   Passed    0.04 sec
+163/383 Test #237: axisly.nested.lambda_raw_compatibility .................   Passed    0.03 sec
+        Start 157: axisly.measurement.invalid_constrained
+        Start 172: axisly.spanning.alignments
+164/383 Test #176: axisly.spanning.content_minimum ........................   Passed    0.04 sec
+        Start 218: axisly.range.span_capped_content
+165/383 Test  #90: axisly.fixed.deterministic .............................   Passed    0.04 sec
+166/383 Test #157: axisly.measurement.invalid_constrained .................   Passed    0.03 sec
+        Start 108: axisly.weighted.extreme_weights
+        Start 134: axisly.alignment.bounds_invariants
+167/383 Test #172: axisly.spanning.alignments .............................   Passed    0.03 sec
+        Start  45: axisly.css.grid.tracks_and_placement
+168/383 Test #218: axisly.range.span_capped_content .......................   Passed    0.03 sec
+169/383 Test #108: axisly.weighted.extreme_weights ........................   Passed    0.03 sec
+        Start 173: axisly.spanning.oversized_margins
+        Start 228: axisly.range.cap_prevents_overflow
+170/383 Test #134: axisly.alignment.bounds_invariants .....................   Passed    0.04 sec
+171/383 Test  #45: axisly.css.grid.tracks_and_placement ...................   Passed    0.03 sec
+        Start 258: axisly.nested.self_cycle
+        Start 238: axisly.nested.lambda_exceptions
+172/383 Test #173: axisly.spanning.oversized_margins ......................   Passed    0.04 sec
+        Start 112: axisly.weighted.reference_cases
+173/383 Test #228: axisly.range.cap_prevents_overflow .....................   Passed    0.04 sec
+        Start 224: axisly.range.row_remeasurement
+174/383 Test #258: axisly.nested.self_cycle ...............................   Passed    0.04 sec
+175/383 Test #238: axisly.nested.lambda_exceptions ........................   Passed    0.03 sec
+        Start 197: axisly.spanning.huge_offset
+        Start 140: axisly.measurement.content_shrink
+176/383 Test #112: axisly.weighted.reference_cases ........................   Passed    0.04 sec
+        Start 162: axisly.measurement.fractional_limits
+177/383 Test #224: axisly.range.row_remeasurement .........................   Passed    0.04 sec
+178/383 Test #197: axisly.spanning.huge_offset ............................   Passed    0.03 sec
+        Start 200: axisly.spanning.extreme_weights
+        Start 275: axisly.cache.measurement_counts
+179/383 Test #140: axisly.measurement.content_shrink ......................   Passed    0.05 sec
+        Start  70: axisly.fixed.multiple_rows
+180/383 Test #162: axisly.measurement.fractional_limits ...................   Passed    0.05 sec
+181/383 Test #200: axisly.spanning.extreme_weights ........................   Passed    0.04 sec
+        Start 264: axisly.nested.numeric_overflow
+        Start 222: axisly.range.span_dynamic_minimum
+182/383 Test #275: axisly.cache.measurement_counts ........................   Passed    0.05 sec
+        Start 124: axisly.alignment.zero_cells
+183/383 Test  #70: axisly.fixed.multiple_rows .............................   Passed    0.04 sec
+184/383 Test #264: axisly.nested.numeric_overflow .........................   Passed    0.03 sec
+        Start 191: axisly.spanning.aligned_measurement
+        Start 174: axisly.spanning.overlapping_fixed
+185/383 Test #222: axisly.range.span_dynamic_minimum ......................   Passed    0.04 sec
+        Start 163: axisly.measurement.exceptions
+186/383 Test #124: axisly.alignment.zero_cells ............................   Passed    0.04 sec
+187/383 Test #191: axisly.spanning.aligned_measurement ....................   Passed    0.03 sec
+        Start 255: axisly.nested.invalid_measurement
+        Start 119: axisly.alignment.margins
+188/383 Test #174: axisly.spanning.overlapping_fixed ......................   Passed    0.04 sec
+        Start 208: axisly.range.content_weighted
+189/383 Test #163: axisly.measurement.exceptions ..........................   Passed    0.04 sec
+190/383 Test #255: axisly.nested.invalid_measurement ......................   Passed    0.03 sec
+        Start  59: axisly.ranges
+        Start 225: axisly.range.known_zero_width
+191/383 Test #119: axisly.alignment.margins ...............................   Passed    0.04 sec
+        Start 165: axisly.measurement.deterministic
+192/383 Test #208: axisly.range.content_weighted ..........................   Passed    0.04 sec
+193/383 Test  #59: axisly.ranges ..........................................   Passed    0.03 sec
+        Start 204: axisly.range.fixed_content
+        Start 147: axisly.measurement.margins
+194/383 Test #225: axisly.range.known_zero_width ..........................   Passed    0.04 sec
+        Start 274: axisly.cache.size_changes
+195/383 Test #165: axisly.measurement.deterministic .......................   Passed    0.04 sec
+196/383 Test #204: axisly.range.fixed_content .............................   Passed    0.03 sec
+        Start 122: axisly.alignment.zero_preferred
+        Start 139: axisly.measurement.largest_contribution
+197/383 Test #147: axisly.measurement.margins .............................   Passed    0.04 sec
+        Start  75: axisly.fixed.zero_tracks
+198/383 Test #274: axisly.cache.size_changes ..............................   Passed    0.04 sec
+199/383 Test #122: axisly.alignment.zero_preferred ........................   Passed    0.03 sec
+        Start 282: axisly.cache.exceptions
+        Start  71: axisly.fixed.asymmetric_padding
+200/383 Test #139: axisly.measurement.largest_contribution ................   Passed    0.06 sec
+        Start 198: axisly.spanning.fractional_limits
+201/383 Test  #75: axisly.fixed.zero_tracks ...............................   Passed    0.06 sec
+202/383 Test #282: axisly.cache.exceptions ................................   Passed    0.05 sec
+        Start  60: axisly.invalid_ranges
+        Start 185: axisly.spanning.overlapping_contributions
+203/383 Test  #71: axisly.fixed.asymmetric_padding ........................   Passed    0.06 sec
+        Start 227: axisly.range.numeric_overflow
+204/383 Test #198: axisly.spanning.fractional_limits ......................   Passed    0.04 sec
+205/383 Test  #60: axisly.invalid_ranges ..................................   Passed    0.03 sec
+        Start 138: axisly.measurement.intrinsic_size
+        Start  77: axisly.fixed.overflow_layout
+206/383 Test #185: axisly.spanning.overlapping_contributions ..............   Passed    0.04 sec
+        Start 144: axisly.measurement.weighted_minimum
+207/383 Test #227: axisly.range.numeric_overflow ..........................   Passed    0.04 sec
+208/383 Test #138: axisly.measurement.intrinsic_size ......................   Passed    0.04 sec
+        Start 158: axisly.measurement.invalid_order
+        Start  80: axisly.fixed.invalid_geometry
+209/383 Test  #77: axisly.fixed.overflow_layout ...........................   Passed    0.05 sec
+        Start 233: axisly.range.randomized_bounds
+210/383 Test #144: axisly.measurement.weighted_minimum ....................   Passed    0.05 sec
+211/383 Test #158: axisly.measurement.invalid_order .......................   Passed    0.04 sec
+        Start 212: axisly.range.fixed_cap_priority
+        Start  73: axisly.fixed.fractional
+212/383 Test  #80: axisly.fixed.invalid_geometry ..........................   Passed    0.06 sec
+        Start 277: axisly.cache.invalidation
+213/383 Test #233: axisly.range.randomized_bounds .........................   Passed    0.05 sec
+214/383 Test #212: axisly.range.fixed_cap_priority ........................   Passed    0.04 sec
+        Start 283: axisly.cache.reentrant_mutation
+        Start  63: axisly.results
+215/383 Test  #73: axisly.fixed.fractional ................................   Passed    0.04 sec
+        Start 239: axisly.nested.lambda_reentrant
+216/383 Test #277: axisly.cache.invalidation ..............................   Passed    0.04 sec
+217/383 Test #283: axisly.cache.reentrant_mutation ........................   Passed    0.03 sec
+        Start 229: axisly.range.fractional_limits
+        Start 285: axisly.cache.empty_and_bounds
+218/383 Test  #63: axisly.results .........................................   Passed    0.04 sec
+        Start 117: axisly.alignment.stretch
+219/383 Test #239: axisly.nested.lambda_reentrant .........................   Passed    0.05 sec
+220/383 Test #229: axisly.range.fractional_limits .........................   Passed    0.04 sec
+        Start  83: axisly.fixed.invalid_item_values
+        Start 148: axisly.measurement.width_reflow
+221/383 Test #285: axisly.cache.empty_and_bounds ..........................   Passed    0.07 sec
+        Start 109: axisly.weighted.weight_scale
+222/383 Test #117: axisly.alignment.stretch ...............................   Passed    0.07 sec
+223/383 Test  #83: axisly.fixed.invalid_item_values .......................   Passed    0.06 sec
+        Start 201: axisly.spanning.independent_axes
+        Start 152: axisly.measurement.advisory_space
+224/383 Test #148: axisly.measurement.width_reflow ........................   Passed    0.07 sec
+        Start 250: axisly.nested.known_zero_width
+225/383 Test #109: axisly.weighted.weight_scale ...........................   Passed    0.04 sec
+226/383 Test #201: axisly.spanning.independent_axes .......................   Passed    0.03 sec
+        Start 180: axisly.spanning.weighted_minimum
+        Start 182: axisly.spanning.weighted_cap
+227/383 Test #152: axisly.measurement.advisory_space ......................   Passed    0.04 sec
+        Start 154: axisly.measurement.row_remeasurement
+228/383 Test #250: axisly.nested.known_zero_width .........................   Passed    0.04 sec
+        Start 247: axisly.nested.spanning_child
+229/383 Test #180: axisly.spanning.weighted_minimum .......................   Passed    0.04 sec
+230/383 Test #182: axisly.spanning.weighted_cap ...........................   Passed    0.03 sec
+        Start 160: axisly.measurement.numeric_overflow
+        Start 181: axisly.spanning.weighted_existing_minimum
+231/383 Test #154: axisly.measurement.row_remeasurement ...................   Passed    0.05 sec
+        Start 166: axisly.measurement.resize
+232/383 Test #247: axisly.nested.spanning_child ...........................   Passed    0.05 sec
+233/383 Test #160: axisly.measurement.numeric_overflow ....................   Passed    0.04 sec
+        Start 179: axisly.spanning.content_weighted
+        Start  99: axisly.weighted.zero_container
+234/383 Test #181: axisly.spanning.weighted_existing_minimum ..............   Passed    0.05 sec
+        Start 265: axisly.nested.child_core_overflow
+235/383 Test #166: axisly.measurement.resize ..............................   Passed    0.04 sec
+236/383 Test #179: axisly.spanning.content_weighted .......................   Passed    0.03 sec
+        Start 143: axisly.measurement.mixed_tracks
+        Start 281: axisly.cache.invalid_measurement
+237/383 Test  #99: axisly.weighted.zero_container .........................   Passed    0.04 sec
+        Start 241: axisly.nested.fixed_child
+238/383 Test #265: axisly.nested.child_core_overflow ......................   Passed    0.04 sec
+239/383 Test #143: axisly.measurement.mixed_tracks ........................   Passed    0.03 sec
+        Start 106: axisly.weighted.empty_items
+        Start 192: axisly.spanning.zero_width
+240/383 Test #281: axisly.cache.invalid_measurement .......................   Passed    0.04 sec
+        Start  97: axisly.weighted.no_free_space
+241/383 Test #241: axisly.nested.fixed_child ..............................   Passed    0.04 sec
+242/383 Test #106: axisly.weighted.empty_items ............................   Passed    0.04 sec
+        Start 111: axisly.weighted.numeric_overflow
+        Start 271: axisly.cache.spec_changes
+243/383 Test #192: axisly.spanning.zero_width .............................   Passed    0.07 sec
+        Start 256: axisly.nested.invalid_mapping
+244/383 Test  #97: axisly.weighted.no_free_space ..........................   Passed    0.07 sec
+245/383 Test #111: axisly.weighted.numeric_overflow .......................   Passed    0.05 sec
+        Start 194: axisly.spanning.resize
+        Start 289: axisly.cache.prepared_axis_transitions
+246/383 Test #271: axisly.cache.spec_changes ..............................   Passed    0.04 sec
+        Start 272: axisly.cache.item_changes
+247/383 Test #256: axisly.nested.invalid_mapping ..........................   Passed    0.04 sec
+248/383 Test #194: axisly.spanning.resize .................................   Passed    0.03 sec
+        Start 121: axisly.alignment.oversized_preferred
+        Start 284: axisly.cache.independent_cache
+249/383 Test #289: axisly.cache.prepared_axis_transitions .................   Passed    0.04 sec
+        Start 116: axisly.alignment.end
+250/383 Test #272: axisly.cache.item_changes ..............................   Passed    0.04 sec
+251/383 Test #121: axisly.alignment.oversized_preferred ...................   Passed    0.03 sec
+        Start 125: axisly.alignment.fractional
+        Start 184: axisly.spanning.weighted_preferred
+252/383 Test #284: axisly.cache.independent_cache .........................   Passed    0.04 sec
+        Start 269: axisly.cache.snapshots
+253/383 Test #116: axisly.alignment.end ...................................   Passed    0.04 sec
+254/383 Test #125: axisly.alignment.fractional ............................   Passed    0.03 sec
+        Start 221: axisly.range.span_all_capped
+        Start  81: axisly.fixed.invalid_placement
+255/383 Test #184: axisly.spanning.weighted_preferred .....................   Passed    0.04 sec
+        Start 153: axisly.measurement.fixed_weighted_compatibility
+256/383 Test #269: axisly.cache.snapshots .................................   Passed    0.05 sec
+257/383 Test #221: axisly.range.span_all_capped ...........................   Passed    0.04 sec
+        Start 102: axisly.weighted.competing_bounds
+        Start 260: axisly.nested.depth_limits
+258/383 Test  #81: axisly.fixed.invalid_placement .........................   Passed    0.05 sec
+        Start 262: axisly.nested.final_failure
+259/383 Test #153: axisly.measurement.fixed_weighted_compatibility ........   Passed    0.05 sec
+260/383 Test #102: axisly.weighted.competing_bounds .......................   Passed    0.04 sec
+        Start 136: axisly.measurement.static_fallback
+        Start 193: axisly.spanning.zero_tracks_with_gaps
+261/383 Test #260: axisly.nested.depth_limits .............................   Passed    0.05 sec
+        Start 171: axisly.spanning.subspan
+262/383 Test #262: axisly.nested.final_failure ............................   Passed    0.05 sec
+263/383 Test #136: axisly.measurement.static_fallback .....................   Passed    0.03 sec
+        Start 216: axisly.range.multiple_items
+        Start 123: axisly.alignment.oversized_margins
+264/383 Test #193: axisly.spanning.zero_tracks_with_gaps ..................   Passed    0.06 sec
+        Start 145: axisly.measurement.weighted_cap
+265/383 Test #171: axisly.spanning.subspan ................................   Passed    0.06 sec
+266/383 Test #216: axisly.range.multiple_items ............................   Passed    0.04 sec
+        Start 259: axisly.nested.indirect_cycle
+        Start 129: axisly.alignment.invalid_preferred
+267/383 Test #123: axisly.alignment.oversized_margins .....................   Passed    0.06 sec
+        Start  95: axisly.weighted.both_axes
+268/383 Test #145: axisly.measurement.weighted_cap ........................   Passed    0.04 sec
+269/383 Test #259: axisly.nested.indirect_cycle ...........................   Passed    0.03 sec
+        Start 210: axisly.range.equal_bounds
+        Start 100: axisly.weighted.minimum_freeze
+270/383 Test #129: axisly.alignment.invalid_preferred .....................   Passed    0.04 sec
+        Start 169: axisly.spanning.fixed_rows
+271/383 Test  #95: axisly.weighted.both_axes ..............................   Passed    0.04 sec
+272/383 Test #210: axisly.range.equal_bounds ..............................   Passed    0.03 sec
+        Start 240: axisly.nested.flat_equivalence
+        Start  74: axisly.fixed.zero_container
+273/383 Test #100: axisly.weighted.minimum_freeze .........................   Passed    0.04 sec
+        Start  96: axisly.weighted.padding_and_gaps
+274/383 Test #169: axisly.spanning.fixed_rows .............................   Passed    0.04 sec
+275/383 Test #240: axisly.nested.flat_equivalence .........................   Passed    0.03 sec
+        Start 175: axisly.spanning.content_preferred
+        Start 220: axisly.range.span_weighted_fallback
+276/383 Test  #74: axisly.fixed.zero_container ............................   Passed    0.04 sec
+        Start 280: axisly.cache.invalid_inputs
+277/383 Test  #96: axisly.weighted.padding_and_gaps .......................   Passed    0.04 sec
+278/383 Test #175: axisly.spanning.content_preferred ......................   Passed    0.03 sec
+        Start  58: axisly.invalid_tracks
+        Start 105: axisly.weighted.equal_bounds
+279/383 Test #220: axisly.range.span_weighted_fallback ....................   Passed    0.04 sec
+        Start 127: axisly.alignment.weighted_cells
+280/383 Test #280: axisly.cache.invalid_inputs ............................   Passed    0.04 sec
+281/383 Test  #58: axisly.invalid_tracks ..................................   Passed    0.03 sec
+        Start  76: axisly.fixed.empty_grids
+        Start 209: axisly.range.empty_ranges
+282/383 Test #105: axisly.weighted.equal_bounds ...........................   Passed    0.04 sec
+        Start 150: axisly.measurement.clipped_width
+283/383 Test #127: axisly.alignment.weighted_cells ........................   Passed    0.04 sec
+284/383 Test  #76: axisly.fixed.empty_grids ...............................   Passed    0.03 sec
+        Start 251: axisly.nested.empty_grids
+        Start 107: axisly.weighted.numeric_limits
+285/383 Test #209: axisly.range.empty_ranges ..............................   Passed    0.06 sec
+        Start 199: axisly.spanning.large_preferred
+286/383 Test #150: axisly.measurement.clipped_width .......................   Passed    0.06 sec
+287/383 Test #251: axisly.nested.empty_grids ..............................   Passed    0.05 sec
+        Start 141: axisly.measurement.minimum_overflow
+        Start 254: axisly.nested.invalid_child
+288/383 Test #107: axisly.weighted.numeric_limits .........................   Passed    0.05 sec
+        Start 273: axisly.cache.item_sequence
+289/383 Test #199: axisly.spanning.large_preferred ........................   Passed    0.04 sec
+290/383 Test #141: axisly.measurement.minimum_overflow ....................   Passed    0.03 sec
+        Start 190: axisly.spanning.row_reflow
+        Start 226: axisly.range.callback_validation
+291/383 Test #254: axisly.nested.invalid_child ............................   Passed    0.04 sec
+        Start 253: axisly.nested.invalid_root
+292/383 Test #273: axisly.cache.item_sequence .............................   Passed    0.04 sec
+293/383 Test #190: axisly.spanning.row_reflow .............................   Passed    0.03 sec
+        Start 249: axisly.nested.advisory_dependent_probes
+        Start 245: axisly.nested.scoped_shared_ids
+294/383 Test #226: axisly.range.callback_validation .......................   Passed    0.04 sec
+        Start 223: axisly.range.both_axes
+295/383 Test #253: axisly.nested.invalid_root .............................   Passed    0.04 sec
+296/383 Test #249: axisly.nested.advisory_dependent_probes ................   Passed    0.03 sec
+        Start 146: axisly.measurement.both_axes
+        Start 270: axisly.cache.unchanged_setters
+297/383 Test #245: axisly.nested.scoped_shared_ids ........................   Passed    0.04 sec
+        Start 213: axisly.range.margins_alignment
+298/383 Test #223: axisly.range.both_axes .................................   Passed    0.04 sec
+299/383 Test #146: axisly.measurement.both_axes ...........................   Passed    0.03 sec
+        Start 188: axisly.spanning.permutation
+        Start 132: axisly.alignment.extreme_geometry
+300/383 Test #270: axisly.cache.unchanged_setters .........................   Passed    0.04 sec
+        Start 217: axisly.range.content_shrink
+301/383 Test #213: axisly.range.margins_alignment .........................   Passed    0.03 sec
+302/383 Test #188: axisly.spanning.permutation ............................   Passed    0.03 sec
+        Start  98: axisly.weighted.insufficient_space
+        Start 131: axisly.alignment.invalid_alignments
+303/383 Test #132: axisly.alignment.extreme_geometry ......................   Passed    0.04 sec
+        Start 206: axisly.range.content_fixed
+304/383 Test #217: axisly.range.content_shrink ............................   Passed    0.04 sec
+305/383 Test  #98: axisly.weighted.insufficient_space .....................   Passed    0.03 sec
+        Start 231: axisly.range.deterministic_resize
+        Start 236: axisly.nested.lambda_const_function
+306/383 Test #131: axisly.alignment.invalid_alignments ....................   Passed    0.05 sec
+        Start 170: axisly.spanning.both_axes
+307/383 Test #206: axisly.range.content_fixed .............................   Passed    0.06 sec
+308/383 Test #231: axisly.range.deterministic_resize ......................   Passed    0.05 sec
+        Start 248: axisly.nested.range_child
+        Start  92: axisly.weighted.ratio_one_two
+309/383 Test #236: axisly.nested.lambda_const_function ....................   Passed    0.07 sec
+        Start 114: axisly.alignment.start
+310/383 Test #170: axisly.spanning.both_axes ..............................   Passed    0.06 sec
+311/383 Test #248: axisly.nested.range_child ..............................   Passed    0.04 sec
+        Start 242: axisly.nested.content_child
+        Start  46: axisly.css.grid.implicit_and_negative_lines
+312/383 Test  #92: axisly.weighted.ratio_one_two ..........................   Passed    0.05 sec
+        Start 151: axisly.measurement.zero_width
+313/383 Test #114: axisly.alignment.start .................................   Passed    0.05 sec
+314/383 Test #242: axisly.nested.content_child ............................   Passed    0.04 sec
+315/383 Test  #46: axisly.css.grid.implicit_and_negative_lines ............   Passed    0.03 sec
+        Start 263: axisly.nested.exception_recovery
+        Start 278: axisly.cache.callback_changes
+        Start 196: axisly.spanning.numeric_overflow
+316/383 Test #151: axisly.measurement.zero_width ..........................   Passed    0.04 sec
+317/383 Test #263: axisly.nested.exception_recovery .......................   Passed    0.03 sec
+        Start 126: axisly.alignment.padding_and_gaps
+        Start 183: axisly.spanning.all_capped
+318/383 Test #278: axisly.cache.callback_changes ..........................   Passed    0.04 sec
+        Start 261: axisly.nested.work_limits
+319/383 Test #196: axisly.spanning.numeric_overflow .......................   Passed    0.04 sec
+320/383 Test #126: axisly.alignment.padding_and_gaps ......................   Passed    0.03 sec
+        Start 187: axisly.spanning.shorter_spans_first
+        Start  94: axisly.weighted.mixed_tracks
+321/383 Test #183: axisly.spanning.all_capped .............................   Passed    0.04 sec
+        Start 137: axisly.measurement.null_callback
+322/383 Test #261: axisly.nested.work_limits ..............................   Passed    0.04 sec
+323/383 Test #187: axisly.spanning.shorter_spans_first ....................   Passed    0.03 sec
+        Start 189: axisly.spanning.width_reflow
+        Start 291: axisly.cache.prepared_second_pass_failure
+324/383 Test  #94: axisly.weighted.mixed_tracks ...........................   Passed    0.04 sec
+        Start 244: axisly.nested.aligned_child
+325/383 Test #137: axisly.measurement.null_callback .......................   Passed    0.04 sec
+326/383 Test #189: axisly.spanning.width_reflow ...........................   Passed    0.03 sec
+        Start  87: axisly.fixed.duplicate_validation_order
+        Start  61: axisly.grids
+327/383 Test #291: axisly.cache.prepared_second_pass_failure ..............   Passed    0.05 sec
+        Start  86: axisly.fixed.duplicate_order
+328/383 Test #244: axisly.nested.aligned_child ............................   Passed    0.05 sec
+329/383 Test  #87: axisly.fixed.duplicate_validation_order ................   Passed    0.04 sec
+        Start 306: axisly.advanced.rounding
+        Start 302: axisly.advanced.baseline_static
+330/383 Test  #61: axisly.grids ...........................................   Passed    0.05 sec
+331/383 Test #306: axisly.advanced.rounding ...............................   Passed    0.02 sec
+        Start 161: axisly.measurement.large_preferred
+        Start 290: axisly.cache.prepared_numeric_recovery
+332/383 Test  #86: axisly.fixed.duplicate_order ...........................   Passed    0.05 sec
+333/383 Test #302: axisly.advanced.baseline_static ........................   Passed    0.03 sec
+        Start 130: axisly.alignment.invalid_margins
+        Start 317: axisly.tree.nested_reference
+334/383 Test #161: axisly.measurement.large_preferred .....................   Passed    0.04 sec
+        Start  48: axisly.css.grid.span_and_fit_content
+335/383 Test #290: axisly.cache.prepared_numeric_recovery .................   Passed    0.04 sec
+336/383 Test #130: axisly.alignment.invalid_margins .......................   Passed    0.03 sec
+337/383 Test #317: axisly.tree.nested_reference ...........................   Passed    0.02 sec
+        Start 325: axisly.tree.randomized_updates
+        Start  47: axisly.css.grid.invalid_style
+        Start  32: axisly.css.flex.balanced_zero_item
+338/383 Test  #48: axisly.css.grid.span_and_fit_content ...................   Passed    0.04 sec
+339/383 Test #325: axisly.tree.randomized_updates .........................   Passed    0.03 sec
+        Start 322: axisly.tree.callback_guards
+        Start  84: axisly.fixed.range_in_fixed_grid
+340/383 Test  #47: axisly.css.grid.invalid_style ..........................   Passed    0.04 sec
+341/383 Test  #32: axisly.css.flex.balanced_zero_item .....................   Passed    0.03 sec
+342/383 Test #322: axisly.tree.callback_guards ............................   Passed    0.02 sec
+        Start 319: axisly.tree.topology
+        Start  30: axisly.css.flex.automatic_minimum
+        Start   9: axisly.css.tree.intrinsic_queries
+343/383 Test #319: axisly.tree.topology ...................................   Passed    0.03 sec
+344/383 Test  #30: axisly.css.flex.automatic_minimum ......................   Passed    0.02 sec
+        Start 315: axisly.tree.unchanged
+        Start 309: axisly.advanced.measurement_lru
+345/383 Test  #84: axisly.fixed.range_in_fixed_grid .......................   Passed    0.06 sec
+346/383 Test   #9: axisly.css.tree.intrinsic_queries ......................   Passed    0.03 sec
+        Start 324: axisly.tree.rounding_tree
+        Start 299: axisly.advanced.placement_randomized
+347/383 Test #315: axisly.tree.unchanged ..................................   Passed    0.04 sec
+348/383 Test #309: axisly.advanced.measurement_lru ........................   Passed    0.03 sec
+349/383 Test #324: axisly.tree.rounding_tree ..............................   Passed    0.02 sec
+        Start  33: axisly.css.flex.nested_flex_basis
+        Start  13: axisly.css.tree.cache_and_dirty
+        Start 321: axisly.tree.error_atomicity
+350/383 Test #299: axisly.advanced.placement_randomized ...................   Passed    0.05 sec
+351/383 Test  #33: axisly.css.flex.nested_flex_basis ......................   Passed    0.04 sec
+352/383 Test  #13: axisly.css.tree.cache_and_dirty ........................   Passed    0.02 sec
+        Start 318: axisly.tree.sibling_subtree_reuse
+        Start  31: axisly.css.flex.balanced_lines
+        Start  50: axisly.css.grid.automatic_repetition
+353/383 Test #321: axisly.tree.error_atomicity ............................   Passed    0.04 sec
+354/383 Test #318: axisly.tree.sibling_subtree_reuse ......................   Passed    0.03 sec
+355/383 Test  #31: axisly.css.flex.balanced_lines .........................   Passed    0.02 sec
+        Start 311: axisly.advanced.grid_measurement_cache
+        Start 308: axisly.advanced.measurement_keys
+        Start  28: axisly.css.flex.shrink_and_reverse
+356/383 Test  #50: axisly.css.grid.automatic_repetition ...................   Passed    0.04 sec
+357/383 Test #311: axisly.advanced.grid_measurement_cache .................   Passed    0.03 sec
+358/383 Test #308: axisly.advanced.measurement_keys .......................   Passed    0.02 sec
+        Start 294: axisly.advanced.placement_column
+        Start   5: axisly.css.foundation.measurement
+        Start 323: axisly.tree.limits
+359/383 Test  #28: axisly.css.flex.shrink_and_reverse .....................   Passed    0.04 sec
+360/383 Test #294: axisly.advanced.placement_column .......................   Passed    0.03 sec
+361/383 Test   #5: axisly.css.foundation.measurement ......................   Passed    0.02 sec
+        Start   4: axisly.css.foundation.box
+        Start 316: axisly.tree.targeted_dirty
+        Start 320: axisly.tree.handles_and_validation
+362/383 Test #323: axisly.tree.limits .....................................   Passed    0.04 sec
+363/383 Test   #4: axisly.css.foundation.box ..............................   Passed    0.03 sec
+364/383 Test #316: axisly.tree.targeted_dirty .............................   Passed    0.02 sec
+        Start  29: axisly.css.flex.wrap_and_cross_alignment
+        Start 297: axisly.advanced.implicit_tracks
+        Start 296: axisly.advanced.placement_locked_spans
+365/383 Test #320: axisly.tree.handles_and_validation .....................   Passed    0.05 sec
+366/383 Test  #29: axisly.css.flex.wrap_and_cross_alignment ...............   Passed    0.04 sec
+        Start 298: axisly.advanced.placement_limits
+        Start 301: axisly.advanced.percentage_ranges
+367/383 Test #297: axisly.advanced.implicit_tracks ........................   Passed    0.05 sec
+368/383 Test #296: axisly.advanced.placement_locked_spans .................   Passed    0.03 sec
+        Start 288: axisly.cache.prepared_validation_priority
+        Start  12: axisly.css.tree.errors_and_exception_atomicity
+369/383 Test #298: axisly.advanced.placement_limits .......................   Passed    0.04 sec
+370/383 Test #301: axisly.advanced.percentage_ranges ......................   Passed    0.03 sec
+        Start 313: axisly.advanced.advanced_cache_equivalence
+        Start 310: axisly.advanced.measurement_failures
+371/383 Test  #12: axisly.css.tree.errors_and_exception_atomicity .........   Passed    0.04 sec
+372/383 Test #313: axisly.advanced.advanced_cache_equivalence .............   Passed    0.03 sec
+        Start 312: axisly.advanced.cache_exception_identity
+        Start 295: axisly.advanced.placement_locked
+373/383 Test #288: axisly.cache.prepared_validation_priority ..............   Passed    0.08 sec
+374/383 Test #310: axisly.advanced.measurement_failures ...................   Passed    0.05 sec
+375/383 Test #312: axisly.advanced.cache_exception_identity ...............   Passed    0.02 sec
+        Start 304: axisly.advanced.baseline_spans_and_clipping
+        Start   8: axisly.css.tree.topology_and_hidden
+        Start  49: axisly.css.grid.named_lines_and_areas
+376/383 Test #295: axisly.advanced.placement_locked .......................   Passed    0.04 sec
+377/383 Test #304: axisly.advanced.baseline_spans_and_clipping ............   Passed    0.03 sec
+378/383 Test   #8: axisly.css.tree.topology_and_hidden ....................   Passed    0.02 sec
+        Start 303: axisly.advanced.baseline_reflow
+        Start 300: axisly.advanced.percentage
+        Start 305: axisly.advanced.baseline_extreme_caps
+379/383 Test  #49: axisly.css.grid.named_lines_and_areas ..................   Passed    0.04 sec
+380/383 Test #303: axisly.advanced.baseline_reflow ........................   Passed    0.03 sec
+        Start  22: axisly.css.tree.geometry_snapshot_lifetime
+381/383 Test #300: axisly.advanced.percentage .............................   Passed    0.03 sec
+382/383 Test #305: axisly.advanced.baseline_extreme_caps ..................   Passed    0.02 sec
+383/383 Test  #22: axisly.css.tree.geometry_snapshot_lifetime .............   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 383
+
+Label Time Summary:
+reference    = 187.48 sec*proc (58 tests)
+
+Total Test time (real) =  52.51 sec

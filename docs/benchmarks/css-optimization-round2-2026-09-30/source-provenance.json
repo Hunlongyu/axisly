@@ -1,0 +1,52 @@
+{
+  "base_revision": "711317aa1d9bcfcb4c48301b5d0769176fa15b92",
+  "binaries": {
+    "axisly_before": "build/css-perf-round2-before/axisly_css_comparison_native.exe",
+    "axisly_css": "build/comparison-release/axisly_css_comparison_native.exe",
+    "taffy": "build/comparison-release/benchmarks/comparison/cargo/x86_64-pc-windows-msvc/release/css.exe",
+    "allocations_before": "build/css-perf-round2-before/axisly_css_retained_allocations.exe",
+    "allocations_current": "build/comparison-release/axisly_css_retained_allocations.exe"
+  },
+  "sha256": {
+    "axisly_before": "fab2558fcd2e6ec1be493f6e0406741bb5494f64f78562f2ded78f29d14c4302",
+    "axisly_css": "66b3c580f0bf7f72e3a81b1ed631ae602a2440bc79610d328ae3ba1a93e638d4",
+    "taffy": "4657160238e648b06f8cff3bbbb688935baa6e3f69ad27470b22456888275c49",
+    "allocations_before": "32d75ff17584cdc72fb5c3e844bb05651341e5c98e3cd44a8e0dda2d0d3cfffb",
+    "allocations_current": "a57d282a3286c29cc6cf1dfe77b058672a718138335868d538a809bdf100acd4"
+  },
+  "baseline": "First optimization final executable; see ../css-optimization-2026-09-30/source-provenance.json",
+  "source_snapshot": "validated-source-sha256.json",
+  "validation_executable_sha256": {
+    "comparison-release": {
+      "tests/axisly_css_tree_tests.exe": "c54719c421acb89cce21c66c22f546617a46e633754b340ea8a36d8cf36bbb22",
+      "tests/axisly_css_foundation_tests.exe": "c4834175e70b627215e3a53c005d695c182fcc5c27c4f15b236ff04afc2acc95"
+    },
+    "reference-release": {
+      "tests/axisly_css_tree_tests.exe": "428af066566523ac93229ce41f845cc963f0beb7fc9144d6d9ab7a0c788256a1",
+      "tests/axisly_css_foundation_tests.exe": "3f2aa327fe20d389ab0b756115120297ac49868e98797e562ce07e0c61047057",
+      "tests/reference/axisly_upstream_native.exe": "1ee4c0e74ca25c1dfddb0ea4d52e711d829df5c56073fe59ffc058ccecbf9117"
+    },
+    "reference-debug": {
+      "tests/axisly_css_tree_tests.exe": "caa84cdb73a1c8b73ff644f616bab5d2d5c98ccf148ab823041bc378beca5c0f",
+      "tests/axisly_css_foundation_tests.exe": "f59882324273ee73944c30d4819fdb820f49b78dabe1597f25eb5e95b4a08d30",
+      "tests/reference/axisly_upstream_native.exe": "ae2b7de3fe2714e59fa496cd49caa2ef557276c71de67d02ec80f42aa180d4e6"
+    },
+    "reference-asan": {
+      "tests/axisly_css_tree_tests.exe": "143ff415d7542a3a9a87b47124e90c165117603bb697d53d7471b26b82fae2f4",
+      "tests/axisly_css_foundation_tests.exe": "6b1a414fb79fe327a6762df3844cab78ec5be4ae57b5bac078f3a8a3d3d73a44",
+      "tests/reference/axisly_upstream_native.exe": "0d6e751f1abe8953bed5514b8beab45c421752b3f18e1153d1f61f1c066d0aed"
+    }
+  },
+  "sizes_before": {
+    "Length": 32,
+    "Style": 1232,
+    "LayoutNode": 1624
+  },
+  "sizes_after": {
+    "Length": 8,
+    "Style": 632,
+    "LayoutNode": 1024
+  },
+  "cpp_flags": "/O2 /Ob2 /DNDEBUG /MD; no LTO",
+  "rust_flags": "opt-level=3, codegen-units=16; no LTO"
+}

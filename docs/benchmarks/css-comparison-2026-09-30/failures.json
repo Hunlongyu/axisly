@@ -1,0 +1,26 @@
+[
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "error": "axisly_css/flex_deep_12/verify_cold: LAYOUT_LIMIT: CSS measurement limit exceeded; measurements=100001; layouts=429882"
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "error": "axisly_css/flex_deep_12/verify_resize: LAYOUT_LIMIT: CSS measurement limit exceeded; measurements=100001; layouts=477172"
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "same",
+    "error": "axisly_css/flex_deep_12/verify_same: LAYOUT_LIMIT: CSS measurement limit exceeded; measurements=100001; layouts=477172"
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "error": "axisly_css/flex_deep_12/verify_leaf_edit: LAYOUT_LIMIT: CSS measurement limit exceeded; measurements=100001; layouts=477172"
+  }
+]

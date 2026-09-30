@@ -1,0 +1,34 @@
+-- Install configuration: "Release"
+-- Installing: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/lib/axisly.lib
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/axisly.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/cache.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/css_box.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/css_grid.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/css_measurement.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/css_style.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/css_tree.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/css_values.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/geometry.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/grid.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/layout.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/measurement.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/measurement_cache.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/result.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/rounding.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/track.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/include/axisly/tree.hpp
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/lib/cmake/axisly/axislyTargets.cmake
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/lib/cmake/axisly/axislyTargets-release.cmake
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/lib/cmake/axisly/axislyConfig.cmake
+-- Up-to-date: C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-install/lib/cmake/axisly/axislyConfigVersion.cmake
+[1/1] Linking CXX executable consumer.exe
+Test project C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/round2-consumer
+    Start 1: axisly.consumer
+1/1 Test #1: axisly.consumer ..................   Passed    0.11 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.13 sec
+Length=8 Style=632 LayoutNode=1024 CacheEntry=304

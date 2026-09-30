@@ -1,0 +1,1274 @@
+[
+  {
+    "case": "flex_fixed_100",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_100",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_100",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_fixed_1000",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_grow_1000",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 3.999999997006398e-06
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_column_grow_1000",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 1001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0007572270000082426
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0007004880000067715
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0007572270000082426
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0007004880000067715
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.00048617200002354366
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_shrink_100",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 3.6547999997083025e-05
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_wrap_100",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_content_100",
+    "engine": "yoga",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 101,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_96",
+    "engine": "yoga",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_nested_text_384",
+    "engine": "yoga",
+    "mode": "leaf_edit",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "yoga",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "yoga",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "yoga",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "flex_deep_12",
+    "engine": "yoga",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 29,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "block_text_96",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 97,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_fixed_20x20",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_fixed_20x20",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_fixed_20x20",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_fixed_20x20",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_fixed_20x20",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_fixed_20x20",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_20x20",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_20x20",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_20x20",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_20x20",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_20x20",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_20x20",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 401,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_100x100",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 10001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_100x100",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 10001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_100x100",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 10001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_100x100",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 10001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_100x100",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 10001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_100x100",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 10001,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_50x50_spans",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 2501,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_50x50_spans",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 2501,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_50x50_spans",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 2501,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_50x50_spans",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 2501,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_50x50_spans",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 2501,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "grid_grow_50x50_spans",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 2501,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_96",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 170,
+    "nodes": 109,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "axisly_css",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "taffy",
+    "mode": "cold",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "axisly_css",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "taffy",
+    "mode": "resize",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "axisly_css",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "taffy",
+    "mode": "same",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "axisly_css",
+    "mode": "leaf_edit",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  },
+  {
+    "case": "mixed_text_384",
+    "engine": "taffy",
+    "mode": "leaf_edit",
+    "frames": 34,
+    "nodes": 433,
+    "max_abs_error": 0.0
+  }
+]

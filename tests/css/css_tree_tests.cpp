@@ -53,6 +53,46 @@ void leaf_and_block() {
         "Block must export its first in-flow child's baseline in local coordinates");
 }
 
+void leaf_available_constraints() {
+    // Host callbacks see the used content budget after bounds, margins and
+    // gutters. These assertions are independent of the Taffy callback model.
+    for (const bool styled : {false, true}) {
+        for (const bool minimum_wins : {false, true}) {
+            LayoutTree tree;
+            Style style;
+            if (styled) style.box.size.width = Length::length(42);
+            style.box.max_size.width = Length::length(30);
+            if (minimum_wins) style.box.min_size.width = Length::length(50);
+            style.box.padding = {Length::length(3), Length::length(2),
+                Length::length(3), Length::length(2)};
+            style.box.border = {Length::length(1), Length::length(1),
+                Length::length(1), Length::length(1)};
+            style.box.margin = {Length::length(5), Length::length(4),
+                Length::length(7), Length::length(6)};
+            style.overflow_y = Overflow::Scroll;
+            style.scrollbar_width = 8;
+            const Unit content_width = minimum_wins ? 34.0F : 14.0F;
+            std::size_t calls = 0;
+            const auto root = tree.create_node(style, [&](const MeasureRequest& request) {
+                ++calls;
+                require(request.available_width == AvailableSpace::definite(content_width)
+                    && request.available_height == AvailableSpace::definite(84),
+                    "Leaf measurement budget must resolve bounds, margins and content insets");
+                require(request.known_content_width == (styled
+                        ? std::optional<Unit>(content_width) : std::nullopt)
+                    && !request.known_content_height,
+                    "Styled leaf dimension must be clamped before reporting known content");
+                return Measurement{{content_width, 14}};
+            });
+            const auto result = tree.compute(root,
+                {AvailableSpace::definite(200), AvailableSpace::definite(100)});
+            require(result.succeeded() && result.size == Size{content_width + 16, 20}
+                && result.find(root)->content_box.width == content_width && calls == 1,
+                "Leaf used geometry must agree with its measurement budget");
+        }
+    }
+}
+
 void topology_and_hidden() {
     LayoutTree tree;
     Style hidden_style;
@@ -381,6 +421,7 @@ int main(int argc, char** argv) {
         require(argc == 2, "Expected test case name");
         const std::string_view name = argv[1];
         if (name == "leaf_and_block") leaf_and_block();
+        else if (name == "leaf_available_constraints") leaf_available_constraints();
         else if (name == "topology_and_hidden") topology_and_hidden();
         else if (name == "intrinsic_queries") intrinsic_queries();
         else if (name == "intrinsic_container_invalidation") intrinsic_container_invalidation();

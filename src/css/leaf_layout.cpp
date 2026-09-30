@@ -1,0 +1,155 @@
+#include "layout_engine.hpp"
+
+#include <algorithm>
+
+namespace axisly::css::detail {
+namespace {
+
+AvailableSpace leaf_measurement_space(AvailableSpace available,
+    std::optional<Unit> requested, std::optional<Unit> minimum,
+    std::optional<Unit> maximum, Unit margin, Unit decoration, NodeId node) {
+    // Definite item/style dimensions replace the parent's available space.
+    // Otherwise the parent contributes a margin-box budget for this leaf.
+    if (requested) available = AvailableSpace::definite(*requested);
+    else if (const auto definite = available.definite_value()) {
+        available = AvailableSpace::definite(std::max(Unit{0},
+            checked(static_cast<double>(*definite) - margin, node)));
+    }
+    if (const auto definite = available.definite_value()) {
+        available = AvailableSpace::definite(std::max(Unit{0},
+            checked(static_cast<double>(constrain_axis(*definite, minimum, maximum))
+                - decoration, node)));
+    }
+    return available;
+}
+
+} // namespace
+
+Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
+                      const ResolvedBox& box) {
+    const auto decoration_width = box.horizontal_decoration();
+    const auto decoration_height = box.vertical_decoration();
+    if (!decoration_width || !decoration_height) {
+        throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
+            "CSS box decoration has no definite containing inline size");
+    }
+    const auto intrinsic = [&](const Length& value, bool horizontal) -> std::optional<Unit> {
+        const auto kind = value.kind();
+        if (kind == LengthKind::Auto || kind == LengthKind::Content
+            || kind == LengthKind::Length || kind == LengthKind::Percent
+            || kind == LengthKind::Calc) return std::nullopt;
+        const Unit decoration = horizontal ? *decoration_width : *decoration_height;
+        const auto available = horizontal ? constraints.available.width : constraints.available.height;
+        if (kind == LengthKind::Stretch) {
+            const auto definite = available.definite_value();
+            if (!definite) return std::nullopt;
+            const auto margin = edges(box.margin, node.id);
+            const Unit outer_margin = horizontal
+                ? checked(static_cast<double>(margin.left) + margin.right, node.id)
+                : checked(static_cast<double>(margin.top) + margin.bottom, node.id);
+            return std::max(decoration, *definite - outer_margin);
+        }
+        const auto probe = [&](AvailableKind query) {
+            MeasureRequest request;
+            request.available_width = constraints.available.width;
+            request.available_height = constraints.available.height;
+            auto& axis = horizontal ? request.available_width : request.available_height;
+            axis = query == AvailableKind::MinContent
+                ? AvailableSpace::min_content() : AvailableSpace::max_content();
+            const auto result = measure(node, request);
+            const Unit content = horizontal ? result.content_size.width : result.content_size.height;
+            return checked(static_cast<double>(content) + decoration, node.id);
+        };
+        if (kind == LengthKind::MinContent) return probe(AvailableKind::MinContent);
+        if (kind == LengthKind::MaxContent) return probe(AvailableKind::MaxContent);
+        const Unit minimum = probe(AvailableKind::MinContent);
+        const Unit maximum = probe(AvailableKind::MaxContent);
+        std::optional<Unit> limit;
+        if (kind == LengthKind::FitContent) limit = available.definite_value();
+        else {
+            limit = value.resolve_fit_content_limit(horizontal
+                ? constraints.containing_width : constraints.containing_height);
+            if (limit) {
+                *limit = box.box_sizing == BoxSizing::ContentBox
+                    ? checked(static_cast<double>(std::max(*limit, Unit{0})) + decoration, node.id)
+                    : std::max(*limit, decoration);
+            }
+        }
+        if (!limit) return maximum;
+        return std::max(minimum, std::min(maximum, *limit));
+    };
+    const auto requested = requested_size(constraints, box);
+    auto width = requested.width;
+    auto height = requested.height;
+    if (!width && constraints.sizing_mode == SizingMode::Inherent
+        && !constraints.ignore_preferred_width) {
+        width = intrinsic(node.style.box.size.width, true);
+    }
+    if (!height && constraints.sizing_mode == SizingMode::Inherent
+        && !constraints.ignore_preferred_height) {
+        height = intrinsic(node.style.box.size.height, false);
+    }
+    // Style dimensions have already transferred through the ratio in
+    // resolve_box. A parent-known leaf axis does not make the other axis
+    // definite before measurement; the ratio floors the measured height
+    // after min/max clamping instead.
+    MeasureRequest request;
+    request.known_content_width = width
+        ? std::optional<Unit>(std::max(Unit{0}, constrain_axis(*width,
+            box.minimum.width, box.maximum.width) - *decoration_width)) : std::nullopt;
+    request.known_content_height = height
+        ? std::optional<Unit>(std::max(Unit{0}, constrain_axis(*height,
+            box.minimum.height, box.maximum.height) - *decoration_height)) : std::nullopt;
+    const auto margin = edges(box.margin, node.id);
+    request.available_width = leaf_measurement_space(constraints.available.width,
+        width, box.minimum.width, box.maximum.width,
+        checked(static_cast<double>(margin.left) + margin.right, node.id),
+        *decoration_width, node.id);
+    request.available_height = leaf_measurement_space(constraints.available.height,
+        height, box.minimum.height, box.maximum.height,
+        checked(static_cast<double>(margin.top) + margin.bottom, node.id),
+        *decoration_height, node.id);
+    const auto measured = measure(node, request);
+    Size candidate{
+        width ? *width : checked(static_cast<double>(measured.content_size.width) + *decoration_width, node.id),
+        height ? *height : checked(static_cast<double>(measured.content_size.height) + *decoration_height, node.id),
+    };
+    candidate = constrain_size(candidate, box);
+    if (box.aspect_ratio) {
+        candidate.height = std::max(candidate.height,
+            checked(static_cast<double>(candidate.width) / *box.aspect_ratio,
+                node.id));
+    }
+    Fragment fragment;
+    fragment.size = candidate;
+    fragment.nodes.push_back(make_layout(node, candidate, box,
+        measured.first_baseline, measured.last_baseline));
+    // Intrinsic Block/Flex layout may leave percentage edges unresolved for
+    // the reported box while measuring the leaf with a definite available
+    // width. Taffy's leaf scrollable extent uses that later width.
+    const auto overflow_box = constraints.containing_width
+        || !constraints.available.width.definite_value()
+        ? box : resolve_layout_box(node,
+            constraints.available.width.definite_value(),
+            constraints.containing_height);
+    const auto padding = edges(overflow_box.padding, node.id);
+    const bool scroll_container = node.style.overflow_x == Overflow::Hidden
+        || node.style.overflow_x == Overflow::Scroll
+        || node.style.overflow_y == Overflow::Hidden
+        || node.style.overflow_y == Overflow::Scroll;
+    const Unit inline_start = node.style.box.direction == Direction::Rtl
+        ? padding.right : padding.left;
+    const Unit inline_end = node.style.box.direction == Direction::Rtl
+        ? padding.left : padding.right;
+    const Size scrollable_content = measured.scrollable_content_size
+        .value_or(measured.content_size);
+    fragment.nodes.front().scrollable_overflow_rect = {
+        0, 0,
+        checked(static_cast<double>(inline_start) + scrollable_content.width
+            + (scroll_container ? inline_end : 0), node.id),
+        checked(static_cast<double>(padding.top) + scrollable_content.height
+            + (scroll_container ? padding.bottom : 0), node.id)};
+    return fragment;
+}
+
+} // namespace axisly::css::detail

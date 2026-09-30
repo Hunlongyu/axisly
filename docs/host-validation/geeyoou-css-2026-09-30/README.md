@@ -62,3 +62,9 @@ CSS 混合页截图 SHA-256 与之前相同。
 [本轮验证记录](validation-replaced-leaf.json)和
 [Showcase 摘要](showcase-replaced-leaf-summary.json)保存了结果。
 实际跨显示器 DPI 和更多新 CSS 树页面仍需验收。
+
+叶节点测量约束阶段独立重构后，Release／Debug／MSVC ASan 宿主各通过
+297/297，安装前缀消费程序通过 1/1。Release 的 19 页 × 3 配置及原生
+CSS 混合页继续通过；本轮布局／测量次数为 5217／9984，截图哈希未变。
+[验证记录](validation-leaf-space.json)和 [真实窗口摘要](showcase-leaf-space-summary.json)
+保留了结果。实际跨显示器 DPI 和更多新 CSS 页面仍待验收。

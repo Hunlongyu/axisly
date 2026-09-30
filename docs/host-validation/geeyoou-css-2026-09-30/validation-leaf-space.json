@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-30",
+  "compiler": "MSVC 19.51.36257.0",
+  "geeyoou_commit": "4cadaf6479b663ce6633e59bfbac28332de495fc",
+  "source_base_before_leaf_space_changes": "874d572",
+  "release_tests": "297/297",
+  "debug_tests": "297/297",
+  "msvc_asan_tests": "297/297",
+  "installed_consumer_tests": "1/1",
+  "showcase_pages": 19,
+  "showcase_visits": 57,
+  "native_dpi_scale": 1,
+  "css_mixed_native": "passed",
+  "release_showcase_sha256": "58433133F50945FF24646A3C4301BAD082C92C8FEA6776D9FED4040564A6F0B6",
+  "release_host_tests_sha256": "167F700CAA048B8B853C6E52FC56C5DAECDBEF5766B2A4FBBBFF7FB3A85BAC49",
+  "css_screenshot_sha256": "BCE7237E37C86B98D4D86EB27D6F3186CD524317A9C18D58DF3CA3E79477E90B",
+  "note": "The source snapshot is the commit containing this record. Cross-monitor DPI remains untested."
+}

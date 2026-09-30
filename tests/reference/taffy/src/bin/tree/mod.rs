@@ -209,6 +209,8 @@ impl LeafContent {
             Self::Ahem { segments, vertical } => {
                 // Taffy 0.14 tests/common/src/lib.rs at the pinned upstream
                 // commit: 10x10 Ahem glyphs, U+200B break opportunities.
+                // Copyright (c) 2018 Visly Inc.; (c) 2026 Taffy Authors.
+                // MIT license: tests/reference/TAFFY_UPSTREAM_LICENSE.txt.
                 let (known_inline, known_block, available) = if *vertical {
                     (known.height, known.width, space.height)
                 } else {

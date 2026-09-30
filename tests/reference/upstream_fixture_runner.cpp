@@ -18,6 +18,8 @@ using namespace axisly::css;
 // Measurement model from Taffy 0.14's tests/common/src/lib.rs at the pinned
 // upstream commit. Ahem glyphs are 10x10, and U+200B marks break opportunities.
 // No font or text layout dependency enters the production library.
+// Copyright (c) 2018 Visly Inc.; Copyright (c) 2026 Taffy Authors.
+// Adapted under the MIT license in TAFFY_UPSTREAM_LICENSE.txt.
 Size measure_ahem(const std::vector<std::size_t>& segments, bool vertical,
     std::optional<Unit> known_inline, std::optional<Unit> known_block,
     AvailableSpace available_inline) {

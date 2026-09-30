@@ -1,0 +1,16 @@
+Test project C:/Users/hunlo/.codex/worktrees/taffy-parity/gridly/build/benchmark-release
+    Start 318: axisly.css_retained_bench.geometry_and_smoke
+1/4 Test #318: axisly.css_retained_bench.geometry_and_smoke ...   Passed    0.20 sec
+    Start 319: axisly.css_retained_bench.allocations_smoke
+2/4 Test #319: axisly.css_retained_bench.allocations_smoke ....   Passed    0.20 sec
+    Start 320: axisly.css_retained_bench.directwrite_smoke
+3/4 Test #320: axisly.css_retained_bench.directwrite_smoke ....   Passed    0.32 sec
+    Start 321: axisly.css_retained_bench.reject_zero
+4/4 Test #321: axisly.css_retained_bench.reject_zero ..........   Passed    0.01 sec
+
+100% tests passed out of 4
+
+Label Time Summary:
+benchmark    =   0.73 sec*proc (4 tests)
+
+Total Test time (real) =   0.76 sec

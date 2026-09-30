@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-09-30T13:26:44.7395609+08:00",
+  "revision": "4784b106be2225db1c8e50691df859216e9cf1a3",
+  "iterations": 20,
+  "executables": [
+    {
+      "sha256": "3e9e33df44e6423c54c048d4f15358c34f0d4e06c1b1bbdea407a0bdbec88e05",
+      "name": "axisly_css_retained_bench"
+    },
+    {
+      "sha256": "fffb978b61ebc1d89e775cc5b693cac91211a43e74c053a6ec978b731aa93141",
+      "name": "axisly_css_retained_allocations"
+    }
+  ],
+  "stage": "before",
+  "samples": 9,
+  "sequence": "synthetic timing, synthetic allocations, directwrite timing, directwrite allocations"
+}

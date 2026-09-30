@@ -1,0 +1,156 @@
+{
+  "status": "passed",
+  "plan": "P0-P5 complete",
+  "source_revision": "3a060ca0d8240fe3afc19374320edad0ddb5523d",
+  "taffy_version": "0.14.0",
+  "taffy_commit": "77f385683c1d698c91a23a259f87fdddf26925fb",
+  "archive_sha256": "baf36d0a3f896d901b81c241b332e2fc59f2f1b6ab05c574b8323b29e35d0baa",
+  "corpus_sha256": "833248fad307ab882325a9d3cd3650a94a187ab817abc424f7331aff846eec54",
+  "upstream_cases": 6020,
+  "upstream_passed": 6020,
+  "nodes": 24876,
+  "style_fields": [
+    "align_content",
+    "align_items",
+    "align_self",
+    "aspect_ratio",
+    "border",
+    "box_sizing",
+    "clear",
+    "contain",
+    "direction",
+    "display",
+    "dummy",
+    "flex_basis",
+    "flex_direction",
+    "flex_grow",
+    "flex_line_count",
+    "flex_shrink",
+    "flex_wrap",
+    "float",
+    "gap",
+    "grid_auto_columns",
+    "grid_auto_flow",
+    "grid_auto_rows",
+    "grid_column",
+    "grid_row",
+    "grid_template_areas",
+    "grid_template_column_names",
+    "grid_template_columns",
+    "grid_template_row_names",
+    "grid_template_rows",
+    "inset",
+    "item_is_replaced",
+    "item_is_table",
+    "justify_content",
+    "justify_items",
+    "justify_self",
+    "margin",
+    "max_size",
+    "min_size",
+    "overflow",
+    "padding",
+    "position",
+    "scrollbar_width",
+    "size",
+    "text_align"
+  ],
+  "layout_fields": 43,
+  "reference_asan_omits": [
+    "axisly.retained.example"
+  ],
+  "omitted_example_covered_by_host_asan": true,
+  "checks": [
+    {
+      "check": "reference-release",
+      "passed": 376,
+      "total": 376,
+      "seconds": 37.17,
+      "log": "reference-release.log"
+    },
+    {
+      "check": "reference-debug",
+      "passed": 376,
+      "total": 376,
+      "seconds": 77.7,
+      "log": "reference-debug.log"
+    },
+    {
+      "check": "reference-asan",
+      "passed": 375,
+      "total": 375,
+      "seconds": 410.97,
+      "log": "reference-asan.log"
+    },
+    {
+      "check": "host-release",
+      "passed": 320,
+      "total": 320,
+      "seconds": 9.09,
+      "log": "host-release.log"
+    },
+    {
+      "check": "host-debug",
+      "passed": 320,
+      "total": 320,
+      "seconds": 16.34,
+      "log": "host-debug.log"
+    },
+    {
+      "check": "host-asan",
+      "passed": 320,
+      "total": 320,
+      "seconds": 19.74,
+      "log": "host-asan.log"
+    },
+    {
+      "check": "consumer",
+      "passed": 1,
+      "total": 1,
+      "seconds": 0.14,
+      "log": "consumer.log"
+    },
+    {
+      "check": "benchmark-smoke",
+      "passed": 4,
+      "total": 4,
+      "seconds": 0.76,
+      "log": "benchmark-smoke.log"
+    }
+  ],
+  "calc_mixed_cases": 2592,
+  "calc_track_cases": 960,
+  "actual_monitor_dpi": [
+    96,
+    120
+  ],
+  "connected_monitors": 4,
+  "binaries": [
+    {
+      "file": "build/reference-release/tests/reference/axisly_upstream_native.exe",
+      "sha256": "488eba44574208198a559abea7b8db1771749e61ebb82da17da96fe91da9c221"
+    },
+    {
+      "file": "build/reference-release/tests/reference/cargo/x86_64-pc-windows-msvc/release/axisly-taffy-tree-reference.exe",
+      "sha256": "2b7ebeb99f1db2f7ba85dcd7aac510f66b8b4898479220a8fa5a936deb5279ee"
+    },
+    {
+      "file": "build/reference-release/tests/reference/cargo/x86_64-pc-windows-msvc/release/calc_reference.exe",
+      "sha256": "df3a4f20d2b759c40b6a90918ae77d445a5cb879fbcb897d3d3a14ab55d84fa8"
+    },
+    {
+      "file": "build/install-geeyoou-css/lib/axisly.lib",
+      "sha256": "b332339b9a1eb8e2334960ed70e16f1b18cf1dda2e0baf25f34a6068844b9b26"
+    }
+  ],
+  "benchmark_rows": 36,
+  "synthetic_leaf_counts": [
+    96,
+    384
+  ],
+  "directwrite_leaf_counts": [
+    96
+  ],
+  "performance": "See comparison-rtl-final.json; work/checksum identical, memory tradeoffs retained",
+  "interrupted_obsolete_asan_batch": "The pre-compact-cache run was stopped; no passing count is claimed for it"
+}

@@ -1,0 +1,1010 @@
+[
+  {
+    "backend": "synthetic",
+    "mode": "first",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 1955.73,
+      "after": 1869.94,
+      "change_percent": -4.386597331942543
+    },
+    "allocations": {
+      "before": 9049.0,
+      "after": 5362.0,
+      "change_percent": -40.74483368327992
+    },
+    "allocated_bytes": {
+      "before": 2311842.0,
+      "after": 2646241.0,
+      "change_percent": 14.464613066117838
+    },
+    "peak_live_bytes": {
+      "before": 556651.0,
+      "after": 733683.0,
+      "change_percent": 31.803050744541906
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "first",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 1964.405,
+      "after": 1909.295,
+      "change_percent": -2.8054296339094953
+    },
+    "allocations": {
+      "before": 9049.0,
+      "after": 5362.0,
+      "change_percent": -40.74483368327992
+    },
+    "allocated_bytes": {
+      "before": 2311842.0,
+      "after": 2646241.0,
+      "change_percent": 14.464613066117838
+    },
+    "peak_live_bytes": {
+      "before": 556651.0,
+      "after": 733683.0,
+      "change_percent": 31.803050744541906
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "same",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 0.03,
+      "after": 0.03,
+      "change_percent": 0.0
+    },
+    "allocations": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "allocated_bytes": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "peak_live_bytes": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "measurements": 0.0,
+    "layouts": 0.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "same",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 1846.24,
+      "after": 1723.38,
+      "change_percent": -6.6546061183811345
+    },
+    "allocations": {
+      "before": 9048.0,
+      "after": 5361.0,
+      "change_percent": -40.74933687002652
+    },
+    "allocated_bytes": {
+      "before": 2293588.0,
+      "after": 2627987.0,
+      "change_percent": 14.5797327157275
+    },
+    "peak_live_bytes": {
+      "before": 548420.0,
+      "after": 725452.0,
+      "change_percent": 32.280369060209324
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "resize",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 48.42,
+      "after": 45.45,
+      "change_percent": -6.13382899628252
+    },
+    "allocations": {
+      "before": 358.25,
+      "after": 288.25,
+      "change_percent": -19.539427773900908
+    },
+    "allocated_bytes": {
+      "before": 144012.4,
+      "after": 152598.6,
+      "change_percent": 5.962125483638925
+    },
+    "peak_live_bytes": {
+      "before": 67050.0,
+      "after": 75549.0,
+      "change_percent": 12.675615212527958
+    },
+    "measurements": 0.0,
+    "layouts": 1.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "resize",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 1885.25,
+      "after": 1688.305,
+      "change_percent": -10.44662511603235
+    },
+    "allocations": {
+      "before": 9048.0,
+      "after": 5361.0,
+      "change_percent": -40.74933687002652
+    },
+    "allocated_bytes": {
+      "before": 2293588.0,
+      "after": 2627987.0,
+      "change_percent": 14.5797327157275
+    },
+    "peak_live_bytes": {
+      "before": 548420.0,
+      "after": 725452.0,
+      "change_percent": 32.280369060209324
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "leaf_edit",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 157.205,
+      "after": 140.375,
+      "change_percent": -10.705766356031942
+    },
+    "allocations": {
+      "before": 869.95,
+      "after": 560.25,
+      "change_percent": -35.59974711190299
+    },
+    "allocated_bytes": {
+      "before": 252914.8,
+      "after": 256264.2,
+      "change_percent": 1.3243194941537695
+    },
+    "peak_live_bytes": {
+      "before": 82811.8,
+      "after": 92632.0,
+      "change_percent": 11.858454954487163
+    },
+    "measurements": 9.25,
+    "layouts": 47.3
+  },
+  {
+    "backend": "synthetic",
+    "mode": "leaf_edit",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 1870.91,
+      "after": 1696.22,
+      "change_percent": -9.337167474651375
+    },
+    "allocations": {
+      "before": 9072.9,
+      "after": 5373.8,
+      "change_percent": -40.770867087700736
+    },
+    "allocated_bytes": {
+      "before": 2306936.0,
+      "after": 2639302.2,
+      "change_percent": 14.407257071717638
+    },
+    "peak_live_bytes": {
+      "before": 550160.8,
+      "after": 727192.8,
+      "change_percent": 32.178228619705365
+    },
+    "measurements": 805.1,
+    "layouts": 1370.1
+  },
+  {
+    "backend": "synthetic",
+    "mode": "branch_edit",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 195.51,
+      "after": 181.6,
+      "change_percent": -7.114725589483917
+    },
+    "allocations": {
+      "before": 1070.75,
+      "after": 700.5,
+      "change_percent": -34.578566425402755
+    },
+    "allocated_bytes": {
+      "before": 320343.4,
+      "after": 356103.6,
+      "change_percent": 11.163083116430661
+    },
+    "peak_live_bytes": {
+      "before": 96513.6,
+      "after": 107273.4,
+      "change_percent": 11.148480628636781
+    },
+    "measurements": 65.85,
+    "layouts": 115.85
+  },
+  {
+    "backend": "synthetic",
+    "mode": "branch_edit",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 1866.89,
+      "after": 1682.495,
+      "change_percent": -9.877121844350778
+    },
+    "allocations": {
+      "before": 9048.65,
+      "after": 5361.0,
+      "change_percent": -40.75359307742039
+    },
+    "allocated_bytes": {
+      "before": 2293697.2,
+      "after": 2627987.0,
+      "change_percent": 14.574277720703499
+    },
+    "peak_live_bytes": {
+      "before": 548420.0,
+      "after": 725452.0,
+      "change_percent": 32.280369060209324
+    },
+    "measurements": 793.65,
+    "layouts": 1358.65
+  },
+  {
+    "backend": "synthetic",
+    "mode": "mixed",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 98.005,
+      "after": 93.81,
+      "change_percent": -4.280393857456244
+    },
+    "allocations": {
+      "before": 621.75,
+      "after": 434.4,
+      "change_percent": -30.132689987937276
+    },
+    "allocated_bytes": {
+      "before": 198834.6,
+      "after": 204496.4,
+      "change_percent": 2.847492337852664
+    },
+    "peak_live_bytes": {
+      "before": 74660.6,
+      "after": 83790.8,
+      "change_percent": 12.228940029948854
+    },
+    "measurements": 4.95,
+    "layouts": 21.25
+  },
+  {
+    "backend": "synthetic",
+    "mode": "mixed",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 1854.405,
+      "after": 1699.43,
+      "change_percent": -8.357128027588356
+    },
+    "allocations": {
+      "before": 9073.2,
+      "after": 5373.8,
+      "change_percent": -40.77282546400388
+    },
+    "allocated_bytes": {
+      "before": 2306986.4,
+      "after": 2639302.2,
+      "change_percent": 14.404757652667577
+    },
+    "peak_live_bytes": {
+      "before": 550160.8,
+      "after": 727192.8,
+      "change_percent": 32.178228619705365
+    },
+    "measurements": 805.4,
+    "layouts": 1370.4
+  },
+  {
+    "backend": "synthetic",
+    "mode": "first",
+    "leaves": 384,
+    "profile": "targeted",
+    "time_us": {
+      "before": 7862.03,
+      "after": 7182.82,
+      "change_percent": -8.639117378081739
+    },
+    "allocations": {
+      "before": 35859.0,
+      "after": 21103.0,
+      "change_percent": -41.15005995705402
+    },
+    "allocated_bytes": {
+      "before": 9091511.0,
+      "after": 10421589.0,
+      "change_percent": 14.629889355025805
+    },
+    "peak_live_bytes": {
+      "before": 2130237.0,
+      "after": 2849868.2,
+      "change_percent": 33.78174353370071
+    },
+    "measurements": 3174.0,
+    "layouts": 5431.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "first",
+    "leaves": 384,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 7684.33,
+      "after": 7237.51,
+      "change_percent": -5.814690415429835
+    },
+    "allocations": {
+      "before": 35859.0,
+      "after": 21103.0,
+      "change_percent": -41.15005995705402
+    },
+    "allocated_bytes": {
+      "before": 9091511.0,
+      "after": 10421589.0,
+      "change_percent": 14.629889355025805
+    },
+    "peak_live_bytes": {
+      "before": 2130257.0,
+      "after": 2849905.8,
+      "change_percent": 33.78225256389251
+    },
+    "measurements": 3174.0,
+    "layouts": 5431.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "same",
+    "leaves": 384,
+    "profile": "targeted",
+    "time_us": {
+      "before": 0.035,
+      "after": 0.035,
+      "change_percent": 0.0
+    },
+    "allocations": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "allocated_bytes": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "peak_live_bytes": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "measurements": 0.0,
+    "layouts": 0.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "same",
+    "leaves": 384,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 7769.7,
+      "after": 7146.21,
+      "change_percent": -8.024634155758903
+    },
+    "allocations": {
+      "before": 35858.0,
+      "after": 21102.0,
+      "change_percent": -41.151207540855594
+    },
+    "allocated_bytes": {
+      "before": 9073969.0,
+      "after": 10404047.0,
+      "change_percent": 14.658172184630569
+    },
+    "peak_live_bytes": {
+      "before": 2122116.0,
+      "after": 2841844.0,
+      "change_percent": 33.91558237155745
+    },
+    "measurements": 3174.0,
+    "layouts": 5431.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "resize",
+    "leaves": 384,
+    "profile": "targeted",
+    "time_us": {
+      "before": 170.75,
+      "after": 164.175,
+      "change_percent": -3.8506588579794943
+    },
+    "allocations": {
+      "before": 1123.25,
+      "after": 837.25,
+      "change_percent": -25.461829512575118
+    },
+    "allocated_bytes": {
+      "before": 530969.4,
+      "after": 558026.6,
+      "change_percent": 5.095811547708773
+    },
+    "peak_live_bytes": {
+      "before": 237501.0,
+      "after": 281498.0,
+      "change_percent": 18.524974631685765
+    },
+    "measurements": 0.0,
+    "layouts": 1.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "resize",
+    "leaves": 384,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 7801.36,
+      "after": 7158.48,
+      "change_percent": -8.240614456966478
+    },
+    "allocations": {
+      "before": 35858.0,
+      "after": 21102.0,
+      "change_percent": -41.151207540855594
+    },
+    "allocated_bytes": {
+      "before": 9073969.0,
+      "after": 10404047.0,
+      "change_percent": 14.658172184630569
+    },
+    "peak_live_bytes": {
+      "before": 2121916.0,
+      "after": 2841468.0,
+      "change_percent": 33.91048467517093
+    },
+    "measurements": 3174.0,
+    "layouts": 5431.0
+  },
+  {
+    "backend": "synthetic",
+    "mode": "leaf_edit",
+    "leaves": 384,
+    "profile": "targeted",
+    "time_us": {
+      "before": 288.485,
+      "after": 277.18,
+      "change_percent": -3.9187479418340665
+    },
+    "allocations": {
+      "before": 1631.75,
+      "after": 1109.25,
+      "change_percent": -32.020836525203
+    },
+    "allocated_bytes": {
+      "before": 639334.2,
+      "after": 661692.2,
+      "change_percent": 3.4970755514095675
+    },
+    "peak_live_bytes": {
+      "before": 253254.4,
+      "after": 298581.0,
+      "change_percent": 17.897655480023246
+    },
+    "measurements": 9.3,
+    "layouts": 44.1
+  },
+  {
+    "backend": "synthetic",
+    "mode": "leaf_edit",
+    "leaves": 384,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 7791.97,
+      "after": 7142.145,
+      "change_percent": -8.339675332425555
+    },
+    "allocations": {
+      "before": 35884.0,
+      "after": 21114.8,
+      "change_percent": -41.15817634600379
+    },
+    "allocated_bytes": {
+      "before": 9087501.8,
+      "after": 10415362.2,
+      "change_percent": 14.61194098470493
+    },
+    "peak_live_bytes": {
+      "before": 2123856.8,
+      "after": 2843584.8,
+      "change_percent": 33.887783771485914
+    },
+    "measurements": 3187.2,
+    "layouts": 5444.2
+  },
+  {
+    "backend": "synthetic",
+    "mode": "branch_edit",
+    "leaves": 384,
+    "profile": "targeted",
+    "time_us": {
+      "before": 330.04,
+      "after": 315.65,
+      "change_percent": -4.360077566355603
+    },
+    "allocations": {
+      "before": 1835.75,
+      "after": 1249.5,
+      "change_percent": -31.9351763584366
+    },
+    "allocated_bytes": {
+      "before": 707300.4,
+      "after": 761531.6,
+      "change_percent": 7.66735039312858
+    },
+    "peak_live_bytes": {
+      "before": 266964.6,
+      "after": 313222.4,
+      "change_percent": 17.32731605613631
+    },
+    "measurements": 65.85,
+    "layouts": 115.85
+  },
+  {
+    "backend": "synthetic",
+    "mode": "branch_edit",
+    "leaves": 384,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 7844.81,
+      "after": 7277.205,
+      "change_percent": -7.235420615668198
+    },
+    "allocations": {
+      "before": 35858.65,
+      "after": 21102.0,
+      "change_percent": -41.152274276917844
+    },
+    "allocated_bytes": {
+      "before": 9074078.2,
+      "after": 10404047.0,
+      "change_percent": 14.656792356054416
+    },
+    "peak_live_bytes": {
+      "before": 2122116.0,
+      "after": 2841844.0,
+      "change_percent": 33.91558237155745
+    },
+    "measurements": 3174.65,
+    "layouts": 5431.65
+  },
+  {
+    "backend": "synthetic",
+    "mode": "mixed",
+    "leaves": 384,
+    "profile": "targeted",
+    "time_us": {
+      "before": 231.885,
+      "after": 212.61,
+      "change_percent": -8.312309981240695
+    },
+    "allocations": {
+      "before": 1386.75,
+      "after": 983.4,
+      "change_percent": -29.085992428339647
+    },
+    "allocated_bytes": {
+      "before": 585791.6,
+      "after": 609924.4,
+      "change_percent": 4.119690347215643
+    },
+    "peak_live_bytes": {
+      "before": 245111.6,
+      "after": 289739.8,
+      "change_percent": 18.20729822660372
+    },
+    "measurements": 4.95,
+    "layouts": 21.25
+  },
+  {
+    "backend": "synthetic",
+    "mode": "mixed",
+    "leaves": 384,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 7838.49,
+      "after": 7159.355,
+      "change_percent": -8.664104948784779
+    },
+    "allocations": {
+      "before": 35883.4,
+      "after": 21114.8,
+      "change_percent": -41.157192462252745
+    },
+    "allocated_bytes": {
+      "before": 9087401.0,
+      "after": 10415362.2,
+      "change_percent": 14.61321229249155
+    },
+    "peak_live_bytes": {
+      "before": 2123856.8,
+      "after": 2843584.8,
+      "change_percent": 33.887783771485914
+    },
+    "measurements": 3186.6,
+    "layouts": 5443.6
+  },
+  {
+    "backend": "directwrite",
+    "mode": "first",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 3824.865,
+      "after": 3658.645,
+      "change_percent": -4.3457742953019185
+    },
+    "allocations": {
+      "before": 9458.0,
+      "after": 5771.0,
+      "change_percent": -38.9828716430535
+    },
+    "allocated_bytes": {
+      "before": 2338698.0,
+      "after": 2673097.0,
+      "change_percent": 14.298511393946555
+    },
+    "peak_live_bytes": {
+      "before": 556651.0,
+      "after": 733683.0,
+      "change_percent": 31.803050744541906
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "directwrite",
+    "mode": "first",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 3762.17,
+      "after": 3701.575,
+      "change_percent": -1.610639604270947
+    },
+    "allocations": {
+      "before": 9458.0,
+      "after": 5771.0,
+      "change_percent": -38.9828716430535
+    },
+    "allocated_bytes": {
+      "before": 2338698.0,
+      "after": 2673097.0,
+      "change_percent": 14.298511393946555
+    },
+    "peak_live_bytes": {
+      "before": 556651.0,
+      "after": 733683.0,
+      "change_percent": 31.803050744541906
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "directwrite",
+    "mode": "same",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 0.03,
+      "after": 0.03,
+      "change_percent": 0.0
+    },
+    "allocations": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "allocated_bytes": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "peak_live_bytes": {
+      "before": 0.0,
+      "after": 0.0,
+      "change_percent": null
+    },
+    "measurements": 0.0,
+    "layouts": 0.0
+  },
+  {
+    "backend": "directwrite",
+    "mode": "same",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 3581.29,
+      "after": 3380.74,
+      "change_percent": -5.5999374527055945
+    },
+    "allocations": {
+      "before": 9457.0,
+      "after": 5770.0,
+      "change_percent": -38.98699376123507
+    },
+    "allocated_bytes": {
+      "before": 2320444.0,
+      "after": 2654843.0,
+      "change_percent": 14.410992034283087
+    },
+    "peak_live_bytes": {
+      "before": 548420.0,
+      "after": 725452.0,
+      "change_percent": 32.280369060209324
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "directwrite",
+    "mode": "resize",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 47.345,
+      "after": 46.325,
+      "change_percent": -2.1543985637342833
+    },
+    "allocations": {
+      "before": 358.25,
+      "after": 288.25,
+      "change_percent": -19.539427773900908
+    },
+    "allocated_bytes": {
+      "before": 144012.4,
+      "after": 152598.6,
+      "change_percent": 5.962125483638925
+    },
+    "peak_live_bytes": {
+      "before": 67050.0,
+      "after": 75549.0,
+      "change_percent": 12.675615212527958
+    },
+    "measurements": 0.0,
+    "layouts": 1.0
+  },
+  {
+    "backend": "directwrite",
+    "mode": "resize",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 3517.85,
+      "after": 3420.195,
+      "change_percent": -2.775985331949904
+    },
+    "allocations": {
+      "before": 9457.0,
+      "after": 5770.0,
+      "change_percent": -38.98699376123507
+    },
+    "allocated_bytes": {
+      "before": 2320444.0,
+      "after": 2654843.0,
+      "change_percent": 14.410992034283087
+    },
+    "peak_live_bytes": {
+      "before": 548420.0,
+      "after": 725452.0,
+      "change_percent": 32.280369060209324
+    },
+    "measurements": 793.0,
+    "layouts": 1358.0
+  },
+  {
+    "backend": "directwrite",
+    "mode": "leaf_edit",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 185.195,
+      "after": 169.95,
+      "change_percent": -8.231863711223308
+    },
+    "allocations": {
+      "before": 871.7,
+      "after": 565.4,
+      "change_percent": -35.138235631524616
+    },
+    "allocated_bytes": {
+      "before": 252656.8,
+      "after": 256577.4,
+      "change_percent": 1.5517492503664965
+    },
+    "peak_live_bytes": {
+      "before": 82778.2,
+      "after": 92632.0,
+      "change_percent": 11.903858745418482
+    },
+    "measurements": 9.25,
+    "layouts": 43.9
+  },
+  {
+    "backend": "directwrite",
+    "mode": "leaf_edit",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 3584.325,
+      "after": 3477.8,
+      "change_percent": -2.971968222747645
+    },
+    "allocations": {
+      "before": 9494.0,
+      "after": 5794.9,
+      "change_percent": -38.962502633242046
+    },
+    "allocated_bytes": {
+      "before": 2334317.6,
+      "after": 2666683.8,
+      "change_percent": 14.238259609574966
+    },
+    "peak_live_bytes": {
+      "before": 550160.8,
+      "after": 727192.8,
+      "change_percent": 32.178228619705365
+    },
+    "measurements": 805.1,
+    "layouts": 1370.1
+  },
+  {
+    "backend": "directwrite",
+    "mode": "branch_edit",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 335.635,
+      "after": 324.07,
+      "change_percent": -3.4457073904688107
+    },
+    "allocations": {
+      "before": 1104.6,
+      "after": 734.35,
+      "change_percent": -33.51892087633532
+    },
+    "allocated_bytes": {
+      "before": 322577.8,
+      "after": 358338.0,
+      "change_percent": 11.085759776401227
+    },
+    "peak_live_bytes": {
+      "before": 96513.6,
+      "after": 107273.4,
+      "change_percent": 11.148480628636781
+    },
+    "measurements": 65.85,
+    "layouts": 115.85
+  },
+  {
+    "backend": "directwrite",
+    "mode": "branch_edit",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 3493.51,
+      "after": 3422.635,
+      "change_percent": -2.0287619042166805
+    },
+    "allocations": {
+      "before": 9458.3,
+      "after": 5770.65,
+      "change_percent": -38.9885074484844
+    },
+    "allocated_bytes": {
+      "before": 2320862.8,
+      "after": 2655152.6,
+      "change_percent": 14.403686422135786
+    },
+    "peak_live_bytes": {
+      "before": 548420.0,
+      "after": 725452.0,
+      "change_percent": 32.280369060209324
+    },
+    "measurements": 793.65,
+    "layouts": 1358.65
+  },
+  {
+    "backend": "directwrite",
+    "mode": "mixed",
+    "leaves": 96,
+    "profile": "targeted",
+    "time_us": {
+      "before": 115.54,
+      "after": 107.205,
+      "change_percent": -7.213951878137448
+    },
+    "allocations": {
+      "before": 624.7,
+      "after": 437.35,
+      "change_percent": -29.990395389787096
+    },
+    "allocated_bytes": {
+      "before": 198993.0,
+      "after": 204654.8,
+      "change_percent": 2.8452257114571777
+    },
+    "peak_live_bytes": {
+      "before": 74660.6,
+      "after": 83790.8,
+      "change_percent": 12.228940029948854
+    },
+    "measurements": 4.95,
+    "layouts": 21.25
+  },
+  {
+    "backend": "directwrite",
+    "mode": "mixed",
+    "leaves": 96,
+    "profile": "full_invalidation",
+    "time_us": {
+      "before": 3597.395,
+      "after": 3467.78,
+      "change_percent": -3.6030238547615667
+    },
+    "allocations": {
+      "before": 9494.6,
+      "after": 5795.2,
+      "change_percent": -38.96320013481348
+    },
+    "allocated_bytes": {
+      "before": 2333960.0,
+      "after": 2666275.8,
+      "change_percent": 14.238281718624135
+    },
+    "peak_live_bytes": {
+      "before": 550160.8,
+      "after": 727192.8,
+      "change_percent": 32.178228619705365
+    },
+    "measurements": 805.4,
+    "layouts": 1370.4
+  }
+]

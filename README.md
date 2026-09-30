@@ -3,11 +3,22 @@
 面向原生 UI 的 C++20 通用布局库。核心只依赖 STL，通过数据和测量回调
 与宿主 UI 对接，不持有控件，不依赖 Qt、SDL 或 Win32。
 
-## 当前进度：Grid 已实现，Flexbox 尚未实现
+## 当前进度：独立 CSS 布局管线与原生 Grid
 
 当前版本为 `0.1.0`。`compute_grid()` 支持固定／权重／Content／Range／百分比轨道、显式与自动放置、隐式轨道、跨格、padding／gap／margin、两轴独立对齐与首基线对齐。列宽确定后重新测量高度；`round_layout()` 可按设备像素取整。默认仍是显式放置、浮点坐标和无状态计算。
 
-可选 `GridCache` 复用完整布局和工作区，可进一步启用条目测量缓存；`MeasurementCache` 也可独立使用。可选 `GridTree` 管理节点、父子关系、嵌套布局和脏标记传播，修改叶子时可复用无关分支。原 Grid 阶段的 M0–M10 及 1.1+ 计划功能已实现；这不表示通用布局目标已完成。Flexbox 将按规范的布局语义实现，使用 C++ 类型输入，不引入 CSS 解析和样式系统。范围见 [通用布局计划](docs/27-native-ui-layout-plan.md) 与 [Flexbox 规范矩阵](docs/28-flexbox-conformance-matrix.md)。现有 Grid 的 [功能与验收记录](docs/22-roadmap-completion.md) 和 [API 契约](docs/23-api-contract.md) 仍可查阅；项目尚未发布，也未承诺跨版本二进制兼容。
+可选 `GridCache` 复用完整布局和工作区，可进一步启用条目测量缓存；`MeasurementCache` 也可独立使用。可选 `GridTree` 管理节点、父子关系、嵌套布局和脏标记传播，修改叶子时可复用无关分支。上述入口保持原生 Grid 语义，历史 [功能与验收记录](docs/22-roadmap-completion.md) 和 [API 契约](docs/23-api-contract.md) 仍可查阅。
+
+新增 `axisly::css::LayoutTree` 使用独立 CSS 布局管线，支持 Block／FlowRoot、
+浮动与 clear、Flexbox（含 balance）、CSS Grid，以及混合树的尺寸、盒模型、
+基线、定位、方向、溢出、contain 与类型化 calc。Taffy 0.14 的 43 个布局字段
+已有实现与验收；固定版本的全部 6020 个上游输入通过几何及轨道诊断对照。
+[详细字段矩阵](docs/30-taffy-014-capability-matrix.md)、
+[验收计划](docs/29-taffy-014-layout-parity-plan.md)及
+[规范差异](docs/32-css-normative-case-index.md)说明版本兼容结果和验证边界。
+生产库接收 C++ 类型，不解析 CSS 字符串，也不提供样式表、DOM、文本塑形或绘制。
+完整 CSS 规范的长期目标仍在 [Flexbox 规范矩阵](docs/28-flexbox-conformance-matrix.md)
+中单独追踪。项目尚未发布，也未承诺跨版本二进制兼容。
 
 SDL3 演示保留十个可交互场景和等宽字体。Taffy 对照、SDL3 演示和性能工具仍为可选开发依赖，不进入生产库。历史性能记录见 [缓存接口](docs/20-layout-cache.md) 和 [工作区优化](docs/21-workspace-optimization.md)。
 
@@ -15,6 +26,37 @@ SDL3 演示保留十个可交互场景和等宽字体。Taffy 对照、SDL3 演�
 `GridTree` 局部失效／真实字体 benchmark，见 [扩展验收记录](docs/24-ci-and-extended-validation.md)。
 真实宿主现已接入 [GeeyoouUI 的完整 19 页 Showcase](docs/26-geeyoou-showcase.md)，
 包含 axisly 页面布局、真实文字测量、动态控件及自动窗口验收。
+
+### CSS 布局入口
+
+```cpp
+#include <axisly/css_tree.hpp>
+namespace css = axisly::css;
+
+css::LayoutTree tree;
+css::Style row;
+row.display = css::Display::Flex;
+row.gap.width = css::Length::length(8);
+const auto root = tree.create_node(row);
+
+css::Style child;
+child.display = css::Display::Block;
+const auto leaf = tree.create_node(child, [](const css::MeasureRequest&) {
+    // 实际应用根据已知内容尺寸和 min/max-content 请求测量文字或控件。
+    return css::Measurement{{80, 24}, 18, 18};
+});
+tree.append_child(root, leaf);
+const auto& result = tree.compute(root, {
+    css::AvailableSpace::definite(320), css::AvailableSpace::definite(100)});
+if (result.succeeded()) {
+    const auto bounds = result.find(leaf)->border_box;
+    // 将根相对 bounds 应用到宿主；像素取整使用宿主的实际 DPI。
+}
+```
+
+结果由树持有，后续计算会更新它；内容变化时调用 `mark_dirty(leaf)`，
+样式变化使用 `set_style()`。测量请求区分未知、已知零、有限可用空间及
+min/max-content，宿主可以报告基线与独立的可滚动内容范围。
 
 ### 从旧名称迁移
 

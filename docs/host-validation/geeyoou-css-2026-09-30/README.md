@@ -1,5 +1,9 @@
 # GeeyoouUI 新 CSS 树宿主验收
 
+本文件保留早期混合页验收记录。当前 P5 已完成，新增三种 CSS 代表页及
+四台真实显示器的 96／120 DPI 检查见[最终宿主验收](../geeyoou-parity-2026-09-30/README.md)。
+
+
 本机 Windows 11／MSVC，以固定的 GeeyoouUI 提交
 `4cadaf6479b663ce6633e59bfbac28332de495fc` 构建。
 示例层的 `CssAxislyLayout` 把宿主直接子控件映射为 CSS 测量叶，

@@ -140,6 +140,16 @@ void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& 
         padding.top, padding.bottom, border.top, border.bottom) - box.scrollbar.height);
 }
 
+void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box) {
+    const auto reported = make_layout(node, fragment.size, box);
+    auto& root = fragment.nodes.front();
+    root.padding = reported.padding;
+    root.border = reported.border;
+    root.content_box = reported.content_box;
+    // The child's late flow resolution owns its overflow origin and baseline.
+    // Item box reporting belongs to the parent's earlier sizing stage.
+}
+
 void translate(Fragment& fragment, Unit x, Unit y, NodeId node) {
     for (auto& layout : fragment.nodes) {
         layout.border_box.x = checked(static_cast<double>(layout.border_box.x) + x, node);
@@ -326,25 +336,12 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
         };
         const auto* hit = lookup(updates_);
         if (!hit) hit = lookup(cache_);
-        // A richer cached fragment can answer a smaller query. The reverse
-        // would publish incomplete descendants or omit a needed baseline.
-        for (int detail = static_cast<int>(detail_) + 1;
-             !hit && detail <= static_cast<int>(FragmentDetail::Full); ++detail) {
-            constraints.detail = static_cast<FragmentDetail>(detail);
-            hit = lookup(updates_);
-            if (!hit) hit = lookup(cache_);
-        }
-        constraints.detail = detail_;
+        // Query stages have distinct semantics: a full Grid layout can rerun
+        // tracks after the size-query exit, changing its intrinsic result.
+        // Cache only the requested stage, even when richer output exists.
         if (hit) {
             ++hits_;
             if (depth == 1) root_hit_ = true;
-            if (hit->constraints.detail != detail_) {
-                Fragment compact;
-                compact.size = hit->fragment.size;
-                compact.nodes.push_back(hit->fragment.nodes.front());
-                compact.block_margins = hit->fragment.block_margins;
-                return compact;
-            }
             return hit->fragment;
         }
     }
@@ -454,12 +451,8 @@ Fragment Engine::layout_size(NodeId id, Constraints constraints,
 std::optional<Unit> Engine::intrinsic_container_size(const LayoutNode& node,
     const Constraints& constraints, const ResolvedBox& box,
     std::size_t depth, bool horizontal) {
-    // Grid and Flex content queries use the parent's selected measurement
-    // constraint. Block still interprets its intrinsic sizing style while
-    // choosing a content-based outer inline axis.
-    if (constraints.sizing_mode == SizingMode::Content
-        && node.style.display != Display::Block
-        && node.style.display != Display::FlowRoot) return std::nullopt;
+    // Content queries use the parent's selected measurement constraint.
+    if (constraints.sizing_mode == SizingMode::Content) return std::nullopt;
     const auto& value = horizontal ? node.style.box.size.width : node.style.box.size.height;
     const auto kind = value.kind();
     if (kind != LengthKind::MinContent && kind != LengthKind::MaxContent

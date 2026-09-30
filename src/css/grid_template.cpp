@@ -81,6 +81,29 @@ std::uint16_t auto_repeat_count(const std::vector<TemplateTrack>& components,
 ExpandedTemplate expand_grid_template(const std::vector<TemplateTrack>& template_tracks,
     const std::vector<std::vector<std::string>>& outer_names,
     std::optional<Unit> available, Unit gap, bool minimum_strategy, NodeId id) {
+    const auto has_automatic_repeat = std::any_of(template_tracks.begin(), template_tracks.end(),
+        [](const TemplateTrack& component) {
+            const auto* repeat = std::get_if<GridRepeat>(&component);
+            return repeat && repeat->kind != RepeatKind::Count;
+        });
+    const auto taffy_fixed_component = [](const TrackSizing& track) {
+        const auto fixed = [](TrackBreadthKind kind) {
+            return kind == TrackBreadthKind::Length || kind == TrackBreadthKind::Percent;
+        };
+        return fixed(track.minimum.kind()) || fixed(track.maximum.kind());
+    };
+    // Taffy 0.14's automatic-repeat admission does not recognize calc as a
+    // fixed component. It discards the whole explicit template. Calc remains
+    // supported in counted repetitions and alongside a numeric fixed bound.
+    if (has_automatic_repeat && std::any_of(template_tracks.begin(), template_tracks.end(),
+            [&](const TemplateTrack& component) {
+                if (const auto* track = std::get_if<TrackSizing>(&component)) {
+                    return !taffy_fixed_component(*track);
+                }
+                const auto& repeat = std::get<GridRepeat>(component);
+                return std::any_of(repeat.tracks.begin(), repeat.tracks.end(),
+                    [&](const TrackSizing& track) { return !taffy_fixed_component(track); });
+            })) return {};
     ExpandedTemplate result;
     result.line_names.emplace_back();
     const auto automatic_count = auto_repeat_count(template_tracks, available,

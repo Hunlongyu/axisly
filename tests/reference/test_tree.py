@@ -34,7 +34,7 @@ class TreeReferenceTests(unittest.TestCase):
         for line in MATRIX.read_text(encoding="utf-8").splitlines():
             cells = [cell.strip() for cell in line.split("|")]
             if len(cells) == 7 and re.fullmatch(r"`[a-z_]+`", cells[1]):
-                self.assertTrue(cells[3].startswith(("部分", "未支持", "内部字段")), line)
+                self.assertTrue(cells[3].startswith(("已实现", "部分", "未支持", "内部字段")), line)
                 self.assertTrue(cells[4], line)
                 self.assertTrue(cells[5], line)
                 fields.append(cells[1][1:-1])

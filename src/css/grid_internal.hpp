@@ -54,6 +54,7 @@ struct TrackState {
 };
 
 struct TrackAxis {
+    NodeId owner;
     std::int32_t origin{};
     std::vector<TrackState> tracks;
     std::vector<Unit> offsets;
@@ -66,8 +67,14 @@ struct TrackAxis {
     [[nodiscard]] Unit span(std::int32_t start, std::int32_t end) const {
         const auto begin = static_cast<std::size_t>(start - origin);
         const auto finish = static_cast<std::size_t>(end - origin);
-        return offsets.at(finish) - offsets.at(begin)
-            - (end > start ? gutter_after.at(finish - 1) : 0);
+        // Track extents are nonnegative. Subtracting rounded absolute lines
+        // and the last gutter can turn a zero-sized track into a negative area.
+        double value = 0;
+        for (auto index = begin; index < finish; ++index) {
+            value += tracks.at(index).size;
+            if (index + 1 < finish) value += gutter_after.at(index);
+        }
+        return checked(value, owner);
     }
 };
 

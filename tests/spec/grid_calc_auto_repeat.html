@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CSS Grid calc automatic repetition</title>
+<style>
+  body { font: 16px sans-serif; margin: 24px; }
+  .grid { display: grid; width: 200px; grid-template-rows: 40px; gap: 5px; margin: 16px 0; }
+  .grid > div { height: 10px; background: #2385bd; }
+  #fill { grid-template-columns: repeat(auto-fill, calc(20px + 10%)); }
+  #fit { grid-template-columns: repeat(auto-fit, calc(20px + 10%)); }
+  #count { grid-template-columns: repeat(2, calc(20px + 10%)); }
+</style>
+<h1>calc() track repetition</h1>
+<div class="grid" id="fill"><div></div><div></div></div>
+<div class="grid" id="fit"><div></div><div></div></div>
+<div class="grid" id="count"><div></div><div></div></div>
+<pre id="result"></pre>
+<script>
+const results = [];
+for (const [id, expected] of [['fill', [40, 40, 40, 40]], ['fit', [40, 40, 0, 0]], ['count', [40, 40]]]) {
+  const grid = document.getElementById(id), bounds = grid.getBoundingClientRect();
+  const tracks = getComputedStyle(grid).gridTemplateColumns.split(' ').map(parseFloat);
+  const children = [...grid.children].map(child => {
+    const box = child.getBoundingClientRect();
+    return [box.x - bounds.x, box.y - bounds.y, box.width, box.height];
+  });
+  const near = (a, b) => Math.abs(a - b) < .01;
+  const pass = tracks.length === expected.length && tracks.every((value, i) => near(value, expected[i]))
+    && children.every((box, i) => box.every((value, j) => near(value, [i * 45, 0, 40, 10][j])));
+  results.push({id, expected, tracks, children, pass});
+}
+document.getElementById('result').textContent = JSON.stringify({status: results.every(x => x.pass) ? 'PASS' : 'FAIL', results});
+</script>

@@ -5,7 +5,7 @@
 namespace axisly::css::detail {
 namespace {
 ResolvedEdge resolved_item_edge(const Length& value, std::optional<Unit> basis) {
-    return {EdgeKind::Numeric, value.resolve_numeric(basis.value_or(Unit{0})).value_or(Unit{0})};
+    return {EdgeKind::Numeric, value.resolve_numeric(basis).value_or(Unit{0})};
 }
 
 EdgeValues numeric_edges(Insets values) {

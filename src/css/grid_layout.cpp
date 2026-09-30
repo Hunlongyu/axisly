@@ -292,7 +292,12 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 + axis.tracks[index].size + axis.gutter_after[index], node.id);
         }
     };
-    const bool rerun_columns = intrinsic_width && cyclic_columns;
+    // A cyclic gutter participates in reflow only between surviving tracks.
+    // A single-column grid has no such gutter, even when its gap is cyclic.
+    const bool rerun_columns = intrinsic_width && cyclic_columns
+        && (has_cyclic_percentage(track_columns)
+            || std::count_if(track_columns.tracks.begin(), track_columns.tracks.end(),
+                [](const TrackState& track) { return !track.collapsed; }) > 1);
     if (rerun_columns) {
         const Unit sizing_width = measured_width;
         track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,

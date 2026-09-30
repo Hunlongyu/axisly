@@ -98,6 +98,7 @@ struct FlexItemSizingInput;
 [[nodiscard]] Unit content_origin_x(const ResolvedBox& box,
     Insets border, Insets padding, NodeId node);
 void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box);
+void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box);
 [[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
     const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
     std::optional<Unit> last_baseline = std::nullopt);
@@ -161,7 +162,7 @@ private:
                                  const ResolvedBox& box, std::size_t depth,
                                  BlockContext* block_context);
     [[nodiscard]] Unit block_content_based_width(const LayoutNode& node,
-        AvailableSpace available, std::size_t depth);
+        AvailableSpace available, ResolvedDimensions percentage_basis, std::size_t depth);
     [[nodiscard]] Fragment flex(const LayoutNode& node, const Constraints& constraints,
                                 const ResolvedBox& box, std::size_t depth);
     [[nodiscard]] FlexItem prepare_flex_item(const LayoutNode& node,

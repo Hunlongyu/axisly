@@ -232,6 +232,59 @@ void wpt_scaled_flex_shrink() {
         && result.find(second)->border_box == Rect{150, 0, 150, 50},
         "Negative free space must be split by flex-shrink times flex base size");
 }
+// WPT css/css-flexbox/align-content-wrap-001.html, horizontal writing.
+void wpt_single_line_wrap() {
+    const std::pair<ContentPosition, Unit> cases[]{
+        {ContentPosition::FlexStart, 0.0f}, {ContentPosition::FlexEnd, 50.0f},
+        {ContentPosition::Center, 25.0f}, {ContentPosition::SpaceBetween, 0.0f},
+        {ContentPosition::SpaceAround, 25.0f}, {ContentPosition::SpaceEvenly, 25.0f},
+        {ContentPosition::Stretch, 0.0f}};
+    for (const auto [alignment, offset] : cases) {
+        LayoutTree tree;
+        Style style;
+        style.flex_wrap = FlexWrap::Wrap;
+        style.align_content = {alignment};
+        style.box.size = {Length::length(100), Length::length(70)};
+        const auto root = tree.create_node(style);
+        style = {};
+        style.box.size = {Length::length(20), Length::length(20)};
+        const auto child = tree.create_node(style);
+        tree.append_child(root, child);
+        const auto& result = tree.compute(root,
+            {AvailableSpace::definite(100), AvailableSpace::definite(70)});
+        require(result.succeeded() && result.find(child)->border_box == Rect{0, offset, 20, 20},
+            "A wrap container with one occupied line must still apply align-content");
+    }
+}
+
+void small_factors_gap() {
+    for (const bool grow : {false, true}) {
+        LayoutTree tree;
+        Style style;
+        style.box.size = {Length::length(grow ? 200.0f : 100.0f), Length::length(20)};
+        style.gap.width = Length::length(10);
+        const auto root = tree.create_node(style);
+        style = {};
+        style.flex_basis = Length::length(grow ? 40.0f : 80.0f);
+        style.box.min_size.width = Length::length(0);
+        style.flex_grow = grow ? .25f : 0;
+        style.flex_shrink = grow ? 0 : .25f;
+        const auto first = tree.create_node(style);
+        const auto second = tree.create_node(style);
+        tree.append_child(root, first);
+        tree.append_child(root, second);
+        const auto& result = tree.compute(root,
+            {AvailableSpace::max_content(), AvailableSpace::max_content()});
+        // Taffy 0.14 scales initial free space, then subtracts the 10px gap
+        // again: grow widths 62.5, shrink widths 57.5. Browser/spec values
+        // are separately asserted in tests/spec/flex_small_factors_gap.html.
+        const Unit width = grow ? 62.5f : 57.5f;
+        require(result.succeeded() && result.find(first)->border_box.width == width
+            && result.find(second)->border_box.width == width
+            && result.find(second)->border_box.x == width + 10,
+            "Low flex factors and gaps must retain the documented Taffy version behavior");
+    }
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -247,6 +300,8 @@ int main(int argc, char** argv) {
         else if (name == "nested_flex_basis") nested_flex_basis();
         else if (name == "wpt_scroll_cross_size") wpt_scroll_cross_size();
         else if (name == "wpt_scaled_flex_shrink") wpt_scaled_flex_shrink();
+        else if (name == "wpt_single_line_wrap") wpt_single_line_wrap();
+        else if (name == "small_factors_gap") small_factors_gap();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

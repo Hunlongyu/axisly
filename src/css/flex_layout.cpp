@@ -479,6 +479,11 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
         main_gap = resolved_gap(row ? node.style.gap.width : node.style.gap.height,
             std::max(Unit{0}, main_size), node.id);
     }
+    // The selected main size supplies a new child-layout percentage basis.
+    // The cross basis and item box metadata retain their collection-stage values.
+    const ResolvedDimensions child_layout_basis{
+        row ? inner_width : child_percentage_width,
+        row ? child_percentage_height : inner_height};
     for (auto& line : lines) {
         resolve_flexible_lengths(line, items, main_size, main_gap, row);
         for (const auto index : line.items) {
@@ -490,8 +495,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
             else final_constraints.known_height_is_definite = item.main_size_is_definite;
             if (row) final_constraints.known_height_is_definite = item.cross_size_is_definite;
             else final_constraints.known_width_is_definite = item.cross_size_is_definite;
-            final_constraints.containing_width = child_percentage_width;
-            final_constraints.containing_height = child_percentage_height;
+            final_constraints.containing_width = child_layout_basis.width;
+            final_constraints.containing_height = child_layout_basis.height;
             final_constraints.available.width = inner_width
                 ? AvailableSpace::definite(*inner_width) : constraints.available.width;
             final_constraints.available.height = inner_height
@@ -673,8 +678,8 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                     flex_axis(item.box.specified_minimum, row, false),
                     flex_axis(item.box.specified_maximum, row, false));
                 Constraints stretched = item.final_constraints;
-                stretched.containing_width = child_percentage_width;
-                stretched.containing_height = child_percentage_height;
+                stretched.containing_width = child_layout_basis.width;
+                stretched.containing_height = child_layout_basis.height;
                 stretched.available.width = inner_width
                     ? AvailableSpace::definite(*inner_width) : AvailableSpace::indefinite();
                 stretched.available.height = inner_height
@@ -684,6 +689,7 @@ Fragment Engine::flex(const LayoutNode& node, const Constraints& constraints,
                 fragment = layout(item.id, stretched, depth + 1);
                 item.cross = flex_axis(fragment.size, row, false);
             }
+            publish_item_box(fragment, get(item.id), item.box);
             double cross_remain = static_cast<double>(line.cross) - item.cross
                 - cross_margin_start - cross_margin_end;
             if (item.auto_cross_start || item.auto_cross_end) {

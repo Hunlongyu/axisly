@@ -8,8 +8,9 @@ use taffy::compute::{
     compute_block_layout, compute_flexbox_layout, compute_grid_layout, compute_hidden_layout,
     compute_leaf_layout, compute_root_layout, BlockContext,
 };
+use taffy::DetailedGridInfo;
 use taffy::prelude::*;
-use taffy::style::{GridTemplateComponent, GridTemplateTracks};
+use taffy::style::{Direction, GridTemplateComponent, GridTemplateTracks, GridTemplateRepetition, RepetitionCount};
 use taffy::tree::{
     Layout, LayoutBlockContainer, LayoutFlexboxContainer, LayoutGridContainer, LayoutInput,
     LayoutOutput, LayoutPartialTree, NodeId, RunMode, TraversePartialTree,
@@ -109,10 +110,30 @@ impl Expression {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CalcTrackInput {
+    minimum: Option<Expression>,
+    minimum_length: Option<f32>,
+    maximum: Expression,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CalcTemplateInput {
+    kind: String,
+    count: Option<u16>,
+    tracks: Vec<CalcTrackInput>,
+}
+
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 struct InputStyle {
     display: Option<Display>,
+    direction: Option<Direction>,
+    intrinsic_width: Option<String>,
+    item_is_replaced: bool,
+    aspect_ratio: Option<f32>,
     content_box: bool,
     flex_grow: Option<f32>,
     gap_width: Option<Expression>,
@@ -120,6 +141,12 @@ struct InputStyle {
     flex_basis: Option<Expression>,
     grid_template_columns: Option<String>,
     grid_template_rows: Option<String>,
+    calc_columns: Option<Vec<CalcTemplateInput>>,
+    calc_rows: Option<Vec<CalcTemplateInput>>,
+    calc_auto_columns: Option<Vec<CalcTrackInput>>,
+    calc_auto_rows: Option<Vec<CalcTrackInput>>,
+    grid_column_start: Option<i16>,
+    grid_row_start: Option<i16>,
     width: Option<Expression>,
     height: Option<Expression>,
     min_width: Option<Expression>,
@@ -193,6 +220,7 @@ struct CalcNode {
     content: Size<f32>,
     children: Vec<NodeId>,
     layout: Layout,
+    grid: Option<DetailedGridInfo<String>>,
 }
 
 struct CalcTree {
@@ -223,6 +251,7 @@ impl CalcTree {
             },
             children: Vec::new(),
             layout: Layout::default(),
+            grid: None,
         });
     }
 
@@ -232,6 +261,46 @@ impl CalcTree {
         let handle = (&*boxed as *const Expression).cast();
         self.expressions.push(boxed);
         Ok(handle)
+    }
+
+    fn calc_tracks(&mut self, inputs: Vec<CalcTrackInput>) -> Result<Vec<TrackSizingFunction>, String> {
+        if inputs.is_empty() || inputs.len() > 32 {
+            return Err("Calc track list outside reference limits".into());
+        }
+        inputs.into_iter().map(|input| {
+            let min = match (input.minimum, input.minimum_length) {
+                (Some(expression), None) => MinTrackSizingFunction::calc(self.handle(expression)?),
+                (None, Some(value)) if value.is_finite() && (0.0..=1_000_000.0).contains(&value) =>
+                    MinTrackSizingFunction::length(value),
+                _ => return Err("Invalid calc track minimum".into()),
+            };
+            Ok(TrackSizingFunction { min, max: MaxTrackSizingFunction::calc(self.handle(input.maximum)?) })
+        }).collect()
+    }
+
+    fn calc_template(&mut self, inputs: Vec<CalcTemplateInput>)
+        -> Result<Vec<GridTemplateComponent<String>>, String> {
+        if inputs.is_empty() || inputs.len() > 32 {
+            return Err("Calc template outside reference limits".into());
+        }
+        let mut result = Vec::new();
+        for input in inputs {
+            let tracks = self.calc_tracks(input.tracks)?;
+            let count = match (input.kind.as_str(), input.count) {
+                ("single", None) => {
+                    result.extend(tracks.into_iter().map(GridTemplateComponent::Single));
+                    continue;
+                }
+                ("count", Some(count)) if (1..=32).contains(&count) => RepetitionCount::Count(count),
+                ("auto-fill", None) => RepetitionCount::AutoFill,
+                ("auto-fit", None) => RepetitionCount::AutoFit,
+                _ => return Err("Invalid calc repetition".into()),
+            };
+            result.push(GridTemplateComponent::Repeat(GridTemplateRepetition {
+                count, tracks, line_names: Vec::new(),
+            }));
+        }
+        Ok(result)
     }
 
     fn dispatch(
@@ -346,6 +415,9 @@ impl LayoutGridContainer for CalcTree {
     fn get_grid_child_style(&self, node_id: NodeId) -> Self::GridItemStyle<'_> {
         &self.nodes[usize::from(node_id)].style
     }
+    fn set_detailed_grid_info(&mut self, node_id: NodeId, info: DetailedGridInfo<String>) {
+        self.nodes[usize::from(node_id)].grid = Some(info);
+    }
 }
 
 impl CacheTree for CalcTree {
@@ -358,11 +430,31 @@ impl CacheTree for CalcTree {
 }
 
 fn apply_style(tree: &mut CalcTree, index: usize, style: InputStyle) -> Result<(), String> {
+    if (style.grid_template_columns.is_some() && style.calc_columns.is_some())
+        || (style.grid_template_rows.is_some() && style.calc_rows.is_some()) {
+        return Err("Conflicting calc grid templates".into());
+    }
     if let Some(display) = style.display {
         tree.nodes[index].style.display = display;
     }
     if style.content_box {
         tree.nodes[index].style.box_sizing = BoxSizing::ContentBox;
+    }
+    if let Some(direction) = style.direction {
+        tree.nodes[index].style.direction = direction;
+    }
+    tree.nodes[index].style.item_is_replaced = style.item_is_replaced;
+    if let Some(ratio) = style.aspect_ratio {
+        if !ratio.is_finite() || ratio <= 0.0 || ratio > 1_000_000.0 {
+            return Err("Invalid calc aspect ratio".into());
+        }
+        tree.nodes[index].style.aspect_ratio = Some(ratio);
+    }
+    if let Some(width) = style.intrinsic_width {
+        if style.width.is_some() || !matches!(width.as_str(), "min-content" | "max-content" | "fit-content") {
+            return Err("Invalid calc intrinsic width".into());
+        }
+        tree.nodes[index].style.size.width = width.parse().map_err(|error| format!("{error:?}"))?;
     }
     if let Some(grow) = style.flex_grow {
         if !grow.is_finite() || !(0.0..=1_000_000.0).contains(&grow) {
@@ -381,6 +473,26 @@ fn apply_style(tree: &mut CalcTree, index: usize, style: InputStyle) -> Result<(
             rows.parse().map_err(|error| format!("{error:?}"))?;
         tree.nodes[index].style.grid_template_rows = tracks.tracks;
         tree.nodes[index].style.grid_template_row_names = tracks.line_names;
+    }
+    if let Some(columns) = style.calc_columns {
+        tree.nodes[index].style.grid_template_columns = tree.calc_template(columns)?;
+    }
+    if let Some(rows) = style.calc_rows {
+        tree.nodes[index].style.grid_template_rows = tree.calc_template(rows)?;
+    }
+    if let Some(columns) = style.calc_auto_columns {
+        tree.nodes[index].style.grid_auto_columns = tree.calc_tracks(columns)?;
+    }
+    if let Some(rows) = style.calc_auto_rows {
+        tree.nodes[index].style.grid_auto_rows = tree.calc_tracks(rows)?;
+    }
+    if let Some(value) = style.grid_column_start {
+        if value == 0 || value.unsigned_abs() > 128 { return Err("Invalid calc grid line".into()); }
+        tree.nodes[index].style.grid_column.start = GridPlacement::Line(value.into());
+    }
+    if let Some(value) = style.grid_row_start {
+        if value == 0 || value.unsigned_abs() > 128 { return Err("Invalid calc grid line".into()); }
+        tree.nodes[index].style.grid_row.start = GridPlacement::Line(value.into());
     }
     macro_rules! bind {
         ($field:expr, $input:expr, $kind:ident) => {
@@ -561,11 +673,28 @@ fn run_case(case: Case) -> Result<serde_json::Value, String> {
         if values.into_iter().any(|value| !value.is_finite()) {
             return Err("Non-finite calc result".into());
         }
+        if node.grid.as_ref().is_some_and(|info| info.rows.positions.iter()
+            .chain(info.columns.positions.iter()).any(|track| !track.start.is_finite() || !track.end.is_finite())) {
+            return Err("Non-finite calc grid track".into());
+        }
+        let grid = node.grid.map(|info| {
+            let axis = |tracks: &taffy::DetailedGridTracksInfo<String>| json!({
+                "negative": tracks.negative_implicit_tracks, "explicit": tracks.explicit_tracks,
+                "positive": tracks.positive_implicit_tracks,
+                "positions": tracks.positions.iter().map(|track| [track.start, track.end]).collect::<Vec<_>>(),
+                "line_names": tracks.iter_line_names().collect::<Vec<_>>(),
+            });
+            json!({"rows": axis(&info.rows), "columns": axis(&info.columns),
+                "items": info.items.iter().map(|item| [item.row_start, item.row_end,
+                    item.column_start, item.column_end]).collect::<Vec<_>>()})
+        });
         nodes.push(json!({"id": node.id, "parent": node.parent,
             "rect": [layout.location.x, layout.location.y,
                 layout.size.width, layout.size.height],
             "margin": rect(layout.margin), "padding": rect(layout.padding),
-            "border": rect(layout.border)}));
+            "border": rect(layout.border),
+            "scrollbar": [layout.scrollbar_size.width, layout.scrollbar_size.height],
+            "overflow": rect(layout.scrollable_overflow_rect), "grid": grid}));
     }
     if tree_case {
         Ok(json!({"name": case.name, "nodes": nodes}))

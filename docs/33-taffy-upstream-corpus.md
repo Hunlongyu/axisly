@@ -221,4 +221,18 @@ XML 层逐项断言 24,876 节点的四项几何、各 356 个最大横／纵滚
 四组独立 Grid 数值测试固定循环百分比区域、增长上限、基线行高和跨轴测量。
 期望解析测试还通过损坏滚动偏移、轨道尺寸与线名来验证差异检测器。
 全量审计已成为 CTest 门禁；Release／Debug 各通过 **367/367**。
-完整 MSVC ASan 继续执行，最终结果在组合验收中记录。
+本阶段完整 MSVC ASan 通过 366/366。
+
+## calc 混合树与查询阶段交叉边界
+
+Block 项目预解析和子树包含块区分未定基准与已知零；固有宽度查询传递
+早期已知高度，Full 几何与 Size 查询分别缓存。Flex 主轴确定后的子布局
+使用晚期主轴基准，项目盒元数据保留收集时的基准。
+Grid 替换元素最小贡献采用版本的零基准上限，循环 calc 轨道参与固有求解；
+单条有效列的百分比 gap 不触发无效列重算。
+
+[2592 组 calc 混合树](reference-validation/taffy-upstream-2026-09-30/calc-matrix.json)、
+[960 组 calc 轨道](reference-validation/taffy-upstream-2026-09-30/calc-tracks.json)
+全部通过，[完整上游重放](reference-validation/taffy-upstream-2026-09-30/calc-upstream.json)
+仍为 6020/6020。新增固定数值断言与输入校验同为门禁；Release／Debug
+各通过 375/375。完整 MSVC ASan 通过 374/374。

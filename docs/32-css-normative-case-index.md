@@ -8,13 +8,30 @@ Axisly 的兼容路径在该输入上的结果相等；规范结论另行验收�
 | ID | 规则与来源 | 本库重放输入 | 已观察结果 | 结论 |
 | --- | --- | --- | --- | --- |
 | FLEX-ALIGN-01 | [CSS Box Alignment 3 §4.3（2026-01-30）](https://www.w3.org/TR/2026/WD-css-align-3-20260130/#distribution-values)：`stretch` 在 Flex 中无法拉伸固定尺寸项目时回退 `flex-start` | [`flex_reverse_justify_stretch.html`](../tests/spec/flex_reverse_justify_stretch.html)；Taffy 用例 `content-alignment-11-5-0-0` 来自 [`test_content_alignment_matrix.py`](../tests/reference/test_content_alignment_matrix.py) | 四个 40px 项目、90px 容器、4px gap、`row-reverse wrap`、LTR：Taffy 两行的项目左边均为 `[44, 0]`；Chrome 153.0.8010.53 均为 `[50, 6]`，本地 HTML 报 `PASS` | Axisly 保留 Taffy 0.14 结果；此项 Taffy 差分不得计作 CSS 规范通过 |
-| FLEX-LINE-01 | [CSS Flexbox 1 §6 与 §9.4（2025-10-14）](https://www.w3.org/TR/2025/CRD-css-flexbox-1-20251014/#algo-cross-line)：允许换行的容器即使只有一行，也先按项目计算行交叉尺寸，再做 `align-content` | [`test_content_alignment_matrix.py`](../tests/reference/test_content_alignment_matrix.py) 中 `Wrap`／`WrapReverse` 的单行与多行输入；[`test_item_alignment_matrix.py`](../tests/reference/test_item_alignment_matrix.py) 中反向换行项目对齐 | Axisly 与 Taffy 的锁定输入差分通过；单行 `NoWrap` 与 `Wrap` 的处理已分开 | 规范文字与兼容行为一致；精确 WPT 用例仍待移植 |
+| FLEX-LINE-01 | [CSS Flexbox 1 §6 与 §9.4（2025-10-14）](https://www.w3.org/TR/2025/CRD-css-flexbox-1-20251014/#algo-cross-line)；[WPT align-content-wrap-001.html](https://github.com/web-platform-tests/wpt/blob/master/css/css-flexbox/align-content-wrap-001.html) 的水平布局 | [`wpt_single_line_wrap`](../tests/css/css_flex_tests.cpp)；[浏览器重放](../tests/spec/wpt_flex_single_line_wrap.html)；单行／多行／反向换行矩阵 | 70px 高容器和 20px 高项目：七种对齐偏移为 `[0,50,25,0,25,25,0]`，独立断言和 Chrome 重放通过；Axisly/Taffy 单行矩阵相同 | 已移植水平几何断言；垂直 writing-mode 不在本布局引擎范围 |
 | FLEX-CROSS-02 | [WPT `layout-algorithm_algo-cross-line-001.html`](https://github.com/web-platform-tests/wpt/blob/master/css/css-flexbox/layout-algorithm_algo-cross-line-001.html)：两个 `overflow: scroll` 的 Flex 项保持 200px 高度 | [`wpt_scroll_cross_size`](../tests/css/css_flex_tests.cpp) 独立断言；[`wpt-flex-cross-scroll`](../tests/reference/fixtures/tree.json) 由 Taffy 0.14 对照；[浏览器重放](../tests/spec/wpt_flex_scroll_cross_size.html) | 200px 宽容器为 200×200；两个项目分别为 `[0,0,100,200]`、`[100,0,100,200]`，Axisly、Taffy 及 Chrome 153.0.8010.53 相同，重放报 `PASS` | 已移植几何断言；未移植浏览器滚动条绘制和完整 reftest |
 | FLEX-SHRINK-02 | [WPT `flex-002.htm`](https://github.com/web-platform-tests/wpt/blob/master/css/css-flexbox/flex-002.htm)：负空间按 `flex-shrink × flex-basis` 分配 | [`wpt_scaled_flex_shrink`](../tests/css/css_flex_tests.cpp) 独立断言；[`wpt-flex-scaled-shrink`](../tests/reference/fixtures/tree.json) 由 Taffy 0.14 对照；[浏览器重放](../tests/spec/wpt_flex_scaled_shrink.html) | 基准宽 300、200，收缩系数 2、1，200px 缺额按 600:200 分配，得到两个 150px 项目；Axisly、Taffy 及 Chrome 153.0.8010.53 相同，重放报 `PASS` | 已移植数值预期；未运行浏览器原始 reftest |
-| FLEX-GROW-01 | [CSS Flexbox 1 §9.7 第 5.2 步](https://www.w3.org/TR/2025/CRD-css-flexbox-1-20251014/#resolve-flexible-lengths)：系数和小于 1 时使用按和缩放的剩余空间 | [`test_flex_factors.py`](../tests/reference/test_flex_factors.py) 中小系数及 gap 的组合 | Taffy 0.14 在缩放后再减一次主轴 gap；Axisly 的版本兼容路径保留该结果 | 已裁决的 Taffy 与规范差异；规范预期仍需独立数值测试 |
+| FLEX-GROW-01 | [CSS Flexbox 1 §9.7 第 5.2 步](https://www.w3.org/TR/2025/CRD-css-flexbox-1-20251014/#resolve-flexible-lengths)：系数和小于 1 时使用按和缩放的剩余空间 | [`small_factors_gap`](../tests/css/css_flex_tests.cpp)；[`test_flex_factors.py`](../tests/reference/test_flex_factors.py)；[浏览器重放](../tests/spec/flex_small_factors_gap.html) | 两项目、系数各 0.25、gap 10px：200px 容器／basis 40px 的增长宽为 Taffy 62.5、规范/Chrome 67.5；100px 容器／basis 80px 的收缩宽为 Taffy 57.5、规范/Chrome 62.5 | 两套独立数值断言均通过；Axisly 保留锁定 Taffy 的重复扣 gap 行为 |
 | GRID-LINE-01 | [CSS Grid 1 §8.3 负线与具名跨度](https://drafts.csswg.org/css-grid-1/#grid-placement) | [`grid_named_span_negative_anchor.html`](../tests/spec/grid_named_span_negative_anchor.html) 与 `grid-line-matrix-10-3-0-0-0-0-0-0` | 指定具名线及 `span 3 x / -1`：Chrome 项目宽 66px，Taffy 宽 74px | Axisly 保留 Taffy 0.14 结果；规范差异单列 |
 
 ## WPT 移植界限与后续
+
+### GRID-CALC-01：自动重复的固定尺寸准入
+
+[CSS Grid 1 §7.2.3.1](https://www.w3.org/TR/css-grid-1/#repeat-syntax) 的固定尺寸
+允许长度与百分比计算。[独立浏览器输入](../tests/spec/grid_calc_auto_repeat.html)
+在 200px 容器中使用 `calc(20px + 10%)` 与 5px gap：`auto-fill` 产生
+四条 40px 列，`auto-fit` 保留四条显式轨道并折叠两个空列，计数重复产生
+两条 40px 列。
+
+Taffy 0.14 的 `TrackSizingFunction::has_fixed_component` 只识别直接长度和
+百分比，纯 calc 边界的自动重复会丢弃整个显式模板。Axisly 保留此版本行为，
+仍布局全部子项及隐式轨道。960 组 calc 轨道矩阵逐节点比较两者的几何、
+盒边、溢出、轨道和放置；包括计数／自动重复、双轴、隐式负线与正线。
+一边直接长度、另一边 calc 的 minmax 可以参与自动重复，也纳入同一矩阵。
+这是版本兼容差异，不能计为自动重复 calc 的 CSS 规范通过。
+[Chrome 153.0.8010.53 原始重放](reference-validation/taffy-upstream-2026-09-30/calc-grid-browser.json)
+三种模板均为 PASS。
 
 ### PIXEL-RTL-01：XML 的负半像素整数预期
 
@@ -43,14 +60,11 @@ Taffy 0.14 的已发布 padding 元数据为 `[4,0,4,0]`：上下边在父块的
 [原始结果](reference-validation/taffy-upstream-2026-09-30/block-padding-browser.json)
 记录浏览器版本。兼容元数据差分不计作 CSS padding 规范通过。
 
-上表两条 WPT 用例已转成 Axisly 独立数值断言及锁定版 Taffy 树形输入。
-它们只覆盖原始 reftest 的布局几何部分。2026-09-30 的 Chrome 无头模式
-分别执行本地重放并报告 `PASS`；平台滚动条绘制和原始 reftest 的
-自动执行仍待验收。
-纳入后的参考 Release／Debug 各通过 340/340，ASan 通过 339/339；
-GeeyoouUI Release／Debug／MSVC ASan 各通过 296/296。
+上表三条 WPT 水平几何用例已移植为独立数值断言、锁定版 Taffy 对照和
+Chrome 重放。浏览器原始 reftest 的绘制、滚动条皮肤和垂直 writing-mode
+不属于本布局库验收对象，不能从几何相等推断它们通过。
 
 新增规范或 WPT 用例时，索引须同时写明输入、规范版本或 WPT 路径、
-断言来源、Axisly/Taffy 结果，以及浏览器结果若用浏览器裁决。
-尚未覆盖的尺寸循环、复杂 Grid 轨道和深层 Block 折叠仍按
-[能力矩阵](30-taffy-014-capability-matrix.md) 的“部分”状态追踪。
+断言来源、Axisly/Taffy 结果，以及用于裁决的浏览器结果。
+布局字段、组合及全量上游的当前验收以[能力矩阵](30-taffy-014-capability-matrix.md)
+为准，已确认差异保留版本兼容行为。

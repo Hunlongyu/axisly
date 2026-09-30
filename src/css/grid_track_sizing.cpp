@@ -10,6 +10,7 @@ TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
                     std::int32_t minimum_line, std::int32_t maximum_line,
                     std::optional<Unit> available, Unit gap, NodeId id) {
     TrackAxis axis;
+    axis.owner = id;
     axis.origin = std::min<std::int32_t>(0, minimum_line);
     axis.gap = gap;
     const auto finish = std::max<std::int32_t>(static_cast<std::int32_t>(explicit_tracks.size()), maximum_line);
@@ -43,12 +44,12 @@ TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
         const auto max_kind = style.maximum.kind();
         state.intrinsic_min = min_kind == TrackBreadthKind::Auto
             || min_kind == TrackBreadthKind::MinContent || min_kind == TrackBreadthKind::MaxContent
-            || (min_kind == TrackBreadthKind::Percent && !available);
+            || ((min_kind == TrackBreadthKind::Percent || min_kind == TrackBreadthKind::Calc) && !available);
         state.intrinsic_max = max_kind == TrackBreadthKind::Auto
             || max_kind == TrackBreadthKind::MinContent || max_kind == TrackBreadthKind::MaxContent
             || max_kind == TrackBreadthKind::FitContentLength
             || max_kind == TrackBreadthKind::FitContentPercent
-            || (max_kind == TrackBreadthKind::Percent && !available);
+            || ((max_kind == TrackBreadthKind::Percent || max_kind == TrackBreadthKind::Calc) && !available);
         state.auto_max = max_kind == TrackBreadthKind::Auto;
         axis.tracks.push_back(std::move(state));
     }
@@ -199,6 +200,14 @@ Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
             == TrackBreadthKind::Fraction;
     }
     if (!spans_auto_minimum || (end - start > 1 && spans_flexible_track)) return 0;
+    if (child.style.box.replaced) {
+        // Taffy caps a compressible replaced item's content suggestion using
+        // zero as the basis of otherwise indefinite preferred/maximum sizes.
+        const auto& size = columns ? child.style.box.size.width : child.style.box.size.height;
+        const auto& maximum = columns ? child.style.box.max_size.width : child.style.box.max_size.height;
+        if (const auto value = size.resolve_numeric(Unit{0})) min_content = std::min(min_content, *value);
+        if (const auto value = maximum.resolve_numeric(Unit{0})) min_content = std::min(min_content, *value);
+    }
     std::optional<Unit> fixed_limit{Unit{0}};
     for (auto index = start; index < end; ++index) {
         const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];

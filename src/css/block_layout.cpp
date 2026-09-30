@@ -64,14 +64,20 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const auto preferred_width = requested.width;
     const auto available_width = constraints.available.width.definite_value();
     const bool content_based_width = !preferred_width
-        && (constraints.content_based_width
+        && (constraints.content_based_width || constraints.sizing_mode == SizingMode::Content
             || node.style.float_side != FloatSide::None
             || node.style.item_is_table || node.style.box.replaced
             || !available_width);
+    const ResolvedDimensions early_content_basis{
+        preferred_width ? std::optional<Unit>(std::max(Unit{0},
+            *preferred_width - *decoration_width)) : std::nullopt,
+        requested.height && (!constraints.known_height || constraints.known_height_is_definite)
+            ? std::optional<Unit>(std::max(Unit{0}, *requested.height - *decoration_height))
+            : std::nullopt};
     const Unit measured_width = content_based_width
         ? checked(static_cast<double>(block_content_based_width(node,
             subtract_decoration(constraints.available.width, *decoration_width),
-            depth)) + *decoration_width, node.id) : Unit{0};
+            early_content_basis, depth)) + *decoration_width, node.id) : Unit{0};
     const Unit outer_width = constraints.known_width_is_final && constraints.known_width
         ? *constraints.known_width : constrain_axis(
         preferred_width.value_or(content_based_width
@@ -258,11 +264,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         const auto item_border = edges(child_box.border, child_id);
         if (nested.nodes.front().padding != item_padding
             || nested.nodes.front().border != item_border) {
-            const auto reported = make_layout(child, nested.size, child_box);
-            nested.nodes.front().padding = reported.padding;
-            nested.nodes.front().border = reported.border;
-            nested.nodes.front().content_box = reported.content_box;
-            nested.nodes.front().overflow_origin_border = reported.overflow_origin_border;
+            publish_item_box(nested, child, child_box);
         }
         if (child.style.float_side != FloatSide::None) {
             const Unit outer_float_width = checked(static_cast<double>(nested.size.width)

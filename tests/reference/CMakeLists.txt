@@ -39,6 +39,28 @@ target_link_libraries(axisly_css_reference_native PRIVATE axisly::axisly)
 set_target_properties(axisly_css_reference_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_css_reference_native)
 
+add_executable(axisly_calc_matrix_native calc_matrix_native.cpp)
+target_link_libraries(axisly_calc_matrix_native PRIVATE axisly::axisly)
+set_target_properties(axisly_calc_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_calc_matrix_native)
+add_test(NAME axisly.reference.calc_matrix COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_calc_matrix.py"
+    --axisly "$<TARGET_FILE:axisly_calc_matrix_native>"
+    --taffy "${taffy_calc_output}"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/calc-matrix.json")
+set_tests_properties(axisly.reference.calc_matrix PROPERTIES LABELS reference TIMEOUT 120)
+
+add_executable(axisly_calc_tracks_native calc_tracks_native.cpp)
+target_link_libraries(axisly_calc_tracks_native PRIVATE axisly::axisly)
+set_target_properties(axisly_calc_tracks_native PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_calc_tracks_native)
+add_test(NAME axisly.reference.calc_tracks COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_calc_tracks.py"
+    --axisly "$<TARGET_FILE:axisly_calc_tracks_native>"
+    --taffy "${taffy_calc_output}"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/calc-tracks.json")
+set_tests_properties(axisly.reference.calc_tracks PROPERTIES LABELS reference TIMEOUT 120)
+
 add_executable(axisly_overflow_matrix_native overflow_matrix_native.cpp)
 target_link_libraries(axisly_overflow_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_overflow_matrix_native PROPERTIES CXX_EXTENSIONS OFF)

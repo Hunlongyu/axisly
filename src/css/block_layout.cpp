@@ -188,6 +188,10 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         catch (const std::invalid_argument& error) {
             throw LayoutFailure(LayoutErrorCode::InvalidStyle, child_id, error.what());
         }
+        // The Block item list transfers max-size through aspect-ratio even
+        // for a measured leaf. The leaf algorithm itself retains independent
+        // maximum bounds, so this belongs to item resolution only.
+        child_box.maximum = transfer_aspect_ratio(child_box.maximum, child_box);
         const auto margin = edges(child_box.margin, child_id);
         const auto child_width_kind = child.style.box.size.width.kind();
         const bool unresolved_normal_width = child_width_kind == LengthKind::Auto
@@ -199,9 +203,16 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                     *child_box.preferred.width, child_box.minimum.width,
                     child_box.maximum.width);
             } else if (unresolved_normal_width) {
-                child_constraints.known_width = std::max(Unit{0}, checked(
+                const Unit stretch_width = std::max(Unit{0}, checked(
                     static_cast<double>(content_width) - margin.left - margin.right,
                     child_id));
+                child_constraints.known_width = constrain_axis(stretch_width,
+                    child_box.minimum.width, child_box.maximum.width);
+            }
+            if (child_box.preferred.height) {
+                child_constraints.known_height = constrain_axis(
+                    *child_box.preferred.height, child_box.minimum.height,
+                    child_box.maximum.height);
             }
         }
         std::optional<FloatSlot> formatting_slot;
@@ -228,7 +239,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 - context.origin_y, child_id);
             if (unresolved_normal_width && !child_box.preferred.width
                 && !intrinsic_width) {
-                child_constraints.known_width = formatting_slot->width;
+                child_constraints.known_width = constrain_axis(
+                    formatting_slot->width, child_box.minimum.width,
+                    child_box.maximum.width);
             }
         }
         const bool same_bfc = child.style.display == Display::Block

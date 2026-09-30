@@ -216,6 +216,41 @@ Release／Debug／MSVC ASan 各通过 296/296，包含 9,216 组混合树差分�
 [逐批分配](benchmarks/css-root-ratio-2026-09-30/directwrite-allocations-raw.csv)、
 [环境与可执行文件哈希](benchmarks/css-root-ratio-2026-09-30/environment.json)。
 
+## 测量叶节点与项目尺寸阶段重构后
+
+新增 1,440 组替换元素／测量叶节点差分，分开 Flex 内容测量与固有尺寸
+查询，并提取 Grid 项目的比例、拉伸和最终约束解析。本轮基准仍采用
+20 帧 × 9 批、相同输入及计时边界；计时与分配分别在所有构建和
+ASan 测试结束后运行。
+
+| 后端／叶子 | 场景 | 中位 µs | C++ 申请／帧 | C++ 峰值存活字节／帧 |
+| --- | --- | ---: | ---: | ---: |
+| 合成／384 | 首次 | 9766.95 | 40162 | 2162557 |
+| 合成／384 | 单叶编辑 | 342.41 | 1730.65 | 266573.6 |
+| DirectWrite／96 | 首次 | 4321.86 | 10565 | 564635 |
+| DirectWrite／96 | 单叶编辑 | 211.78 | 956.1 | 89935.8 |
+
+合成／384 首次布局次数由 8273 降至 8247，测量次数仍为 3558；
+C++ 申请由 40188 降至 40162。查询模式纳入缓存键；首次峰值存活字节
+由约 2106433 增至 2162557。输入不变仍为零测量、零布局、零申请；尺寸变化仍为零测量、
+根节点一次布局。本轮时间落在前轮同二进制重复采样的波动区间内，
+未固定 CPU 亲和性，不能宣称时间优化。首次查询与输出构造仍需优化。
+
+原始记录：[合成时间汇总](benchmarks/css-replaced-leaf-2026-09-30/timing-summary.csv)、
+[逐批时间](benchmarks/css-replaced-leaf-2026-09-30/timing-raw.csv)、
+[C++ 分配汇总](benchmarks/css-replaced-leaf-2026-09-30/allocations-summary.csv)、
+[逐批分配](benchmarks/css-replaced-leaf-2026-09-30/allocations-raw.csv)、
+[DirectWrite 时间汇总](benchmarks/css-replaced-leaf-2026-09-30/directwrite-timing-summary.csv)、
+[逐批时间](benchmarks/css-replaced-leaf-2026-09-30/directwrite-timing-raw.csv)、
+[分配汇总](benchmarks/css-replaced-leaf-2026-09-30/directwrite-allocations-summary.csv)、
+[逐批分配](benchmarks/css-replaced-leaf-2026-09-30/directwrite-allocations-raw.csv)、
+[环境与二进制哈希](benchmarks/css-replaced-leaf-2026-09-30/environment.json)。
+参考 Release／Debug 各通过 347/347；ASan 首轮 345 项通过，一项大型
+Grid 区域矩阵在并行编译负载下超过 120 秒，原二进制单独复跑以 80.61 秒
+通过，未修改超时或断言。346 项 ASan 用例均有通过结果；
+[验证记录](benchmarks/css-replaced-leaf-2026-09-30/validation.json)保留该区别。
+三种宿主配置各通过 296/296，独立安装消费通过 1/1，基准 smoke 通过 4/4。
+
 ## 验证范围
 
 初始基线的 Release、Debug 参考构建各通过 333/333 项；ASan 通过

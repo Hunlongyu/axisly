@@ -18,6 +18,7 @@ struct LayoutNode {
 };
 
 enum class FragmentDetail { Size, Baseline, Full };
+enum class SizingMode { Inherent, Content };
 
 struct Constraints {
     std::optional<Unit> known_width, known_height; // border-box
@@ -33,6 +34,7 @@ struct Constraints {
     bool ignore_min_max_width{}, ignore_min_max_height{};
     bool content_based_width{};
     bool preserve_known_grid_size{};
+    SizingMode sizing_mode{SizingMode::Inherent};
     // Cache entries for intrinsic probes cannot stand in for published geometry.
     FragmentDetail detail{FragmentDetail::Full};
     bool operator==(const Constraints&) const = default;

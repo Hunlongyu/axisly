@@ -1,0 +1,13 @@
+{
+  "release_reference": "347/347",
+  "debug_reference": "347/347",
+  "asan_reference_initial": "345 passed, one grid_area_matrix timeout at 120 seconds while concurrent builds were active",
+  "asan_reference_retry": "grid_area_matrix passed alone in 80.61 seconds with the same binary and unchanged timeout",
+  "asan_reference_all_test_cases_passed": 346,
+  "release_host": "296/296",
+  "debug_host": "296/296",
+  "asan_host": "296/296",
+  "installed_consumer": "1/1",
+  "benchmark_smoke": "4/4",
+  "reference_cases_added": 1440
+}

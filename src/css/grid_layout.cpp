@@ -1,4 +1,5 @@
 #include "grid_internal.hpp"
+#include "grid_item_sizing.hpp"
 #include "item_alignment.hpp"
 
 #include <algorithm>
@@ -12,16 +13,6 @@
 
 namespace axisly::css::detail {
 namespace {
-ResolvedDimensions grid_item_minimum(const ResolvedBox& box) {
-    const Unit width_floor = box.horizontal_decoration().value_or(Unit{0});
-    const Unit height_floor = box.vertical_decoration().value_or(Unit{0});
-    // Grid floors each axis at padding and border before transferring a
-    // minimum through aspect-ratio. Both axes are then known, so an isolated
-    // min-width or min-height does not create a second minimum.
-    return {std::max(box.specified_minimum.width.value_or(width_floor), width_floor),
-        std::max(box.specified_minimum.height.value_or(height_floor), height_floor)};
-}
-
 Unit physical_track_start(Unit content_start, Unit inner_size,
                           Unit inline_start, Unit span,
                           Direction direction, NodeId node) {
@@ -700,6 +691,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 ? child_box.margin.left : child_box.margin.top;
             const auto& cross_margin_end = rows_axis
                 ? child_box.margin.right : child_box.margin.bottom;
+            ResolvedDimensions stretch;
             if (alignment.position == ItemPosition::Stretch
                 && cross_style.kind() == LengthKind::Auto
                 && cross_margin_start.kind != EdgeKind::Auto
@@ -707,13 +699,15 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 const Unit margin_sum = rows_axis
                     ? checked(static_cast<double>(margin.left) + margin.right, id)
                     : checked(static_cast<double>(margin.top) + margin.bottom, id);
-                const Unit known = constrain_axis(std::max(Unit{0}, checked(
-                    static_cast<double>(cross_size) - margin_sum, id)),
-                    rows_axis ? child_box.minimum.width : child_box.minimum.height,
-                    rows_axis ? child_box.maximum.width : child_box.maximum.height);
-                if (rows_axis) intrinsic.known_width = known;
-                else intrinsic.known_height = known;
+                const Unit known = std::max(Unit{0}, checked(
+                    static_cast<double>(cross_size) - margin_sum, id));
+                if (rows_axis) stretch.width = known;
+                else stretch.height = known;
             }
+            const auto sizing = resolve_grid_item_sizing(child_box, stretch,
+                GridItemSizingPhase::Intrinsic);
+            intrinsic.known_width = sizing.size.width;
+            intrinsic.known_height = sizing.size.height;
             own_available = AvailableSpace::min_content();
             const auto minimum = layout_size(id, intrinsic, depth + 1);
             own_available = AvailableSpace::max_content();
@@ -1003,28 +997,22 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         final.containing_height = cell_height;
         final.available = {AvailableSpace::definite(cell_width), AvailableSpace::definite(cell_height)};
         const auto horizontal = child.style.justify_self.value_or(node.style.justify_items.value_or(
-            ItemAlignment{ItemPosition::Stretch, AlignmentSafety::Unsafe}));
+            ItemAlignment{resolved.preferred.width ? ItemPosition::Start
+                : ItemPosition::Stretch, AlignmentSafety::Unsafe}));
         const auto vertical = child.style.align_self.value_or(node.style.align_items.value_or(
             ItemAlignment{resolved.aspect_ratio ? ItemPosition::Start
                 : ItemPosition::Stretch, AlignmentSafety::Unsafe}));
         const auto& contribution = contributions[contribution_indices[i].value()];
         const bool intrinsic_grid_item = child.style.display == Display::Grid;
+        ResolvedDimensions stretch;
         if (horizontal.position == ItemPosition::Stretch
             && child_box.size.width.kind() == LengthKind::Auto
             && resolved.margin.left.kind != EdgeKind::Auto
             && resolved.margin.right.kind != EdgeKind::Auto) {
-            final.known_width = constrain_axis(std::max(Unit{0}, checked(
-                static_cast<double>(cell_width) - margin.left - margin.right, id)),
-                resolved.minimum.width, resolved.maximum.width);
-        } else if (child_box.size.width.kind() == LengthKind::Auto
-                   && !resolved.preferred.width
-                   && intrinsic_grid_item) {
-            final.known_width = constrain_axis(fit_content_item_size(
-                contribution.min_content.width, contribution.max_content.width,
-                cell_width, margin.left, margin.right, id),
-                resolved.minimum.width, resolved.maximum.width);
+            stretch.width = std::max(Unit{0}, checked(
+                static_cast<double>(cell_width) - margin.left - margin.right, id));
         }
-        if (!final.known_width && child_box.size.width.kind() == LengthKind::Auto
+        if (!stretch.width && child_box.size.width.kind() == LengthKind::Auto
             && !resolved.preferred.width
             && (child.style.display == Display::Block
                 || child.style.display == Display::FlowRoot)) {
@@ -1034,25 +1022,32 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             && child_box.size.height.kind() == LengthKind::Auto
             && resolved.margin.top.kind != EdgeKind::Auto
             && resolved.margin.bottom.kind != EdgeKind::Auto) {
-            final.known_height = constrain_axis(std::max(Unit{0}, checked(
-                static_cast<double>(cell_height) - margin.top - margin.bottom, id)),
-                resolved.minimum.height, resolved.maximum.height);
-        } else if (child_box.size.height.kind() == LengthKind::Auto
-                   && !resolved.preferred.height
-                   && intrinsic_grid_item) {
-            final.known_height = constrain_axis(fit_content_item_size(
-                contribution.min_content.height, contribution.max_content.height,
-                cell_height, margin.top, margin.bottom, id),
-                resolved.minimum.height, resolved.maximum.height);
+            stretch.height = std::max(Unit{0}, checked(
+                static_cast<double>(cell_height) - margin.top - margin.bottom, id));
         }
-        if (resolved.aspect_ratio && resolved.preferred.width
-            && resolved.preferred.height && !final.known_width
-            && !final.known_height) {
-            const auto minimum = grid_item_minimum(resolved);
-            final.known_width = constrain_axis(*resolved.preferred.width,
-                minimum.width, resolved.maximum.width);
-            final.known_height = constrain_axis(*resolved.preferred.height,
-                minimum.height, resolved.maximum.height);
+        const auto sizing = resolve_grid_item_sizing(resolved, stretch,
+            GridItemSizingPhase::Final);
+        final.known_width = sizing.size.width;
+        final.known_height = sizing.size.height;
+        // Content-fit dimensions come from measurement after stretch and
+        // ratio resolution. Feeding them back into ratio transfer would turn
+        // an auto-sized Grid container's independent content axes into a
+        // preferred ratio, changing its internal rows.
+        if (intrinsic_grid_item) {
+            if (!final.known_width && child_box.size.width.kind() == LengthKind::Auto) {
+                final.known_width = constrain_axis(fit_content_item_size(
+                    contribution.min_content.width, contribution.max_content.width,
+                    cell_width, margin.left, margin.right, id),
+                    sizing.minimum.width, sizing.maximum.width);
+            }
+            if (!final.known_height && child_box.size.height.kind() == LengthKind::Auto) {
+                final.known_height = constrain_axis(fit_content_item_size(
+                    contribution.min_content.height, contribution.max_content.height,
+                    cell_height, margin.top, margin.bottom, id),
+                    sizing.minimum.height, sizing.maximum.height);
+            }
+        }
+        if (resolved.aspect_ratio && final.known_width && final.known_height) {
             // The Grid item sizing stage has resolved these constraints. Its
             // final dimensions are passed to the child as known dimensions.
             if (child.style.display == Display::Grid) {
@@ -1063,6 +1058,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             }
         }
         auto child_fragment = layout(id, final, depth + 1);
+        finalize_grid_item_fragment(child_fragment, resolved, sizing,
+            {final.known_width, final.known_height});
         if (vertical.position == ItemPosition::Baseline
             && resolved.margin.top.kind != EdgeKind::Auto
             && resolved.margin.bottom.kind != EdgeKind::Auto) {

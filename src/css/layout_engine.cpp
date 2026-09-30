@@ -348,6 +348,17 @@ Fragment Engine::layout(NodeId id, Constraints constraints, std::size_t depth,
     } catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
     }
+    if (constraints.sizing_mode == SizingMode::Content) {
+        // Flex resolves its item size before asking the child for its content.
+        // Containers retain min/max constraints; measured leaves ignore them
+        // and defer aspect-ratio effects to the parent item calculation.
+        box.preferred = {};
+        if (node.children.empty()) {
+            box.minimum = {};
+            box.maximum = {};
+            box.aspect_ratio.reset();
+        }
+    }
     if (constraints.ignore_preferred_width) box.preferred.width.reset();
     if (constraints.ignore_preferred_height) box.preferred.height.reset();
     if (constraints.ignore_min_max_width) {
@@ -598,15 +609,18 @@ Fragment Engine::leaf(const LayoutNode& node, const Constraints& constraints,
     const auto requested = requested_size(constraints, box);
     auto width = requested.width;
     auto height = requested.height;
-    if (!width && !constraints.ignore_preferred_width) {
+    if (!width && constraints.sizing_mode == SizingMode::Inherent
+        && !constraints.ignore_preferred_width) {
         width = intrinsic(node.style.box.size.width, true);
     }
-    if (!height && !constraints.ignore_preferred_height) {
+    if (!height && constraints.sizing_mode == SizingMode::Inherent
+        && !constraints.ignore_preferred_height) {
         height = intrinsic(node.style.box.size.height, false);
     }
-    const auto transferred = transfer_aspect_ratio({width, height}, box);
-    width = transferred.width;
-    height = transferred.height;
+    // Style dimensions have already transferred through the ratio in
+    // resolve_box. A parent-known leaf axis does not make the other axis
+    // definite before measurement; the ratio floors the measured height
+    // after min/max clamping instead.
     MeasureRequest request;
     request.known_content_width = width
         ? std::optional<Unit>(std::max(Unit{0}, *width - *decoration_width)) : std::nullopt;

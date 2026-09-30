@@ -1,6 +1,7 @@
 #include "AxislyLayout.hpp"
 #include "CssAxislyLayout.hpp"
 #include "CssHostPage.hpp"
+#include "CssHostAcceptance.hpp"
 #include "geeyoou/widget/Label.hpp"
 #include "geeyoou/widget/GroupBox.hpp"
 #include "geeyoou/render/Skin.hpp"
@@ -266,10 +267,17 @@ int main() {
         cacheAndRemoval(); maxAndOverflow(); boxSpacingAndVisibility(); nestedInvalidation();
         textAndStyle(); percentageSpanBaselineAndPixels(); failureAtomicity(); responsiveViewport();
         cssMixedHost();
+        for (auto feature : {axisly_demo::CssFeature::Flow, axisly_demo::CssFeature::Flex,
+                axisly_demo::CssFeature::Grid}) {
+            Widget host;
+            const auto page = axisly_demo::buildCssFeaturePage(host, feature);
+            for (float scale : {1.f, 1.25f, 1.5f, 2.f})
+                axisly_demo::exerciseCssFeaturePage(host, page, scale);
+        }
         cssHostLifetime(false); cssHostLifetime(true);
         cssHostInvalidMeasurement();
         for (bool measure : {false, true}) for (int action = 0; action < 4; ++action) lifetime(measure, action);
-        std::puts("axisly GeeyoouUI adapter: 19 scenario groups passed");
+        std::puts("axisly GeeyoouUI adapter: 22 scenario groups passed");
         return 0;
     } catch (const std::exception& error) { std::fprintf(stderr, "%s\n", error.what()); return 1; }
 }

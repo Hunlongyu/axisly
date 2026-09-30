@@ -30,7 +30,7 @@ endif()
 set(page_names Shell ShowcaseWindow PlantIcons PageWindow PageTheme PageDialogs
     PageIcons PageHmi PageWidgets PageInputs PageSelects PageOps
     PageTables PageTablesTree PageScene3D)
-set(page_sources AxislyLayout.cpp CssAxislyLayout.cpp CssHostPage.cpp
+set(page_sources AxislyLayout.cpp CssAxislyLayout.cpp CssHostPage.cpp CssFeaturePages.cpp
     PageOverview.cpp PageLayout.cpp)
 foreach(page IN LISTS page_names)
     list(APPEND page_sources "${generated}/showcase/${page}.cpp")
@@ -44,7 +44,7 @@ target_include_directories(axisly_geeyoou_pages PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}" "${generated}/showcase")
 axisly_enable_warnings(axisly_geeyoou_pages)
 
-add_executable(axisly_geeyoou_showcase WIN32 "${generated}/showcase/main.cpp" Smoke.cpp)
+add_executable(axisly_geeyoou_showcase WIN32 "${generated}/showcase/main.cpp" Smoke.cpp CssHostAcceptance.cpp)
 target_link_libraries(axisly_geeyoou_showcase PRIVATE axisly_geeyoou_pages)
 target_link_options(axisly_geeyoou_showcase PRIVATE /ENTRY:mainCRTStartup)
 axisly_enable_warnings(axisly_geeyoou_showcase)
@@ -52,7 +52,7 @@ set_target_properties(axisly_geeyoou_showcase PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 if(AXISLY_BUILD_TESTS)
-    add_executable(axisly_geeyoou_tests tests.cpp)
+    add_executable(axisly_geeyoou_tests tests.cpp CssHostAcceptance.cpp)
     target_link_libraries(axisly_geeyoou_tests PRIVATE axisly_geeyoou_pages)
     axisly_enable_warnings(axisly_geeyoou_tests)
     add_test(NAME axisly.geeyoou.integration COMMAND axisly_geeyoou_tests)

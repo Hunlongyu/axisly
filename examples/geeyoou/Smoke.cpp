@@ -4,6 +4,7 @@
 #include "Smoke.hpp"
 #include "AxislyLayout.hpp"
 #include "CssHostPage.hpp"
+#include "CssHostAcceptance.hpp"
 #include "ShowcaseWindow.hpp"
 #include "i18n/I18n.hpp"
 #include "geeyoou/render/Canvas.hpp"
@@ -13,6 +14,7 @@
 #include "geeyoou/widget/LineEdit.hpp"
 #include "geeyoou/widget/PushButton.hpp"
 #include "geeyoou/widget/ScrollArea.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -20,6 +22,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace axisly_demo {
 namespace {
@@ -115,14 +118,47 @@ HWND ownWindow() {
     }, reinterpret_cast<LPARAM>(&result));
     return result;
 }
+struct NativeMonitor {
+    HMONITOR handle{};
+    RECT work{};
+    std::wstring device;
+};
+std::vector<NativeMonitor> nativeMonitors() {
+    struct Inventory { std::vector<NativeMonitor> monitors; bool ok{true}; } state;
+    const auto success = EnumDisplayMonitors(nullptr, nullptr,
+        [](HMONITOR monitor, HDC, LPRECT, LPARAM data) -> BOOL {
+            auto& inventory = *reinterpret_cast<Inventory*>(data);
+            MONITORINFOEXW info{};
+            info.cbSize = sizeof(info);
+            if (!GetMonitorInfoW(monitor, &info)) { inventory.ok = false; return FALSE; }
+            try { inventory.monitors.push_back({monitor, info.rcWork, info.szDevice}); }
+            catch (...) { inventory.ok = false; return FALSE; }
+            return TRUE;
+        }, reinterpret_cast<LPARAM>(&state));
+    check(success && state.ok && !state.monitors.empty(), "Monitor inventory failed");
+    return state.monitors;
+}
+struct MonitorResult { std::string device; UINT dpi{}; float scale{}; };
+std::string jsonDevice(const std::wstring& source) {
+    // Windows display device names are ASCII; escape their path separators.
+    std::string result;
+    for (const auto c : source) {
+        check(c >= 32 && c < 127, "Unexpected display device name");
+        if (c == L'\\' || c == L'"') result += '\\';
+        result += static_cast<char>(c);
+    }
+    return result;
+}
 struct Run {
     showcase::ShowcaseWindow& window;
     std::filesystem::path directory;
     std::ofstream report;
     geeyoou::TimerId timer{};
     int step{};
+    std::vector<NativeMonitor> monitors;
+    std::vector<MonitorResult> monitor_results;
     explicit Run(showcase::ShowcaseWindow& win, std::filesystem::path path)
-        : window(win), directory(std::move(path)) {
+        : window(win), directory(std::move(path)), monitors(nativeMonitors()) {
         std::filesystem::create_directories(directory);
         report.open(directory / "pages.csv");
         check(bool(report), "Cannot open acceptance report");
@@ -133,8 +169,41 @@ struct Run {
         try {
             constexpr int pages = 19;
             const int round = step / pages, page = step % pages;
-            if (round == 3) {
-                validateCssWindow(window, directory / "css-mixed-native.png");
+            if (step >= 3 * pages) {
+                const auto stage = static_cast<std::size_t>(step - 3 * pages);
+                const auto index = stage / 3;
+                if (index < monitors.size()) {
+                    const auto native = ownWindow();
+                    check(native != nullptr, "Native window not found during DPI acceptance");
+                    const auto& monitor = monitors[index];
+                    if (stage % 3 == 0) {
+                        const auto& r = monitor.work;
+                        check(SetWindowPos(native, nullptr, r.left + 16, r.top + 16,
+                            std::min<LONG>(1100, r.right - r.left - 32),
+                            std::min<LONG>(800, r.bottom - r.top - 32),
+                            SWP_NOZORDER | SWP_NOACTIVATE), "Cross-monitor move failed");
+                    } else if (stage % 3 == 2) {
+                        window.animationTickTree();
+                        check(MonitorFromWindow(native, MONITOR_DEFAULTTONEAREST) == monitor.handle,
+                            "Window did not reach the requested monitor");
+                        const UINT dpi = GetDpiForWindow(native);
+                        const float scale = window.scaleFactor();
+                        check(dpi > 0 && std::abs(scale - float(dpi) / 96.f) < .001f,
+                            "Host scale differs from native monitor DPI");
+                        validateCssWindow(window, directory / ("monitor-" + std::to_string(index) + "-css-mixed.png"));
+                        for (auto feature : {CssFeature::Flow, CssFeature::Flex, CssFeature::Grid}) {
+                            auto* host = window.add<geeyoou::Widget>();
+                            const auto feature_page = buildCssFeaturePage(*host, feature);
+                            exerciseCssFeaturePage(*host, feature_page, scale);
+                            renderCssHost(*host, scale, directory / ("monitor-" + std::to_string(index)
+                                + "-css-" + cssFeatureName(feature) + ".png"));
+                            window.removeChild(host);
+                        }
+                        monitor_results.push_back({jsonDevice(monitor.device), dpi, scale});
+                    }
+                    ++step;
+                    return;
+                }
                 const auto c = counters();
                 check(c.errors == 0, "axisly solve failed during Showcase run");
                 check(c.solves > 0 && c.cacheHits > 0, "Showcase never exercised axisly/cache");
@@ -143,9 +212,17 @@ struct Run {
                     << ",\"solves\":" << c.solves << ",\"cache_hits\":" << c.cacheHits
                     << ",\"widget_measures\":" << c.widgetMeasures << ",\"wrapped_measures\":" << c.wrappedMeasures
                     << ",\"css_mixed_native\":\"passed\""
-                    << ",\"aborted_passes\":" << c.aborted << ",\"errors\":" << c.errors << "}\n";
+                    << ",\"css_feature_pages\":3,\"monitor_visits\":" << monitor_results.size()
+                    << ",\"monitors\":[";
+                for (std::size_t i = 0; i < monitor_results.size(); ++i) {
+                    const auto& monitor = monitor_results[i];
+                    if (i) summary << ',';
+                    summary << "{\"device\":\"" << monitor.device << "\",\"dpi\":" << monitor.dpi
+                        << ",\"scale\":" << monitor.scale << ",\"status\":\"passed\"}";
+                }
+                summary << "],\"aborted_passes\":" << c.aborted << ",\"errors\":" << c.errors << "}\n";
                 report.close();
-                std::puts("Showcase: 19 pages x 3 window/language/theme configurations passed");
+                std::puts("Showcase: 19 pages x 3 configurations and four CSS pages on every connected monitor passed");
                 geeyoou::platform().stopTimer(timer);
                 geeyoou::platform().quit(0);
                 return;

@@ -7,8 +7,10 @@
 
 namespace axisly::css::detail {
 
-std::vector<std::size_t> balanced_line_counts(std::span<const Unit> outer_sizes,
-    Unit line_limit, Unit gap, std::size_t minimum_lines, std::size_t maximum_work) {
+std::span<const std::size_t> balanced_line_counts(std::span<const Unit> outer_sizes,
+    Unit line_limit, Unit gap, std::size_t minimum_lines, std::size_t maximum_work,
+    BalancedLineWorkspace& workspace) {
+    workspace.clear();
     const auto count = outer_sizes.size();
     if (!count) return {};
     if ((!(std::isfinite(line_limit) || std::isinf(line_limit))) || line_limit < 0
@@ -16,8 +18,10 @@ std::vector<std::size_t> balanced_line_counts(std::span<const Unit> outer_sizes,
         throw std::invalid_argument("Invalid balanced Flex line parameters");
     }
     const double limit = line_limit;
-    std::vector<double> prefix(count + 1);
-    std::vector<bool> zero(count);
+    auto& prefix = workspace.prefix;
+    auto& zero = workspace.zero;
+    prefix.resize(count + 1);
+    zero.resize(count);
     for (std::size_t i = 0; i < count; ++i) {
         if (!std::isfinite(outer_sizes[i])) throw std::invalid_argument("Invalid Flex item size");
         const double size = std::max(Unit{0}, outer_sizes[i]);
@@ -27,8 +31,10 @@ std::vector<std::size_t> balanced_line_counts(std::span<const Unit> outer_sizes,
     const auto line_size = [&](std::size_t start, std::size_t end) {
         return prefix[end + 1] - prefix[start] - gap;
     };
-    std::vector<std::size_t> suffix_greedy(count + 1);
-    std::vector<std::size_t> fit_end(count);
+    auto& suffix_greedy = workspace.suffix_greedy;
+    auto& fit_end = workspace.fit_end;
+    suffix_greedy.resize(count + 1);
+    fit_end.resize(count);
     std::size_t fit = 0;
     for (std::size_t start = 0; start < count; ++start) {
         fit = std::max(fit, start);
@@ -39,12 +45,22 @@ std::vector<std::size_t> balanced_line_counts(std::span<const Unit> outer_sizes,
         suffix_greedy[start] = 1 + suffix_greedy[fit_end[start] + 1];
     }
     const auto line_count = std::max(suffix_greedy[0], std::min(minimum_lines, count));
-    if (line_count == count) return std::vector<std::size_t>(count, 1);
+    auto& result = workspace.result;
+    if (line_count == count) {
+        result.assign(count, 1);
+        return result;
+    }
 
     const double infinity = std::numeric_limits<double>::infinity();
-    std::vector<double> previous(count + 1, infinity), current(count + 1, infinity);
-    std::vector<std::vector<std::size_t>> choice(line_count + 1,
-        std::vector<std::size_t>(count));
+    auto& previous = workspace.previous;
+    auto& current = workspace.current;
+    auto& choice = workspace.choice;
+    previous.assign(count + 1, infinity);
+    current.assign(count + 1, infinity);
+    if (line_count + 1 > choice.max_size() / count) {
+        throw std::length_error("Balanced Flex choice table limit exceeded");
+    }
+    choice.resize((line_count + 1) * count);
     for (std::size_t start = 0; start < count; ++start) {
         const double size = line_size(start, count - 1);
         if (start == count - 1 || size <= limit) previous[start] = size * size;
@@ -68,16 +84,15 @@ std::vector<std::size_t> balanced_line_counts(std::span<const Unit> outer_sizes,
                 if (score <= best) { best = score; best_end = end; }
             }
             current[start] = best;
-            choice[lines][start] = best_end;
+            choice[lines * count + start] = best_end;
         }
         previous.swap(current);
     }
     if (!std::isfinite(previous[0])) throw std::logic_error("Balanced Flex division is infeasible");
-    std::vector<std::size_t> result;
     result.reserve(line_count);
     std::size_t start = 0;
     for (std::size_t lines = line_count; lines > 1; --lines) {
-        const auto end = choice[lines][start];
+        const auto end = choice[lines * count + start];
         result.push_back(end - start + 1);
         start = end + 1;
     }

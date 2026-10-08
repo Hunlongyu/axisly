@@ -9,14 +9,7 @@
 
 | 源码 | 构建目标 | 内容 |
 | --- | --- | --- |
-| [fixed_grid.cpp](../examples/fixed_grid.cpp) | `axisly_api_example` | 固定网格和矩形输出 |
-| [weighted_grid.cpp](../examples/weighted_grid.cpp) | `axisly_weighted_example` | 固定与权重轨道混排 |
-| [alignment_grid.cpp](../examples/alignment_grid.cpp) | `axisly_alignment_example` | 对齐和外边距 |
-| [measurement_grid.cpp](../examples/measurement_grid.cpp) | `axisly_measurement_example` | 内容测量与换行高度 |
-| [spanning_grid.cpp](../examples/spanning_grid.cpp) | `axisly_spanning_example` | 跨行和跨列 |
-| [range_grid.cpp](../examples/range_grid.cpp) | `axisly_range_example` | 轨道上下界和空间不足 |
-| [nested_grid.cpp](../examples/nested_grid.cpp) | `axisly_nested_example` | 宿主侧递归适配 |
-| [retained_grid.cpp](../examples/retained_grid.cpp) | `axisly_retained_example` | 缓存、自动放置、基线和取整 |
+| [css_grid.cpp](../examples/css_grid.cpp) | `axisly_api_example` | CSS 固定／fr／minmax 轨道、测量、跨度、对齐、嵌套、缓存与取整 |
 
 程序位于相应构建目录，Windows 文件名带 `.exe`。Windows 双击启动并独占控制台时，
 输出保留到按回车关闭；已有终端或重定向运行时直接退出。
@@ -34,7 +27,7 @@ CSS 混合树的最小例子见 [README](../README.md#快速开始)。
 `AXISLY_BUILD_PLAYGROUND=ON`，通过 `CMAKE_PREFIX_PATH` 提供 SDL3 与 SDL_ttf。
 版本和校验值见 [示例 CMake 配置](../examples/playground/CMakeLists.txt)。
 
-十个场景展示固定、权重、Content、跨度、对齐、Range 与嵌套布局：
+十个场景展示 CSS 固定、fr、auto、跨度、对齐、minmax 与同树嵌套布局：
 
 - `1..0`、左右键或侧栏点击：切换场景。
 - `G`／`B`／`M`：切换网格线、条目边框和数值标注。
@@ -59,11 +52,10 @@ Axisly 分配页面和容器矩形；控件内部、虚拟化表格、工艺图�
 
 ## 接入自己的 UI
 
-1. 保持 `NodeId`／`ItemId` 与宿主控件的映射。
+1. 保持 `css::NodeId` 与宿主控件的映射，或通过 `LayoutSource` 借用宿主树。
 2. 用宿主文字或控件测量接口处理布局请求。
 3. 内容和样式变化后标脏或更新对应节点。
 4. 计算成功后应用全部所需矩形，处理坐标转换、裁剪和滚动。
 
 同一控件的外部矩形应只有一个布局管理者。线程绑定的控件和字体资源应在允许的线程测量。
-CSS 的接口约定见 [布局指南](css-layout.md)，无状态网格和宿主嵌套策略见
-[原生 Grid 指南](native-grid.md)。
+统一接口、测量和借用宿主树的约定见 [布局指南](css-layout.md)。

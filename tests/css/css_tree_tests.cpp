@@ -7,7 +7,9 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <typeinfo>
 
 namespace {
 using namespace axisly;
@@ -176,7 +178,7 @@ void topology_and_hidden() {
     try { tree.append_child(nested, second); }
     catch (const std::invalid_argument&) { cycle = true; }
     require(cycle, "Cycle insertion must be rejected");
-    tree.remove(second);
+    tree.remove_subtree(second);
     require(!tree.contains(second) && !tree.contains(nested) && tree.contains(hidden),
         "Removing a subtree must invalidate all descendants");
 }
@@ -299,6 +301,75 @@ void intrinsic_container_invalidation() {
     const auto maximum = tree.compute(root, space);
     require(maximum.succeeded() && maximum.find(grid)->border_box.width == 112,
         "Switching the intrinsic keyword must recompute the container width");
+}
+
+void host_exception_types() {
+    // The original exception type/value must survive both measurement APIs,
+    // nested algorithms and both publication paths.
+    std::vector<std::exception_ptr> errors;
+    const auto remember = [&](auto error) {
+        try { throw error; } catch (...) { errors.push_back(std::current_exception()); }
+    };
+    remember(std::invalid_argument("host argument"));
+    remember(std::overflow_error("host overflow"));
+    remember(std::length_error("host length"));
+    remember(std::bad_alloc{});
+    remember(42);
+    const auto describe = [](const std::exception_ptr& error) -> std::string {
+        if (!error) return "no exception";
+        try { std::rethrow_exception(error); }
+        catch (const std::exception& value) {
+            return std::string(typeid(value).name()) + ":" + value.what();
+        } catch (int value) { return std::to_string(value); }
+    };
+    for (const auto display : {Display::Block, Display::Flex, Display::Grid}) {
+        for (const bool per_node : {false, true}) {
+            for (const bool publish : {false, true}) {
+                LayoutTree tree;
+                Style style;
+                style.display = display;
+                style.box.size.width = Length::length(100);
+                const auto root = tree.create_node(style);
+                const auto leaf = tree.create_node();
+                tree.append_child(root, leaf);
+                struct Provider final : MeasureProvider {
+                    NodeId leaf;
+                    std::exception_ptr failure;
+                    Measurement measure(NodeId id, const Style&, void*, const MeasureRequest&) const override {
+                        if (id == leaf && failure) std::rethrow_exception(failure);
+                        return {{20, 10}};
+                    }
+                } provider;
+                provider.leaf = leaf;
+                if (per_node) tree.set_measure(leaf, [&](const MeasureRequest& request) {
+                    return provider.measure(leaf, tree.style(leaf), nullptr, request);
+                });
+                LayoutOptions options;
+                options.publish_nodes = publish;
+                options.measure_provider = per_node ? nullptr : &provider;
+                const auto& previous = tree.compute(root, {}, options);
+                require(previous.succeeded(), "Initial exception fixture failed");
+                const auto snapshot = previous;
+                const auto geometry = tree.layout(leaf);
+                const auto* storage = previous.nodes.data();
+                for (const auto& error : errors) {
+                    provider.failure = error;
+                    tree.mark_dirty(leaf);
+                    std::exception_ptr caught;
+                    try { (void)tree.compute(root, {}, options); }
+                    catch (...) { caught = std::current_exception(); }
+                    require(describe(caught) == describe(error), "Host exception type/value must propagate");
+                    require(previous.succeeded() && previous.nodes == snapshot.nodes
+                        && previous.size == snapshot.size && previous.nodes.data() == storage
+                        && tree.layout(leaf) == geometry,
+                        "Host failure must preserve the complete publication");
+                }
+                provider.failure = {};
+                require(tree.compute(root, {}, options).succeeded(),
+                    "Tree must recover after a host failure");
+            }
+        }
+    }
 }
 
 void errors_and_exception_atomicity() {
@@ -547,7 +618,7 @@ void node_storage_lifecycle() {
     require(!tree.contains(NodeId{root.value & 0xffffffffULL}),
         "An identity without an epoch must not address an occupied slot");
     for (std::size_t i = 0; i < leaves.size(); i += 3) {
-        tree.remove(leaves[i]);
+        tree.remove_subtree(leaves[i]);
         removed.push_back(leaves[i]);
         require(!tree.contains(NodeId{leaves[i].value & 0xffffffffULL}),
             "An identity without an epoch must not address a vacant slot");
@@ -570,7 +641,7 @@ void node_storage_lifecycle() {
     require(result.succeeded() && result.nodes.size() == count + 1
         && result.size == Size{64, static_cast<Unit>(2 * count)},
         "Surviving and newly inserted nodes must all participate in layout");
-    tree.remove(root);
+    tree.remove_subtree(root);
     require(!tree.contains(root) && !tree.contains(anchor), "Subtree removal must release all identities");
 }
 
@@ -669,7 +740,7 @@ void cache_capacity_churn() {
             require(host_calls == warmed_calls,
                 "A small resident working set must survive hash collisions and size/full queries");
         }
-        tree.remove(root);
+        tree.remove_subtree(root);
         const auto leaf = tree.create_node({}, [](const MeasureRequest&) {
             return Measurement{{17, 13}};
         });
@@ -728,7 +799,7 @@ void cached_local_overflow() {
         && changed.find(panels[0])->scrollable_overflow_rect == expected
         && changed.find(panels[1])->scrollable_overflow_rect == Rect{-5.25f, 0, 60.5f, 33.75f},
         "An edited descendant must update only its owning container's cached overflow");
-    tree.remove(root);
+    tree.remove_subtree(root);
     require(snapshot.find(panels[1])->scrollable_overflow_rect == expected,
         "Published overflow snapshots must survive cache reuse and tree removal");
 }
@@ -1010,6 +1081,7 @@ int main(int argc, char** argv) {
         else if (name == "rtl_root_coordinates") rtl_root_coordinates();
         else if (name == "intrinsic_container_invalidation") intrinsic_container_invalidation();
         else if (name == "errors_and_exception_atomicity") errors_and_exception_atomicity();
+        else if (name == "host_exception_types") host_exception_types();
         else if (name == "cache_and_dirty") cache_and_dirty();
         else if (name == "inherited_float_invalidation") inherited_float_invalidation();
         else if (name == "plain_block_single_measure") plain_block_single_measure();

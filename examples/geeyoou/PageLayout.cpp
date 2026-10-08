@@ -78,27 +78,27 @@ Size buildLayoutPage(Widget* content) {
         "The first column uses 25% of the available width. Two weighted columns share the remainder; dense auto placement creates implicit rows."));
     auto* matrix = fractions->add<Widget>(); fractionColumn->addWidget(matrix);
     auto* grid = matrix->setLayout<AxislyGridLayout>(); grid->setSpacing(12);
-    grid->setColumns({axisly::Track::percentage(.25f), axisly::Track::weighted(1, 120), axisly::Track::weighted(1, 120)});
-    grid->setAutoFlow(axisly::AutoFlow::RowDense);
+    grid->setColumns({axisly::css::TrackSizing::percent(.25f), axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(120), axisly::css::TrackBreadth::fraction(1)), axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(120), axisly::css::TrackBreadth::fraction(1))});
+    grid->setAutoFlow(axisly::css::GridAutoFlow::RowDense);
     for (int i = 0; i < 6; ++i) {
         auto* tile = swatch(matrix, i == 0 ? "span 2" : "auto " + std::to_string(i), i % 2 ? theme.accent : theme.ok);
-        axisly::GridItem item;
-        item.column = item.row = axisly::auto_position;
-        if (i == 0) item.column_span = 2;
+        axisly::css::Style item;
+
+        if (i == 0) item.grid.column.end = axisly::css::GridLine::span(2);
         grid->addCell(tile, item);
     }
 
     auto* baselineGroup = panel(content, page, words("③ 首基线对齐", "③ First baseline alignment"));
     auto* baselineGrid = baselineGroup->setLayout<AxislyGridLayout>();
     baselineGrid->setSpacing(12);
-    baselineGrid->setColumns({axisly::Track::weighted(1), axisly::Track::weighted(1), axisly::Track::weighted(1)});
+    baselineGrid->setColumns({axisly::css::TrackSizing::fraction(1), axisly::css::TrackSizing::fraction(1), axisly::css::TrackSizing::fraction(1)});
     for (int i = 0; i < 3; ++i) {
         const float height = 56 + float(i)*12, baseline = 24 + float(i)*12;
         auto* tile = swatch(baselineGroup, "baseline " + std::to_string(int(baseline)), theme.warn);
         tile->hint = {{100, height}, {180, height}, {kUnbounded, height}}; tile->baseline = baseline;
-        axisly::GridItem item; item.column = static_cast<std::uint32_t>(i); item.baseline = baseline;
-        item.vertical_alignment = axisly::VerticalAlignment::Baseline;
-        baselineGrid->addCell(tile, item);
+        axisly::css::Style item; item.grid.column.start = axisly::css::GridLine::index(static_cast<std::int16_t>(i + 1));
+        item.align_self = axisly::css::ItemAlignment{axisly::css::ItemPosition::Baseline};
+        baselineGrid->addCell(tile, item, baseline);
     }
 
     auto* dynamic = panel(content, page, words("④ 动态内容、换行与布局失效", "④ Dynamic content, wrapping and invalidation"));
@@ -116,14 +116,14 @@ Size buildLayoutPage(Widget* content) {
     auto* remove = addButton(words("移除末项", "Remove last"));
     auto* itemsHost = dynamic->add<Widget>(); dynamicColumn->addWidget(itemsHost);
     auto* items = itemsHost->setLayout<AxislyGridLayout>(); items->setSpacing(10);
-    items->setColumns({axisly::Track::weighted(1, 100), axisly::Track::weighted(1, 100), axisly::Track::weighted(1, 100)});
-    items->setAutoFlow(axisly::AutoFlow::Row);
+    items->setColumns({axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(100), axisly::css::TrackBreadth::fraction(1)), axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(100), axisly::css::TrackBreadth::fraction(1)), axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(100), axisly::css::TrackBreadth::fraction(1))});
+    items->setAutoFlow(axisly::css::GridAutoFlow::Row);
     auto live = std::make_shared<std::vector<Widget*>>();
     auto serial = std::make_shared<int>(0);
     auto append = [itemsHost, items, live, serial] {
         auto* tile = swatch(itemsHost, "item " + std::to_string(++*serial), Theme::current().accent);
         live->push_back(tile);
-        axisly::GridItem item; item.column = item.row = axisly::auto_position;
+        axisly::css::Style item;
         items->addCell(tile, item);
     };
     append(); append(); append();

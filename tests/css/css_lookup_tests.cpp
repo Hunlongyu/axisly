@@ -23,7 +23,7 @@ void lookup() {
     check(tree, tree.compute(root, {}));
     require(!tree.find_layout(other) && !tree.find_layout(detached), "Foreign or uncomputed node accepted");
     const auto* old = tree.find_layout(nested);
-    tree.remove(nested);
+    tree.remove_subtree(nested);
     require(tree.find_layout(nested) == old, "Mutation changed the last published snapshot");
     const auto recycled = tree.create_node();
     tree.append_child(second, recycled);

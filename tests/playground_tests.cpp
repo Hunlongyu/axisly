@@ -58,7 +58,9 @@ int main() {
         check(near(range.columns[0],220),"Range maximum ignored");
         check(arrange_scene(8,{120,500}).occupied.width > 120,"Range minimum did not overflow");
         const auto nested = arrange_scene(9,{1000,500});
-        check(nested.items.size() == 5 && nested.items[2].path == "/2/1","Nested path lost");
+        check(nested.items.size() == 5 && nested.items[2].depth == 1
+            && nested.items[2].input.node != nested.items[1].input.node,
+            "Nested nodes must have distinct identities in the same CSS tree");
         check(nested.items[2].rect.x > nested.items[1].rect.x && nested.items[2].rect.y > nested.items[1].rect.y,"Child origin not translated");
         bool invalid = false;
         try { (void)arrange_scene(10,{1,1}); } catch (const std::out_of_range&) { invalid = true; }

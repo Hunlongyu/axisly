@@ -125,14 +125,14 @@ void percentageSpanBaselineAndPixels() {
     Widget host;
     auto* grid = host.setLayout<AxislyGridLayout>();
     grid->setSpacing(0);
-    grid->setColumns({axisly::Track::percentage(.25f), axisly::Track::weighted(1)});
+    grid->setColumns({axisly::css::TrackSizing::percent(.25f), axisly::css::TrackSizing::fraction(1)});
     auto* a = host.add<Hint>(); auto* b = host.add<Hint>();
     grid->addWidget(a, 0, 0); grid->addWidget(b, 1, 0, 1, 2);
     host.setGeometry({0, 0, 400, 200});
     near(a->geometry().width(), 100, "percentage width");
     near(b->geometry().width(), 400, "spanned width");
     require(host.sizeHint().preferred.width < 1000, "intrinsic percentage has no huge synthetic basis");
-    grid->setColumns({axisly::Track::range(axisly::Track::content(), axisly::Track::weighted(1)), axisly::Track::weighted(1)});
+    grid->setColumns({axisly::css::TrackSizing::fraction(1), axisly::css::TrackSizing::fraction(1)});
     require(host.sizeHint().preferred.width < 1000, "intrinsic Range must not expand against a sentinel size");
     for (float scale : {1.f, 1.25f, 1.5f, 2.f}) {
         grid->setPixelScale(scale); host.setGeometry({0, 0, 403, 203});
@@ -144,8 +144,8 @@ void percentageSpanBaselineAndPixels() {
     auto* c = baselines.add<Hint>(); auto* d = baselines.add<Hint>();
     c->hint.min.height = c->hint.preferred.height = c->hint.max.height = 30;
     d->hint.min.height = d->hint.preferred.height = d->hint.max.height = 40;
-    axisly::GridItem x; x.baseline = 10.0f; x.vertical_alignment = axisly::VerticalAlignment::Baseline;
-    baseline->addCell(c, x); x.column = 1; x.baseline = 25.0f; baseline->addCell(d, x);
+    axisly::css::Style x; x.align_self = axisly::css::ItemAlignment{axisly::css::ItemPosition::Baseline};
+    baseline->addCell(c, x, 10.0f); x.grid.column.start = axisly::css::GridLine::index(2); baseline->addCell(d, x, 25.0f);
     baselines.setGeometry({0,0,300,100});
     near(c->geometry().y()+10, d->geometry().y()+25, "baseline alignment");
 }
@@ -179,7 +179,7 @@ void failureAtomicity() {
 void responsiveViewport() {
     Widget host;
     auto* root = host.setLayout<AxislyGridLayout>();
-    root->setColumns({axisly::Track::weighted(1)}); root->setRows({axisly::Track::weighted(1)});
+    root->setColumns({axisly::css::TrackSizing::fraction(1)}); root->setRows({axisly::css::TrackSizing::fraction(1)});
     auto* area = host.add<axisly_demo::AxislyScrollArea>(); root->addWidget(area, 0, 0);
     auto* content = area->content();
     auto* page = content->setLayout<AxislyBoxLayout>(AxislyBoxLayout::Orientation::Vertical);

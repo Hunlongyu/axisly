@@ -11,7 +11,7 @@
 - `create_node_with_children` 创建带子节点的容器；`set_children` 整体更新子节点。
 - `replace_child` 按索引替换；`detach_child_at`、`detach_children` 按索引或范围分离。
 - `detach` 保留子树；`remove_node` 只删除节点并将其子节点变为根。
-- `remove_subtree` 删除整棵子树；原有 `remove` 保留同样的递归删除语义。
+- `remove_subtree` 删除节点及其全部后代。
 - `node_count`、`child_count`、`child_at`、`dirty` 提供查询，`clear` 清空节点。
 - `set_style` 更新样式；`set_measure` 更新测量回调；外部内容改变时调用 `mark_dirty`。
 
@@ -76,6 +76,9 @@ auto icon = tree.create_node({}, [](const css::MeasureRequest& request) {
 库不加载字体或进行文字塑形；换行、字体度量、图标和图片尺寸由宿主提供。
 
 ### 共享测量与节点上下文
+
+少量独立控件可直接用节点级 `MeasureFunction`。宿主已有统一文字／图片测量服务，
+或希望减少每节点捕获对象时，推荐共享 `MeasureProvider` 加节点上下文。
 
 `set_context(node, shared_ptr<void>)` 保存宿主上下文，`context(node)` 读取它。
 实现 `MeasureProvider::measure(node, style, context, request)` 后，通过
@@ -162,8 +165,40 @@ auto bounds = session.layout(host_child, css::CoordinateSpace::Parent);
 样式工厂和树操作的非法参数通过异常报告。计算失败时检查 `result.error` 中的错误码、节点与消息；
 失败结果为空，不返回部分几何。宿主回调异常原样传播，保留上一份完整发布结果。
 
+入口检查和布局检查的边界如下。`validate_style` 检查类型化样式的属性域，不解析特定容器下的最终数值，
+也不能保证随后 `compute` 成功；`set_style` 自身会完成同样的检查，无需为了提交而重复校验。
+重复提交与节点当前值相同的样式时直接返回，不复制样式、不重新校验、不使缓存失效。
+实际变更使用左值时先完成校验和副本准备，使用右值时先校验再移动；校验或副本分配失败
+会保留旧样式和缓存。所有提交仍须遵守节点句柄有效性及计算期间禁止修改的约定。
+
+| 阶段 | 条件举例 | 报告方式 |
+| --- | --- | --- |
+| 值工厂 | NaN／无穷长度、零 Grid 线号、非法 span | `std::invalid_argument`，对象尚未生成 |
+| `validate_style`、`create_node`、`set_style` | 非法枚举、负 flex 因子、非正宽高比、Grid 区域不成矩形、非法模板组合 | `std::invalid_argument`，不提交非法样式 |
+| 树修改和查询 | 无效句柄、循环父子关系、越界子索引、计算中修改同一棵树 | `std::invalid_argument`、`std::out_of_range` 或 `std::logic_error` |
+| `compute` 的参数 | 非法确定空间、取整比例或原点 | `std::invalid_argument`，保留上一份发布结果 |
+| 布局过程中 | 依赖容器的值、借用宿主样式、测量返回值、计算预算 | 下表的 `LayoutErrorCode`，发布空的失败结果 |
+| 节点／共享测量器抛出异常 | 包括 `invalid_argument`、`overflow_error`、`length_error`、`bad_alloc` 及非标准异常 | 保留类型和值并向调用方传播，保留上一份完整发布结果 |
+| 库自身的内存分配失败 | 样式复制、缓存、结果存储分配失败 | `std::bad_alloc`；不会伪装成非法样式或空布局 |
+
+| `LayoutErrorCode` | 含义与边界 |
+| --- | --- |
+| `None` | 计算成功 |
+| `InvalidRoot` | 请求的根或遍历时需要的节点不存在；借用树应检查宿主拓扑 |
+| `InvalidStyle` | 解析后的 gap 为负、盒模型参数不合法，或借用树的样式在计算时未通过校验；属性域合法不代表每个容器尺寸下都合法 |
+| `Unsupported` | 保留错误码，当前算法没有产生此码的路径；不支持的浏览器功能不能用这个枚举自动检测 |
+| `UnresolvedPercentage` | 算法需要确定盒边时仍缺少百分比基准；未定百分比并非一律报错，许多布局路径按各自规则延后或按零处理 |
+| `InvalidMeasurement` | 回调正常返回，但尺寸／基线等未通过测量值校验；与回调抛出异常不同 |
+| `NumericOverflow` | 库内计算或几何发布超出有限 `Unit` 范围 |
+| `LimitExceeded` | 布局深度、测量次数、轨道／放置／均衡换行工作量等超过上限；建树节点数超限在入口抛 `std::length_error` |
+
+当前库要求启用 C++ 异常，不支持 `-fno-exceptions`。尚无 `check_style`／`try_set_style` 的无异常契约；
+来自配置文件的值应由宿主在输入边界捕获验证异常。仅增加 `noexcept` 包装不足以消除值工厂、
+样式复制及宿主回调的异常，不能据此宣称整个“校验、提交、计算”流程无异常。
+
 `TreeLimits` 默认限制最大深度为 64，树节点数、每次计算的测量次数及两类缓存条目预算各为 100,000。
 可在构造树时按业务规模调整。预算用于限制工作量，超限不应被当成正常空布局。
+两类缓存条目预算控制缓存保留量；达到缓存上限可以继续计算，不等于布局工作量超限。
 
 ## 接口迁移
 
@@ -171,5 +206,6 @@ auto bounds = session.layout(host_child, css::CoordinateSpace::Parent);
 `mark_subtree_dirty`；单节点内容变化继续使用 `mark_dirty`。
 `NodeLayout` 中原有的 `overflow_origin_border` 和 `overflow_coordinate_width`
 已移入私有算法状态；宿主应使用公开的 `border` 和 `scrollable_overflow_rect`。
-默认不取整、根相对坐标和 `remove` 的递归删除行为保持原有约定。
+默认不取整、根相对坐标保持原有约定。`remove` 已删除，原调用改为
+`remove_subtree`，递归删除行为不变。
 `compute` 的第三个参数应明确使用 `PixelRounding{...}` 或 `LayoutOptions{...}`，避免裸 `{}` 的重载歧义。

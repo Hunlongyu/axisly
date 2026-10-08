@@ -9,6 +9,7 @@
 #include <limits>
 #include <stdexcept>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace axisly::css {
@@ -90,6 +91,22 @@ struct LayoutTree::Impl {
         auto* node = nodes.find(id.value);
         if (!node) throw std::invalid_argument("Unknown CSS node");
         return *node;
+    }
+    template<class StyleSource>
+    void set_style(NodeId id, StyleSource&& style) {
+        mutable_guard();
+        auto& item = get(id);
+        // Stored styles have already passed validation. Avoid copying vectors,
+        // area names and calc ownership when a host resubmits an unchanged style.
+        if (&item.style == &style || item.style == style) return;
+        validate_style(style);
+        // Copying an lvalue may fail halfway through its Grid containers. Stage
+        // it first so the old style and all caches remain coherent on failure.
+        Style replacement(std::forward<StyleSource>(style));
+        static_assert(std::is_nothrow_move_assignable_v<Style>);
+        item.owned_style = std::move(replacement);
+        item.reset_style_cache();
+        invalidate_path(id);
     }
     const detail::LayoutNode& get(NodeId id) const {
         const auto* node = nodes.find(id.value);
@@ -180,14 +197,11 @@ NodeId LayoutTree::child_at(NodeId parent, std::size_t index) const {
 }
 std::size_t LayoutTree::child_count(NodeId parent) const { return impl_->get(parent).children.size(); }
 
-void LayoutTree::set_style(NodeId node, Style style) {
-    impl_->mutable_guard();
-    validate_style(style);
-    auto& item = impl_->get(node);
-    if (item.style == style) return;
-    item.owned_style = std::move(style);
-    item.reset_style_cache();
-    impl_->invalidate_path(node);
+void LayoutTree::set_style(NodeId node, const Style& style) {
+    impl_->set_style(node, style);
+}
+void LayoutTree::set_style(NodeId node, Style&& style) {
+    impl_->set_style(node, std::move(style));
 }
 void LayoutTree::set_measure(NodeId node, MeasureFunction measure) {
     impl_->mutable_guard();
@@ -317,9 +331,6 @@ void LayoutTree::detach(NodeId child) {
     item.parent.reset();
     impl_->invalidate_subtree(child);
     impl_->invalidate_path(old_parent);
-}
-void LayoutTree::remove(NodeId node) {
-    remove_subtree(node);
 }
 void LayoutTree::remove_subtree(NodeId node) {
     impl_->mutable_guard();

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(axisly VERSION 0.1.0 LANGUAGES CXX)
+project(axisly VERSION 0.2.0 LANGUAGES CXX)
 
 include(cmake/DetectMsvcIncludes.cmake)
 axisly_detect_msvc_includes()
@@ -73,17 +73,6 @@ add_library(axisly STATIC
     src/css/overflow_layout.cpp
     src/css/balanced_lines.cpp
     src/css_values.cpp
-    src/track.cpp
-    src/compute_grid.cpp
-    src/cache.cpp
-    src/rounding.cpp
-    src/measurement_cache.cpp
-    src/tree.cpp
-    src/detail/placement.cpp
-    src/detail/track_sizing.cpp
-    src/detail/track_state.cpp
-    src/detail/span_resolution.cpp
-    src/detail/item_alignment.cpp
 )
 add_library(axisly::axisly ALIAS axisly)
 set_target_properties(axisly PROPERTIES
@@ -178,47 +167,11 @@ if(AXISLY_BUILD_TESTS)
 endif()
 
 if(AXISLY_BUILD_EXAMPLES)
-    add_executable(axisly_api_example examples/fixed_grid.cpp)
+    add_executable(axisly_api_example examples/css_grid.cpp)
     target_link_libraries(axisly_api_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_api_example PROPERTIES CXX_EXTENSIONS OFF)
     axisly_enable_warnings(axisly_api_example)
-
-    add_executable(axisly_weighted_example examples/weighted_grid.cpp)
-    target_link_libraries(axisly_weighted_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_weighted_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_weighted_example)
-
-    add_executable(axisly_alignment_example examples/alignment_grid.cpp)
-    target_link_libraries(axisly_alignment_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_alignment_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_alignment_example)
-
-    add_executable(axisly_measurement_example examples/measurement_grid.cpp)
-    target_link_libraries(axisly_measurement_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_measurement_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_measurement_example)
-
-    add_executable(axisly_spanning_example examples/spanning_grid.cpp)
-    target_link_libraries(axisly_spanning_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_spanning_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_spanning_example)
-
-    add_executable(axisly_range_example examples/range_grid.cpp)
-    target_link_libraries(axisly_range_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_range_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_range_example)
-
-    add_executable(axisly_nested_example examples/nested_grid.cpp)
-    target_link_libraries(axisly_nested_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_nested_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_nested_example)
-
-    add_executable(axisly_retained_example examples/retained_grid.cpp)
-    target_link_libraries(axisly_retained_example PRIVATE axisly::axisly)
-    set_target_properties(axisly_retained_example PROPERTIES CXX_EXTENSIONS OFF)
-    axisly_enable_warnings(axisly_retained_example)
     if(AXISLY_BUILD_TESTS)
-        add_test(NAME axisly.retained.example COMMAND axisly_retained_example)
+        add_test(NAME axisly.css.example COMMAND axisly_api_example)
     endif()
 endif()
 

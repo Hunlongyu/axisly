@@ -2,7 +2,8 @@
 
 #include <cstdint>
 #include <optional>
-#include <unordered_map>
+#include <array>
+#include <memory>
 #include <vector>
 #include <axisly/axisly.hpp>
 #include "geeyoou/widget/Widget.hpp"
@@ -22,13 +23,13 @@ class AxislyLayout : public geeyoou::Layout {
 public:
     enum class Kind { Grid, Horizontal, Vertical };
     explicit AxislyLayout(Kind kind = Kind::Grid);
-    void setColumns(std::vector<axisly::Track>);
-    void setRows(std::vector<axisly::Track>);
-    void setAutoFlow(axisly::AutoFlow);
+    void setColumns(std::vector<axisly::css::TrackSizing>);
+    void setRows(std::vector<axisly::css::TrackSizing>);
+    void setAutoFlow(axisly::css::GridAutoFlow);
     void setPixelScale(float); // Offscreen acceptance; windows use their actual scale.
     void setColumnStretch(int, std::uint16_t);
     void setRowStretch(int, std::uint16_t);
-    void addCell(geeyoou::Widget*, axisly::GridItem);
+    void addCell(geeyoou::Widget*, axisly::css::Style, std::optional<float> baseline = {});
     std::size_t itemCount() const { return entries_.size(); }
     std::size_t columnCount() const;
     std::size_t rowCount() const;
@@ -51,37 +52,40 @@ private:
     enum class Mode { Minimum, Preferred, Width, Arrange };
     struct Entry {
         std::size_t child{noChild};
-        axisly::GridItem item;
+        axisly::css::Style style;
+        std::optional<float> baseline;
         std::uint16_t weight{};
         float space{};
     };
     struct Snapshot { Entry entry; geeyoou::SizeHint hint; };
-    struct Request { axisly::GridSpec spec; std::vector<axisly::GridItem> items; };
+    struct Request { axisly::css::Style root; std::vector<axisly::css::Style> items; };
+    struct State {
+        std::unique_ptr<axisly::css::LayoutTree> tree;
+        axisly::css::NodeId root;
+        std::vector<axisly::css::NodeId> nodes;
+    };
+    const axisly::css::LayoutResult& compute(Mode, std::optional<float> width = {}, std::optional<float> height = {}) const;
     std::size_t indexOf(const geeyoou::Widget*) const;
     bool valid(std::uint64_t epoch, std::uint64_t style) const;
     void gather(const geeyoou::Widget&) const;
     Request request(Mode) const;
     axisly::Size intrinsic(Mode, std::optional<float> width = {}) const;
-    static axisly::MeasureResult callback(axisly::ItemId, const axisly::MeasureInput&, void*);
-    axisly::MeasureResult measureItem(axisly::ItemId, const axisly::MeasureInput&) const;
+    axisly::css::Measurement measureItem(std::size_t, const axisly::css::MeasureRequest&) const;
     void changed();
     Kind kind_;
     std::vector<Entry> entries_;
-    std::vector<axisly::Track> columns_, rows_;
+    std::vector<axisly::css::TrackSizing> columns_, rows_;
     std::vector<std::uint16_t> columnWeights_, rowWeights_;
-    axisly::AutoFlow flow_{axisly::AutoFlow::Explicit};
-    axisly::ItemId nextId_{1};
+    axisly::css::GridAutoFlow flow_{axisly::css::GridAutoFlow::Row};
     std::uint64_t revision_{1};
     float scale_{1};
     geeyoou::Size designMinimum_{};
     std::optional<float> preferredWidth_;
     mutable std::uint64_t gatheredRevision_{}, gatheredStyle_{};
-    mutable std::uint64_t cacheVersion_{};
     mutable std::vector<Snapshot> snapshots_;
-    mutable std::unordered_map<axisly::ItemId, std::size_t> lookup_;
     mutable Mode mode_{Mode::Preferred};
     mutable std::uint64_t passRevision_{}, passStyle_{};
-    mutable axisly::GridCache arranged_, widthCache_;
+    mutable std::array<State, 4> states_;
     mutable geeyoou::SizeHint natural_{};
     mutable bool naturalValid_{};
 };

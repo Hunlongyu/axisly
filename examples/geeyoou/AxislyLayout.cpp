@@ -34,22 +34,15 @@ std::uint32_t index(int v) {
     if (v < 0 || v > 4096) throw std::out_of_range("Showcase grid index must be in [0,4096]");
     return static_cast<std::uint32_t>(v);
 }
-axisly::Track intrinsicTrack(const axisly::Track& track) {
-    if (const auto* weighted = std::get_if<axisly::WeightedTrack>(&track.definition()))
-        return axisly::Track::range(axisly::Track::fixed(weighted->minimum),
-            weighted->maximum ? axisly::Track::fixed(*weighted->maximum) : axisly::Track::content());
-    // An unconstrained size hint has no percentage basis. Measure its content;
-    // the real percentage is resolved later against a finite container width.
-    if (track.kind() == axisly::TrackKind::Percentage) return axisly::Track::content();
-    if (const auto* range = std::get_if<axisly::RangeTrack>(&track.definition())) {
-        const auto bound = [](const axisly::TrackBound& value) {
-            if (const auto* fixed = std::get_if<axisly::FixedTrack>(&value)) return axisly::Track::fixed(fixed->size);
-            return axisly::Track::content();
-        };
-        return axisly::Track::range(bound(range->minimum), bound(range->maximum));
-    }
-    return track;
+axisly::css::GridPlacement placement(std::uint32_t start, std::uint16_t span = 1) {
+    return {axisly::css::GridLine::index(static_cast<std::int16_t>(start + 1)), axisly::css::GridLine::span(span)};
 }
+std::size_t extent(const axisly::css::GridPlacement& p) {
+    if (p.start.kind() != axisly::css::GridLineKind::Index || p.start.index_value() <= 0) return 0;
+    return static_cast<std::size_t>(p.start.index_value() - 1)
+        + (p.end.kind() == axisly::css::GridLineKind::Span ? p.end.span_count() : 1);
+}
+
 }
 
 Counters counters() { return totals; }
@@ -66,10 +59,7 @@ geeyoou::SizeHint measureAtWidth(const geeyoou::Widget& widget, float width) {
     return widget.sizeHint();
 }
 
-AxislyLayout::AxislyLayout(Kind kind) : kind_(kind) {
-    arranged_.set_measure(callback, this);
-    widthCache_.set_measure(callback, this);
-}
+AxislyLayout::AxislyLayout(Kind kind) : kind_(kind) {}
 void AxislyLayout::onInvalidated() { ++revision_; naturalValid_ = false; }
 void AxislyLayout::onChildAppended() { onInvalidated(); }
 void AxislyLayout::onChildRemoved(std::size_t child) {
@@ -81,15 +71,15 @@ void AxislyLayout::changed() {
     // invalidate() can synchronously arrange and destroy us. It must be last.
     invalidate();
 }
-void AxislyLayout::setColumns(std::vector<axisly::Track> tracks) {
+void AxislyLayout::setColumns(std::vector<axisly::css::TrackSizing> tracks) {
     if (columns_ == tracks) return;
     columns_ = std::move(tracks); changed();
 }
-void AxislyLayout::setRows(std::vector<axisly::Track> tracks) {
+void AxislyLayout::setRows(std::vector<axisly::css::TrackSizing> tracks) {
     if (rows_ == tracks) return;
     rows_ = std::move(tracks); changed();
 }
-void AxislyLayout::setAutoFlow(axisly::AutoFlow flow) {
+void AxislyLayout::setAutoFlow(axisly::css::GridAutoFlow flow) {
     if (flow_ == flow) return;
     flow_ = flow; changed();
 }
@@ -118,23 +108,21 @@ std::size_t AxislyLayout::indexOf(const geeyoou::Widget* child) const {
     for (std::size_t i = 0; i < children.size(); ++i) if (children[i].get() == child) return i;
     throw std::invalid_argument("AxislyLayout requires a direct child of its host");
 }
-void AxislyLayout::addCell(geeyoou::Widget* child, axisly::GridItem item) {
+void AxislyLayout::addCell(geeyoou::Widget* child, axisly::css::Style style, std::optional<float> baseline) {
     const auto childIndex = indexOf(child);
     if (std::any_of(entries_.begin(), entries_.end(), [childIndex](const Entry& e) { return e.child == childIndex; }))
         throw std::invalid_argument("Widget already belongs to the layout");
-    item.id = nextId_++;
-    entries_.push_back({childIndex, item}); changed();
+    axisly::css::validate_style(style);
+    entries_.push_back({childIndex, std::move(style), baseline}); changed();
 }
 void AxislyLayout::addBoxWidget(geeyoou::Widget* child, std::uint16_t weight) {
     const auto childIndex = indexOf(child);
     if (std::any_of(entries_.begin(), entries_.end(), [childIndex](const Entry& e) { return e.child == childIndex; }))
         throw std::invalid_argument("Widget already belongs to the layout");
-    axisly::GridItem item; item.id = nextId_++;
-    entries_.push_back({childIndex, item, weight}); changed();
+    entries_.push_back({childIndex, {}, {}, weight}); changed();
 }
 void AxislyLayout::addSpace(float pixels, std::uint16_t weight) {
-    axisly::GridItem item; item.id = nextId_++;
-    entries_.push_back({noChild, item, weight, nonnegative(pixels)}); changed();
+    entries_.push_back({noChild, {}, {}, weight, nonnegative(pixels)}); changed();
 }
 void AxislyLayout::addFormRow(geeyoou::Widget* label, geeyoou::Widget* field) {
     const auto labelIndex = indexOf(label), fieldIndex = indexOf(field);
@@ -146,21 +134,20 @@ void AxislyLayout::addFormRow(geeyoou::Widget* label, geeyoou::Widget* field) {
     entries_.reserve(entries_.size() + 2);
     if (columnWeights_.size() < 2) columnWeights_.resize(2);
     if (!columnWeights_[1]) columnWeights_[1] = 1;
-    axisly::GridItem labelItem; labelItem.id = nextId_++; labelItem.row = row;
-    auto fieldItem = labelItem; fieldItem.id = nextId_++; fieldItem.column = 1;
-    entries_.push_back({labelIndex, labelItem}); entries_.push_back({fieldIndex, fieldItem});
+    axisly::css::Style labelItem, fieldItem;
+    labelItem.grid.row = fieldItem.grid.row = placement(row);
+    labelItem.grid.column = placement(0); fieldItem.grid.column = placement(1);
+    entries_.push_back({labelIndex, labelItem, {}}); entries_.push_back({fieldIndex, fieldItem, {}});
     changed();
 }
 std::size_t AxislyLayout::columnCount() const {
     auto count = std::max(columns_.size(), columnWeights_.size());
-    for (const auto& e : entries_) if (e.item.column != axisly::auto_position)
-        count = std::max(count, std::size_t(e.item.column) + e.item.column_span);
+    for (const auto& e : entries_) count = std::max(count, extent(e.style.grid.column));
     return count;
 }
 std::size_t AxislyLayout::rowCount() const {
     auto count = std::max(rows_.size(), rowWeights_.size());
-    for (const auto& e : entries_) if (e.item.row != axisly::auto_position)
-        count = std::max(count, std::size_t(e.item.row) + e.item.row_span);
+    for (const auto& e : entries_) count = std::max(count, extent(e.style.grid.row));
     return count;
 }
 bool AxislyLayout::valid(std::uint64_t epoch, std::uint64_t style) const {
@@ -186,113 +173,115 @@ void AxislyLayout::gather(const geeyoou::Widget& hostWidget) const {
         fresh.push_back({e, normalize(hint)});
     }
     snapshots_ = std::move(fresh);
-    lookup_.clear();
-    for (std::size_t i = 0; i < snapshots_.size(); ++i) lookup_.emplace(snapshots_[i].entry.item.id, i);
+    for (auto& state : states_) state = {};
     gatheredRevision_ = epoch; gatheredStyle_ = style;
-    ++cacheVersion_;
 }
 
 AxislyLayout::Request AxislyLayout::request(Mode mode) const {
+    namespace css = axisly::css;
     Request r;
-    const bool intrinsicMode = mode == Mode::Minimum || mode == Mode::Preferred;
-    const auto track = [&](std::uint16_t weight) {
-        return weight && !intrinsicMode ? axisly::Track::range(axisly::Track::content(), axisly::Track::weighted(float(weight)))
-                                        : axisly::Track::content();
+    const auto flexTrack = [](std::uint16_t weight) {
+        return weight ? css::TrackSizing::minmax(css::TrackBreadth::min_content(), css::TrackBreadth::fraction(float(weight)))
+                      : css::TrackSizing::automatic();
     };
+    r.root.display = kind_ == Kind::Grid ? css::Display::Grid : css::Display::Flex;
+    r.root.align_content = css::ContentAlignment{css::ContentPosition::Start};
+    r.root.justify_content = css::ContentAlignment{css::ContentPosition::Start};
     if (kind_ == Kind::Grid) {
-        r.spec.columns = columns_;
-        r.spec.rows = rows_;
-        for (auto i = r.spec.columns.size(); i < columnCount(); ++i)
-            r.spec.columns.push_back(track(i < columnWeights_.size() ? columnWeights_[i] : 0));
-        for (auto i = r.spec.rows.size(); i < rowCount(); ++i)
-            r.spec.rows.push_back(mode == Mode::Width ? axisly::Track::content() : track(i < rowWeights_.size() ? rowWeights_[i] : 0));
-        if (intrinsicMode) {
-            for (auto& t : r.spec.columns) t = intrinsicTrack(t);
-            for (auto& t : r.spec.rows) t = intrinsicTrack(t);
+        auto& grid = r.root.grid;
+        for (const auto& track : columns_) grid.template_columns.push_back(track);
+        for (const auto& track : rows_) grid.template_rows.push_back(track);
+        for (auto i = columns_.size(); i < columnCount(); ++i)
+            grid.template_columns.push_back(flexTrack(i < columnWeights_.size() ? columnWeights_[i] : 0));
+        for (auto i = rows_.size(); i < rowCount(); ++i)
+            grid.template_rows.push_back(flexTrack(i < rowWeights_.size() ? rowWeights_[i] : 0));
+        grid.auto_flow = flow_;
+        r.root.gap = {css::Length::length(std::max(0.0f, spacing())), css::Length::length(std::max(0.0f, spacing()))};
+    } else r.root.flex_direction = kind_ == Kind::Vertical ? css::FlexDirection::Column : css::FlexDirection::Row;
+    bool previousWidget = false;
+    for (const auto& snapshot : snapshots_) {
+        auto style = snapshot.entry.style;
+        const auto& hint = snapshot.hint;
+        const bool widget = snapshot.entry.child != noChild;
+        if (widget) {
+            style.box.min_size = {css::Length::length(hint.min.width), css::Length::length(hint.min.height)};
+            style.box.max_size = {css::Length::length(hint.max.width), css::Length::length(hint.max.height)};
         }
-        if (mode == Mode::Width) for (auto& t : r.spec.rows) t = intrinsicTrack(t);
-        r.spec.column_gap = r.spec.row_gap = std::max(0.0f, spacing());
-        r.spec.auto_flow = flow_;
-        r.spec.allow_implicit_tracks = flow_ != axisly::AutoFlow::Explicit;
-        for (const auto& s : snapshots_) {
-            auto item = s.entry.item;
-            item.preferred_size = {s.hint.preferred.width, s.hint.preferred.height};
-            r.items.push_back(item);
+        if (kind_ != Kind::Grid) {
+            const bool vertical = kind_ == Kind::Vertical;
+            style.flex_shrink = 0;
+            style.flex_grow = float(snapshot.entry.weight);
+            if (style.flex_grow > 0 && mode == Mode::Arrange) style.flex_basis = css::Length::length(0);
+            if (!widget) {
+                (vertical ? style.box.size.height : style.box.size.width) = css::Length::length(snapshot.entry.space);
+            }
+            if (previousWidget && widget) {
+                (vertical ? style.box.margin.top : style.box.margin.left) = css::Length::length(std::max(0.0f, spacing()));
+            }
         }
-    } else {
-        const bool vertical = kind_ == Kind::Vertical;
-        auto& main = vertical ? r.spec.rows : r.spec.columns;
-        auto& cross = vertical ? r.spec.columns : r.spec.rows;
-        cross.push_back(intrinsicMode || (mode == Mode::Width && !vertical) ? axisly::Track::content()
-            : axisly::Track::range(axisly::Track::content(), axisly::Track::weighted(1)));
-        bool previousWidget = false;
-        for (const auto& s : snapshots_) {
-            const bool isWidget = s.entry.child != noChild;
-            if (previousWidget && isWidget) main.push_back(axisly::Track::fixed(std::max(0.0f, spacing())));
-            auto item = s.entry.item;
-            item.preferred_size = {s.hint.preferred.width, s.hint.preferred.height};
-            if (vertical) item.row = static_cast<std::uint32_t>(main.size());
-            else item.column = static_cast<std::uint32_t>(main.size());
-            if (!isWidget) {
-                main.push_back(s.entry.weight && !intrinsicMode && !(mode == Mode::Width && vertical)
-                    ? axisly::Track::weighted(float(s.entry.weight), s.entry.space) : axisly::Track::fixed(s.entry.space));
-            } else if (s.entry.weight && !intrinsicMode && !(mode == Mode::Width && vertical)) {
-                // Exactly one widget owns this track: its max can legitimately
-                // cap this one-dimensional track. Shared grid columns never do.
-                const float mn = vertical ? s.hint.min.height : s.hint.min.width;
-                const float mx = vertical ? s.hint.max.height : s.hint.max.width;
-                main.push_back(axisly::Track::weighted(float(s.entry.weight), mn, mx));
-            } else main.push_back(axisly::Track::content());
-            r.items.push_back(item);
-            previousWidget = isWidget;
-        }
+        r.items.push_back(std::move(style));
+        previousWidget = widget;
     }
     return r;
 }
-axisly::MeasureResult AxislyLayout::callback(axisly::ItemId id, const axisly::MeasureInput& in, void* ctx) {
-    return static_cast<AxislyLayout*>(ctx)->measureItem(id, in);
-}
-axisly::MeasureResult AxislyLayout::measureItem(axisly::ItemId id, const axisly::MeasureInput& input) const {
+axisly::css::Measurement AxislyLayout::measureItem(std::size_t index, const axisly::css::MeasureRequest& input) const {
+    namespace css = axisly::css;
     if (!valid(passRevision_, passStyle_)) throw Interrupted{};
-    const Snapshot snapshot = snapshots_.at(lookup_.at(id));
+    const Snapshot snapshot = snapshots_.at(index);
     if (snapshot.entry.child == noChild) return {};
     auto h = snapshot.hint;
-    if ((mode_ == Mode::Width || mode_ == Mode::Arrange) && input.known_width) {
+    const auto knownWidth = input.known_content_width ? input.known_content_width : input.available_width.definite_value();
+    if ((mode_ == Mode::Width || mode_ == Mode::Arrange) && knownWidth) {
         const auto* child = host()->children().at(snapshot.entry.child).get();
         const geeyoou::detail::DeathWatch watch(child);
-        const float width = std::clamp(*input.known_width, h.min.width, h.max.width);
+        const float width = std::clamp(*knownWidth, h.min.width, h.max.width);
         if (const auto* label = dynamic_cast<const geeyoou::Label*>(child); label && label->wordWrap()) {
             ++totals.wrappedMeasures;
             h.preferred.height = std::max(h.min.height, label->heightForWidth(width));
-            h.min.height = h.preferred.height;
         } else if (dynamic_cast<const AxislyLayout*>(child->layout())) {
             const auto sized = measureAtWidth(*child, width);
             if (!valid(passRevision_, passStyle_) || !watch.alive()) throw Interrupted{};
             h.preferred.height = std::max(h.min.height, sized.preferred.height);
-            h.min.height = std::max(h.min.height, sized.min.height);
         }
         if (!valid(passRevision_, passStyle_) || !watch.alive()) throw Interrupted{};
     }
-    if (mode_ == Mode::Minimum) h.preferred = h.min;
-    auto baseline = snapshot.entry.item.baseline;
-    if (baseline && mode_ == Mode::Minimum) baseline = std::min(*baseline, h.preferred.height);
-    return {{h.min.width, h.min.height}, {h.preferred.width, h.preferred.height}, baseline};
+    const float width = input.known_content_width.value_or(
+        input.available_width.kind == css::AvailableKind::MinContent ? h.min.width : h.preferred.width);
+    const float height = input.known_content_height.value_or(
+        input.available_height.kind == css::AvailableKind::MinContent ? h.min.height : h.preferred.height);
+    auto baseline = snapshot.entry.baseline;
+    if (baseline) baseline = std::min(*baseline, height);
+    return {{width, height}, baseline, baseline};
+}
+const axisly::css::LayoutResult& AxislyLayout::compute(Mode mode, std::optional<float> width, std::optional<float> height) const {
+    namespace css = axisly::css;
+    mode_ = mode; passRevision_ = revision_; passStyle_ = geeyoou::styleGeneration();
+    auto& state = states_[static_cast<std::size_t>(mode)];
+    if (!state.tree) {
+        auto req = request(mode);
+        auto tree = std::make_unique<css::LayoutTree>();
+        state.root = tree->create_node(req.root);
+        state.nodes.clear();
+        for (std::size_t i = 0; i < req.items.size(); ++i) {
+            const auto node = tree->create_node(req.items[i], [this, i](const css::MeasureRequest& input) { return measureItem(i, input); });
+            tree->append_child(state.root, node);
+            state.nodes.push_back(node);
+        }
+        state.tree = std::move(tree);
+    }
+    auto style = state.tree->style(state.root);
+    style.box.size = {width ? css::Length::length(*width) : css::Length::automatic(),
+                      height ? css::Length::length(*height) : css::Length::automatic()};
+    state.tree->set_style(state.root, std::move(style));
+    const auto query = mode == Mode::Minimum ? css::AvailableSpace::min_content() : css::AvailableSpace::max_content();
+    const auto& result = state.tree->compute(state.root,
+        {width ? css::AvailableSpace::definite(*width) : query, height ? css::AvailableSpace::definite(*height) : query});
+    if (!result.succeeded()) { ++totals.errors; throw Interrupted{}; }
+    if (result.cache_hit) ++totals.cacheHits; else ++totals.solves;
+    return result;
 }
 axisly::Size AxislyLayout::intrinsic(Mode mode, std::optional<float> width) const {
-    mode_ = mode; passRevision_ = revision_; passStyle_ = geeyoou::styleGeneration();
-    auto req = request(mode);
-    axisly::Size available{width.value_or(geeyoou::kUnbounded), geeyoou::kUnbounded};
-    if (mode == Mode::Width) {
-        widthCache_.set_spec(req.spec); widthCache_.set_items(req.items);
-        const auto r = widthCache_.compute(available, cacheVersion_);
-        if (!r.result.succeeded()) { ++totals.errors; throw Interrupted{}; }
-        if (r.cache_hit) ++totals.cacheHits; else ++totals.solves;
-        return r.result.size;
-    }
-    ++totals.solves;
-    const auto r = axisly::compute_grid(req.spec, req.items, available, callback, const_cast<AxislyLayout*>(this));
-    if (!r.succeeded()) { ++totals.errors; throw Interrupted{}; }
-    return r.size;
+    return compute(mode, width).size;
 }
 geeyoou::SizeHint AxislyLayout::measure(const geeyoou::Widget& hostWidget) const {
     try {
@@ -328,17 +317,7 @@ geeyoou::SizeHint AxislyLayout::measure(const geeyoou::Widget& hostWidget) const
 geeyoou::LayoutOverflow AxislyLayout::arrange(geeyoou::Widget& hostWidget, const geeyoou::Rect& content) {
     try {
         gather(hostWidget);
-        mode_ = Mode::Arrange; passRevision_ = revision_; passStyle_ = geeyoou::styleGeneration();
-        auto req = request(mode_);
-        arranged_.set_spec(req.spec); arranged_.set_items(req.items);
-        const auto computed = arranged_.compute({std::max(0.0f, content.width()), std::max(0.0f, content.height())},
-                                                cacheVersion_);
-        if (!computed.result.succeeded()) {
-            ++totals.errors;
-            std::fprintf(stderr, "axisly host arrange: %s\n", computed.result.error.message.c_str());
-            return {};
-        }
-        if (computed.cache_hit) ++totals.cacheHits; else ++totals.solves;
+        const auto& result = compute(Mode::Arrange, std::max(0.0f, content.width()), std::max(0.0f, content.height()));
         float scale = scale_;
         // window() can be overridden. Guard it just like measurement.
         auto* window = hostWidget.window();
@@ -346,16 +325,18 @@ geeyoou::LayoutOverflow AxislyLayout::arrange(geeyoou::Widget& hostWidget, const
         if (window) scale = window->scaleFactor();
         const auto snap = [scale](float v) { return std::round(v * scale) / scale; };
         geeyoou::LayoutOverflow overflow;
-        overflow.widthShort = std::max(0.0f, computed.result.size.width - content.width());
-        overflow.heightShort = std::max(0.0f, computed.result.size.height - content.height());
+        overflow.widthShort = std::max(0.0f, result.nodes.front().scrollable_overflow_rect.width - content.width());
+        overflow.heightShort = std::max(0.0f, result.nodes.front().scrollable_overflow_rect.height - content.height());
         // No geometry is published until ALL measurements and solving succeed.
-        for (const auto& item : computed.result.items) {
+        for (std::size_t i = 0; i < snapshots_.size(); ++i) {
             if (!valid(passRevision_, passStyle_)) throw Interrupted{};
-            const auto entry = snapshots_.at(lookup_.at(item.id));
+            const auto entry = snapshots_[i];
             if (entry.entry.child == noChild) continue;
             auto* child = hostWidget.children().at(entry.entry.child).get();
             const geeyoou::detail::DeathWatch watch(child);
-            const auto& r = item.rect;
+            const auto* item = result.find(states_[static_cast<std::size_t>(Mode::Arrange)].nodes[i]);
+            if (!item) throw Interrupted{};
+            const auto& r = item->border_box;
             // Max constrains this widget, never another item sharing its column.
             // Min wins over an undersized cell; overflow is explicitly reported.
             const float w = std::clamp(r.width, entry.hint.min.width, entry.hint.max.width);
@@ -373,12 +354,12 @@ geeyoou::LayoutOverflow AxislyLayout::arrange(geeyoou::Widget& hostWidget, const
 }
 
 void AxislyGridLayout::addWidget(geeyoou::Widget* w, int row, int column, int rowSpan, int columnSpan) {
-    axisly::GridItem item;
-    item.row = index(row); item.column = index(column);
+    axisly::css::Style item;
+    index(row); index(column);
     if (rowSpan < 1 || columnSpan < 1 || rowSpan > 4097 - row || columnSpan > 4097 - column)
         throw std::out_of_range("Invalid Showcase span");
-    item.row_span = static_cast<std::uint32_t>(rowSpan);
-    item.column_span = static_cast<std::uint32_t>(columnSpan);
+    item.grid.row = placement(index(row), static_cast<std::uint16_t>(rowSpan));
+    item.grid.column = placement(index(column), static_cast<std::uint16_t>(columnSpan));
     addCell(w, item);
 }
 void AxislyGridLayout::addRow(geeyoou::Widget* label, geeyoou::Widget* field) {
@@ -428,9 +409,9 @@ geeyoou::Size adoptDesignedPage(geeyoou::Widget& page, geeyoou::Size design) {
     unique(xs); unique(ys);
     auto* layout = page.setLayout<AxislyGridLayout>();
     layout->setSpacing(0);
-    std::vector<axisly::Track> columns, rows;
-    for (std::size_t i = 1; i < xs.size(); ++i) columns.push_back(axisly::Track::weighted(xs[i] - xs[i-1], xs[i] - xs[i-1]));
-    for (std::size_t i = 1; i < ys.size(); ++i) rows.push_back(axisly::Track::fixed(ys[i] - ys[i-1]));
+    std::vector<axisly::css::TrackSizing> columns, rows;
+    for (std::size_t i = 1; i < xs.size(); ++i) columns.push_back(axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(xs[i] - xs[i-1]), axisly::css::TrackBreadth::fraction(xs[i] - xs[i-1])));
+    for (std::size_t i = 1; i < ys.size(); ++i) rows.push_back(axisly::css::TrackSizing::fixed(ys[i] - ys[i-1]));
     layout->setColumns(std::move(columns)); layout->setRows(std::move(rows));
     layout->setDesignMinimum(design);
     for (const auto& [child, r] : panels) {

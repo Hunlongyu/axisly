@@ -47,8 +47,8 @@ Label* paragraph(Widget* host, AxislyBoxLayout* layout, std::string text) {
 Size buildOverviewPage(Widget* content, AppState& app) {
     auto* page = content->setLayout<AxislyGridLayout>();
     page->setSpacing(16);
-    page->setColumns({axisly::Track::weighted(1, 170), axisly::Track::weighted(1, 170),
-                      axisly::Track::weighted(1, 170), axisly::Track::weighted(1, 170)});
+    page->setColumns({axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(170), axisly::css::TrackBreadth::fraction(1)), axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(170), axisly::css::TrackBreadth::fraction(1)),
+                      axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(170), axisly::css::TrackBreadth::fraction(1)), axisly::css::TrackSizing::minmax(axisly::css::TrackBreadth::length(170), axisly::css::TrackBreadth::fraction(1))});
     const auto& theme = Theme::current();
     StatTile* tiles[4]{};
     const std::string captions[] = {tr("釜内温度（实时）"), words("布局引擎", "Layout engine"),

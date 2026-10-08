@@ -26,11 +26,10 @@ ctest --preset reference-release
 
 Windows 可用 `./scripts/build-msvc.ps1 -Preset reference-release`；Debug 使用 `reference-debug`。
 
-参考测试分为两套语义：
+参考测试统一验证 CSS 布局语义：
 
 | 对象 | 驱动与输入 | 比较范围 |
 | --- | --- | --- |
-| 原生 `compute_grid` | `tests/reference/compare.py` 与 `fixtures/common.json` | 明确准入的共同子集，拒绝语义不同的 Content／跨度组合 |
 | CSS `LayoutTree` | `tests/reference/test_tree.py`、`test_css_tree.py` 和各属性矩阵 | 混合布局、尺寸阶段、基线、溢出、定位、Grid 诊断等 |
 | 上游完整输入 | `tests/reference/test_upstream_corpus.py` 与 `test_upstream_rounding.py` | 锁定 Taffy 输入的逻辑几何与实际像素取整输出 |
 
@@ -63,9 +62,9 @@ ctest --test-dir build/reference-release -R "^axisly.reference.upstream(_roundin
 `upstream-rounding-audit.json`。进程错误、超时和布局差异均使测试失败；
 批量进程失败时二分重放定位输入。Taffy 与 XML 本身的差异单列，输入仍参加 Taffy 对照。
 
-共同子集驱动 `compare.py` 使用 `--failure-dir` 保存失败输入及两边结果，
-可用相同命令附加 `--replay <失败输入.json>` 重放。参考工具的输入、生成器和源代码
-保留在 `tests/reference/`；生成结果留在 `build/`。
+参考工具的输入、生成器和源代码保留在 `tests/reference/`；生成结果留在 `build/`。
+旧原生 Grid 的算法与专属契约测试已删除，因此测试总数减少；CSS 契约、
+宿主树接入、属性矩阵及全部 6020 项上游输入继续保留。
 
 语料通过表示该组输入和指定参照下的结果一致，不等同于完整 CSS 规范或完整浏览器 WPT 通过。
 

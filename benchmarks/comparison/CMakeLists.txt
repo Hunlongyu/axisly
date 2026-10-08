@@ -13,13 +13,6 @@ if(MSVC)
     target_compile_options(yogacore PRIVATE /utf-8)
 endif()
 
-add_executable(axisly_comparison_native native.cpp)
-target_link_libraries(axisly_comparison_native PRIVATE axisly::axisly yogacore)
-target_compile_definitions(axisly_comparison_native PRIVATE
-    AXISLY_BENCH_CONFIG="$<CONFIG>" AXISLY_BENCH_VERSION="${PROJECT_VERSION}")
-set_target_properties(axisly_comparison_native PROPERTIES CXX_EXTENSIONS OFF
-    INTERPROCEDURAL_OPTIMIZATION FALSE RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-axisly_enable_warnings(axisly_comparison_native)
 configure_file("${axisly_bench_yoga_SOURCE_DIR}/LICENSE" "${CMAKE_BINARY_DIR}/comparison-yoga-LICENSE.txt" COPYONLY)
 
 add_executable(axisly_css_comparison_native css_native.cpp)
@@ -46,20 +39,17 @@ if(NOT rust_host_match)
     message(FATAL_ERROR "Cannot determine Rust host")
 endif()
 set(rust_host "${CMAKE_MATCH_1}")
-set(taffy_exe "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/axisly-taffy-bench${CMAKE_EXECUTABLE_SUFFIX}")
 set(taffy_css_exe "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/css${CMAKE_EXECUTABLE_SUFFIX}")
-add_custom_command(OUTPUT "${taffy_exe}" "${taffy_css_exe}"
+add_custom_command(OUTPUT "${taffy_css_exe}"
     COMMAND "${AXISLY_COMPARISON_CARGO}" build --release --locked
         --manifest-path "${CMAKE_CURRENT_SOURCE_DIR}/taffy/Cargo.toml" --target "${rust_host}"
         --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
-    DEPENDS taffy/Cargo.toml taffy/Cargo.lock taffy/src/main.rs taffy/src/bin/css.rs
+    DEPENDS taffy/Cargo.toml taffy/Cargo.lock taffy/src/bin/css.rs
     VERBATIM)
-add_custom_target(axisly_comparison_taffy ALL DEPENDS "${taffy_exe}" "${taffy_css_exe}")
+add_custom_target(axisly_comparison_taffy ALL DEPENDS "${taffy_css_exe}")
 if(AXISLY_BUILD_TESTS)
-    add_test(NAME axisly.comparison.geometry_and_smoke COMMAND "${Python3_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/compare.py" --native "$<TARGET_FILE:axisly_comparison_native>"
-        --taffy "${taffy_exe}" --output "${CMAKE_CURRENT_BINARY_DIR}/smoke" --smoke)
-    set_tests_properties(axisly.comparison.geometry_and_smoke PROPERTIES LABELS comparison TIMEOUT 120)
+    add_test(NAME axisly.css_comparison.statistics COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test_css_statistics.py")
     add_test(NAME axisly.css_comparison.geometry_and_smoke COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/css_compare.py" --native "$<TARGET_FILE:axisly_css_comparison_native>"
         --taffy "${taffy_css_exe}" --output "${CMAKE_CURRENT_BINARY_DIR}/css-smoke" --smoke

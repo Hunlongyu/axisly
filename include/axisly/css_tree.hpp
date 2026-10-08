@@ -151,7 +151,10 @@ public:
     [[nodiscard]] std::span<const NodeId> children(NodeId node) const;
     [[nodiscard]] NodeId child_at(NodeId parent, std::size_t index) const;
     [[nodiscard]] std::size_t child_count(NodeId parent) const;
-    void set_style(NodeId node, Style style);
+    // Equal styles are a no-op: no copy, validation allocation or invalidation.
+    // A changed style is validated and staged before the stored value is replaced.
+    void set_style(NodeId node, const Style& style);
+    void set_style(NodeId node, Style&& style);
     void set_measure(NodeId node, MeasureFunction measure);
     void set_context(NodeId node, std::shared_ptr<void> context);
     [[nodiscard]] const std::shared_ptr<void>& context(NodeId node) const;
@@ -164,8 +167,7 @@ public:
     [[nodiscard]] NodeId detach_child_at(NodeId parent, std::size_t index);
     void detach_children(NodeId parent, std::size_t first, std::size_t count);
     void detach(NodeId child);
-    // remove() retains its original recursive semantics for source compatibility.
-    void remove(NodeId node);
+    // Delete this node and all of its descendants.
     void remove_subtree(NodeId node);
     // Delete only this node; direct children become roots and remain alive.
     void remove_node(NodeId node);

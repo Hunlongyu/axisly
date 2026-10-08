@@ -54,8 +54,8 @@ for path in (source / "examples/showcase").rglob("*"):
         text = replace_once(text, "  pageArea_ = add<Widget>();", """  pageArea_ = add<Widget>();
   auto* shellGrid = setLayout<AxislyGridLayout>();
   shellGrid->setSpacing(0);
-  shellGrid->setColumns({axisly::Track::fixed(sidebar_->preferredWidth()), axisly::Track::weighted(1)});
-  shellGrid->setRows({axisly::Track::fixed(kTitleH), axisly::Track::weighted(1)});
+  shellGrid->setColumns({axisly::css::TrackSizing::fixed(sidebar_->preferredWidth()), axisly::css::TrackSizing::fraction(1)});
+  shellGrid->setRows({axisly::css::TrackSizing::fixed(kTitleH), axisly::css::TrackSizing::fraction(1)});
   shellGrid->addWidget(sidebarHost_, 0, 0, 2, 1);
   shellGrid->addWidget(titleBar_, 0, 1);
   shellGrid->addWidget(pageArea_, 1, 1);""")
@@ -64,7 +64,7 @@ for path in (source / "examples/showcase").rglob("*"):
         begin = text.index("  sidebar_->setGeometry({0.0f, 0.0f, rail, r.height()});")
         end = text.index("  const Rect pa = pageArea_->localRect();", begin)
         text = text[:begin] + """  static_cast<AxislyGridLayout*>(layout())->setColumns(
-      {axisly::Track::fixed(rail), axisly::Track::weighted(1)});
+      {axisly::css::TrackSizing::fixed(rail), axisly::css::TrackSizing::fraction(1)});
   const float navHeight = std::max(sidebar_->contentHeight(), sidebarHost_->geometry().height());
   sidebar_->setGeometry({0, 0, std::max(0.0f, rail - 12), navHeight});
   sidebarHost_->setContentSize({std::max(0.0f, rail - 12), navHeight});

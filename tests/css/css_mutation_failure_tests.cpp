@@ -116,6 +116,83 @@ template<class Operation> void exhaust(const char* name, Operation operation, bo
     }
     throw std::runtime_error("Allocation probe did not reach successful operation");
 }
+
+Style named_style() {
+    Style style;
+    style.display = Display::Grid;
+    style.box.size = {Length::length(100), Length::length(40)};
+    style.grid.template_columns.assign(2, TrackSizing::fraction(1));
+    style.grid.template_rows.assign(2, TrackSizing::fixed(20));
+    style.grid.column_line_names = {{"a-long-first-column-boundary"}, {}, {"a-long-final-column-boundary"}};
+    style.grid.template_areas = std::vector<std::vector<std::string>>{
+        {"a-long-top-area-name", "a-long-top-area-name"},
+        {"a-long-bottom-area-name", "a-long-bottom-area-name"}};
+    return style;
+}
+
+void equal_style_does_not_allocate() {
+    LayoutTree tree;
+    auto equal = named_style();
+    const auto root = tree.create_node(equal);
+    const auto before = tree.compute(root, {});
+    injection::operation = "equal style";
+    injection::position = 0;
+    injection::remaining = 0;
+    tree.set_style(root, tree.style(root));
+    tree.set_style(root, equal);
+    tree.set_style(root, std::move(equal));
+    injection::remaining = injection::disabled;
+    require(equal == tree.style(root), "Equal rvalue style was unnecessarily consumed");
+    const auto& after = tree.compute(root, {});
+    require(after.cache_hit && after.nodes == before.nodes,
+        "Equal style invalidated the published layout");
+    std::cout << "equal style: alias, lvalue and rvalue perform no allocation\n";
+}
+
+#if !defined(_ITERATOR_DEBUG_LEVEL) || _ITERATOR_DEBUG_LEVEL == 0
+void style_allocation_failures() {
+    const auto original = named_style();
+    auto changed = original;
+    changed.box.size.width = Length::length(120);
+    changed.grid.template_columns.assign(3, TrackSizing::fraction(1));
+    changed.grid.column_line_names = {{"a-new-first-column-boundary"}, {}, {}, {"a-new-final-column-boundary"}};
+    changed.grid.template_areas = std::vector<std::vector<std::string>>{
+        {"new-long-area-name", "new-long-area-name", "new-long-area-name"}};
+    std::size_t failures = 0;
+    for (std::size_t position = 0; position < 128; ++position) {
+        LayoutTree tree;
+        const auto root = tree.create_node(original);
+        tree.append_child(root, tree.create_node());
+        const auto before = tree.compute(root, {});
+        injection::operation = "set style";
+        injection::position = position;
+        injection::remaining = position;
+        bool failed = false;
+        try { tree.set_style(root, changed); }
+        catch (const std::bad_alloc&) { failed = true; }
+        injection::remaining = injection::disabled;
+        if (failed) {
+            ++failures;
+            require(tree.style(root) == original && !tree.dirty(root),
+                "Style copy failure changed the stored style or invalidated caches");
+            const auto& after = tree.compute(root, {});
+            require(after.cache_hit && after.nodes == before.nodes,
+                "Style copy failure lost the last successful layout");
+        } else {
+            require(failures > 0 && tree.style(root) == changed && tree.dirty(root),
+                "Style update did not exercise allocations or publish the new style");
+            const auto updated = tree.compute(root, {});
+            tree.mark_subtree_dirty(root);
+            const auto& fresh = tree.compute(root, {});
+            require(updated.succeeded() && updated.size.width == 120 && updated.nodes == fresh.nodes,
+                "Changed style reused stale geometry");
+            std::cout << "set style: " << failures << " allocation failures checked\n";
+            return;
+        }
+    }
+    throw std::runtime_error("Style allocation probe did not complete");
+}
+#endif
 }
 int main() {
 #if defined(_MSC_VER)
@@ -136,6 +213,7 @@ int main() {
     });
     std::cout << std::unitbuf;
     try {
+        equal_style_does_not_allocate();
         exhaust("detach", [](Fixture& f) { f.tree.detach(f.branch); }, false);
         exhaust("invalidate", [](Fixture& f) { f.tree.mark_subtree_dirty(f.root); }, false);
         exhaust("remove subtree", [](Fixture& f) { f.tree.remove_subtree(f.branch); }, false);
@@ -144,6 +222,7 @@ int main() {
         exhaust("set children", [](Fixture& f) { f.tree.set_children(f.root, std::array{f.leaf, f.sibling}); }, true);
         exhaust("replace", [](Fixture& f) { (void)f.tree.replace_child(f.root, 0, f.leaf); }, true);
 #if !defined(_ITERATOR_DEBUG_LEVEL) || _ITERATOR_DEBUG_LEVEL == 0
+        style_allocation_failures();
         // MSVC iterator debugging allocates container proxies in noexcept
         // default/move constructors, including evaluation of the Style argument
         // before entering our API. Faulting those proxies terminates the CRT.

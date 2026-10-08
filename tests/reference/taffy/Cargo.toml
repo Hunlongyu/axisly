@@ -5,10 +5,6 @@ edition = "2021"
 publish = false
 
 [[bin]]
-name = "axisly-taffy-reference"
-path = "src/main.rs"
-
-[[bin]]
 name = "axisly-taffy-tree-reference"
 path = "src/bin/tree_reference.rs"
 

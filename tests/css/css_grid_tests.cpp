@@ -117,7 +117,7 @@ void retained_structure_and_reports() {
     tree.set_style(children[0], item);
     require(compute(70).grid_tracks.front().items.size() == 3,
         "Hidden children must leave the retained placement plan");
-    tree.remove(children[1]);
+    tree.remove_subtree(children[1]);
     const auto& removed = compute(70);
     require(removed.nodes.size() == 4 && removed.grid_tracks.front().items.size() == 2,
         "Topology changes must remove stale placement identities");
@@ -133,7 +133,7 @@ void retained_structure_and_reports() {
     tree.set_style(root, grid);
     require(compute(100).grid_tracks.front().columns.front() == 50,
         "Template edits must invalidate the compiled Grid structure");
-    tree.remove(root);
+    tree.remove_subtree(root);
     require(snapshot.grid_tracks.front().columns.front() == 777
         && snapshot.grid_tracks.front().items.empty()
         && snapshot.find(children[3])->border_box == Rect{0, 20, 10, 10},

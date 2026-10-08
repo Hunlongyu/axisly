@@ -51,6 +51,49 @@ void topology() {
     require(!tree.compute(root, {}).succeeded() && !tree.layout(root), "Invalid root retained geometry");
 }
 
+void style_updates() {
+    LayoutTree tree;
+    Style style;
+    style.box.size = {Length::length(100), Length::length(40)};
+    const auto root = tree.create_node(style);
+    const auto leaf = tree.create_node();
+    tree.append_child(root, leaf);
+    const auto before = tree.compute(root, {});
+    auto invalid = style;
+    invalid.flex_grow = -1;
+    const auto saved_invalid = invalid;
+    rejects([&] { tree.set_style(root, invalid); });
+    rejects([&] { tree.set_style(root, std::move(invalid)); });
+    require(invalid == saved_invalid && tree.style(root) == style,
+        "Rejected rvalue style was moved from or committed");
+    rejects([&] { tree.set_style(NodeId{}, style); });
+    require(tree.compute(root, {}).cache_hit && tree.compute(root, {}).nodes == before.nodes,
+        "Rejected style invalidated the old layout");
+
+    // Copy directly from another live node; the source stays unchanged.
+    style.box.size.width = Length::length(120);
+    const auto source = tree.create_node(style);
+    tree.set_style(root, tree.style(source));
+    require(tree.style(source) == style && tree.style(root) == style && tree.dirty(root),
+        "Style copied from another node was not committed independently");
+    require(tree.compute(root, {}).size.width == 120, "Copied style retained old dimensions");
+    style.box.size.width = Length::length(140);
+    tree.set_style(root, std::move(style));
+    require(tree.compute(root, {}).size.width == 140, "Moved style retained old dimensions");
+
+    // Even an identical style must obey the mutation guard during measurement.
+    std::size_t checks = 0;
+    tree.set_measure(leaf, [&](const MeasureRequest&) {
+        bool rejected = false;
+        try { tree.set_style(root, tree.style(root)); }
+        catch (const std::logic_error&) { rejected = true; }
+        require(rejected, "Equal-style fast path bypassed the mutation guard");
+        ++checks;
+        return Measurement{{10, 10}};
+    });
+    require(tree.compute(root, {}).succeeded() && checks > 0, "Mutation guard callback did not run");
+}
+
 void measurement() {
     struct Provider final : MeasureProvider {
         mutable std::size_t calls{};
@@ -191,6 +234,7 @@ int main(int argc, char** argv) {
     try {
         const std::string_view test = argc > 1 ? argv[1] : "";
         if (test == "topology") topology();
+        else if (test == "style_updates") style_updates();
         else if (test == "measurement") measurement();
         else if (test == "publication") { publication(); wide_publication(); }
         else throw std::runtime_error("Unknown test");

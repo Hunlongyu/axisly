@@ -383,8 +383,8 @@ private:
             const auto& input = item.input;
             const float x = split+8;
             text(x,y+40,"ID "+item.path+" / "+item.label,ink,12,half);
-            text(x,y+66,"row="+std::to_string(input.row)+" col="+std::to_string(input.column)+
-                " span="+std::to_string(input.column_span)+"x"+std::to_string(input.row_span),muted,10,half);
+            text(x,y+66,"row="+std::to_string(input.row_start)+" col="+std::to_string(input.column_start)+
+                " span="+std::to_string(input.column_end-input.column_start)+"x"+std::to_string(input.row_end-input.row_start),muted,10,half);
             text(x,y+90,"cell "+rect_text(item.cell),muted,10,half);
             text(x,y+112,"item "+rect_text(item.rect),ink,10,half);
             text(x,y+134,item.has_preferred ? "preferred "+size_text(item.preferred) : "preferred: host child probes",preferred_color,10,half);

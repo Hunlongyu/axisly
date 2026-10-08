@@ -38,6 +38,8 @@ target_link_libraries(your_app PRIVATE axisly::axisly)
 
 ## 快速开始
 
+`Style::display` 默认是 `Flex`，默认主轴为横向；需要块布局时显式设置 `Display::Block`。
+
 下面创建一行两个可伸展的元素，容器宽 320，元素间距为 8：
 
 ```cpp
@@ -81,15 +83,17 @@ int main() {
 
 完整测量约定、错误处理与宿主接入见 [CSS 布局指南](docs/css-layout.md)。
 
-## 选择布局接口
+## 选择接入方式
 
 | 接口 | 适用场景 | 特点 |
 | --- | --- | --- |
-| `axisly::css::LayoutTree` | 使用 CSS 布局规则的界面 | 支持混合树、内容测量、缓存与增量失效 |
-| `axisly::compute_grid()` | 直接给定行列、条目和可用空间 | 无状态计算，采用原生 Grid 的轨道与约束规则 |
-| `axisly::GridCache`／`GridTree` | 复用原生 Grid 布局 | 缓存、测量失效与嵌套网格 |
+| `axisly::css::LayoutTree` | 由库持有布局树 | 管理节点、样式、缓存与增量失效 |
+| `axisly::css::LayoutSource`／`LayoutSession` | 宿主已有控件树 | 借用宿主样式和拓扑，共用同一套布局算法 |
 
-原生 Grid 与 CSS Grid 的尺寸分配语义不同，详见 [原生 Grid 指南](docs/native-grid.md)。
+两种接入方式使用同一套 CSS Block／Flexbox／Grid 语义。Grid 统一使用 `Style::grid`、
+`TrackSizing` 和 `GridLine`；嵌套 Grid 直接作为同一布局树中的子节点。
+这个分层方向与 Taffy 的内置树／自定义树接入一致；本库的宿主树会话还负责维护算法缓存，
+并非逐项复制 Taffy 的低层 trait API。
 公共头文件可以分别包含，也可以使用总入口 `<axisly/axisly.hpp>`。
 
 ## 范围与兼容性
@@ -101,7 +105,8 @@ CSS 布局以 **Taffy 0.14.0** 为版本兼容参照，使用固定用例、组�
 完整浏览器排版中的内联格式化、Table 布局、垂直书写与分页等也不属于当前实现范围。
 滚动范围是布局输出，滚动交互和裁剪由宿主实现。
 
-当前版本为 `0.1.0`，处于开发阶段，暂不承诺跨版本二进制兼容。
+当前版本为 `0.2.0`，处于开发阶段，暂不承诺跨版本二进制兼容。
+开发期源码接口也可能调整；升级时重新编译所有使用方，并核对 [变更与迁移记录](CHANGELOG.md)。
 
 ## 文档与示例
 
@@ -109,7 +114,6 @@ CSS 布局以 **Taffy 0.14.0** 为版本兼容参照，使用固定用例、组�
 | --- | --- |
 | [构建指南](docs/building.md) | 编译、安装、CMake 选项 |
 | [CSS 布局指南](docs/css-layout.md) | 样式、测量、更新和结果生命周期 |
-| [原生 Grid 指南](docs/native-grid.md) | 轨道、对齐、缓存与嵌套 |
 | [执行资源](docs/css-execution-resources.md) | 内存复用、批量执行、取整与 PGO |
 | [兼容性说明](docs/css-compatibility.md) | 布局字段映射和规范边界 |
 | [示例](docs/examples.md) | 控制台、SDL3 和 GeeyoouUI |

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "flex_internal.hpp"
+#include "balanced_lines.hpp"
 #include "workspace_pool.hpp"
 #include <ranges>
 
@@ -16,7 +17,7 @@ struct FlexLine {
 struct FlexWorkspace {
     explicit FlexWorkspace(std::pmr::memory_resource* memory)
         : fragments(memory), items(memory), boxes(memory), constraints(memory),
-          lines(memory), outer_sizes(memory), line_counts(memory) {}
+          lines(memory), outer_sizes(memory), line_counts(memory), balanced(memory) {}
     std::pmr::vector<Fragment> fragments;
     std::pmr::vector<FlexItem> items;
     std::pmr::vector<LayoutBox> boxes;
@@ -24,6 +25,7 @@ struct FlexWorkspace {
     std::pmr::vector<FlexLine> lines;
     std::pmr::vector<Unit> outer_sizes;
     std::pmr::vector<std::size_t> line_counts;
+    BalancedLineWorkspace balanced;
 
     void clear() noexcept {
         // Release all borrowed roots and descendants before leaving a query.
@@ -35,6 +37,7 @@ struct FlexWorkspace {
         lines.clear();
         outer_sizes.clear();
         line_counts.clear();
+        balanced.clear();
     }
 };
 

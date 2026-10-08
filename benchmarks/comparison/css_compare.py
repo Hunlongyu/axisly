@@ -14,6 +14,7 @@ import math
 import os
 from pathlib import Path
 import platform
+import random
 import statistics
 import subprocess
 import sys
@@ -64,7 +65,7 @@ def cases():
         assert len(sizes) == 17
         result.append(dict(name=name, nodes=nodes, sizes=sizes,
             engines=["axisly_css", "taffy"] + (["yoga"] if all(n["display"] == "F" for n in nodes) else []),
-            modes=["cold", "resize", "same"] + (["leaf_edit"] if any(n["measure"] for n in nodes) else [])))
+            modes=["build", "cold", "resize", "same"] + (["leaf_edit"] if any(n["measure"] for n in nodes) else [])))
 
     for count in (100, 1000):
         nodes = [node(width=-2, height=-2, padding=8, gap=4)]
@@ -195,7 +196,42 @@ def checksum(frames):
     return sum(sum(rect(frame[i]) for i in (0, len(frame) // 2, len(frame) - 1)) for frame in frames)
 
 
-def summary(raw, output):
+def bootstrap_intervals(group, reference=None, repetitions=2000):
+    """Exploratory 95% hierarchical bootstrap of batch-mean medians.
+
+    Resample rounds, then batches within each selected round. For a ratio,
+    pair the round selection, but independently resample each engine's batches.
+    Frames within a batch are not independent observations.
+    """
+    if len(group) < 3 or any(len(row["samples_us"]) < 2 for row in group):
+        return None
+    peers = {row["round"]: row for row in reference} if reference is not None else None
+    if peers is not None and (len(peers) != len(group)
+            or any(row["round"] not in peers for row in group)
+            or any(len(row["samples_us"]) < 2 for row in peers.values())):
+        return None
+    rng = random.Random(0)
+    estimates = []
+    for _ in range(repetitions):
+        times, denominators = [], []
+        for row in rng.choices(group, k=len(group)):
+            values = row["samples_us"]
+            times.extend(rng.choices(values, k=len(values)))
+            if peers is not None:
+                values = peers[row["round"]]["samples_us"]
+                denominators.extend(rng.choices(values, k=len(values)))
+        estimate = statistics.median(times)
+        if peers is not None:
+            denominator = statistics.median(denominators)
+            if denominator <= 0:
+                return None
+            estimate /= denominator
+        estimates.append(estimate)
+    estimates.sort()
+    return estimates[math.floor(.025 * (repetitions - 1))], estimates[math.ceil(.975 * (repetitions - 1))]
+
+
+def summary(raw, output, smoke=False):
     groups = {}
     for row in raw:
         group = groups.setdefault((row["case"], row["engine"], row["mode"]), [])
@@ -203,16 +239,34 @@ def summary(raw, output):
     with output.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         writer.writerow(["case", "engine", "mode", "nodes", "batch_count", "iterations",
-            "median_us", "p95_batch_us", "min_round_median_us", "max_round_median_us", "measurements_per_layout"])
+            "median_us", "p95_batch_us", "min_round_median_us", "max_round_median_us", "measurements_per_layout",
+            "median_ci95_low_us", "median_ci95_high_us", "ratio_to_taffy",
+            "ratio_ci95_low", "ratio_ci95_high", "comparison"])
         for key, group in groups.items():
             times = sorted(t for g in group for t in g["samples_us"])
             counts = [c for g in group for c in g["measurements"]]
             if len(set(counts)) != 1:
                 raise ValueError("Measurement count changed between samples")
             medians = [statistics.median(g["samples_us"]) for g in group]
+            interval = None if smoke else bootstrap_intervals(group)
+            reference = groups.get((key[0], "taffy", key[2]))
+            ratio, ratio_interval, comparison = "", None, "insufficient_samples"
+            if smoke:
+                comparison = "smoke_only"
+            elif key[1] == "taffy":
+                ratio, comparison = 1, "reference"
+            elif reference:
+                denominator = statistics.median(t for g in reference for t in g["samples_us"])
+                if denominator > 0:
+                    ratio = statistics.median(times) / denominator
+                    ratio_interval = bootstrap_intervals(group, reference)
+                    if ratio_interval:
+                        low, high = ratio_interval
+                        comparison = "faster" if high < 1 else "slower" if low > 1 else "inconclusive"
             writer.writerow([*key, group[0]["nodes"], len(times), group[0]["iterations"],
                 statistics.median(times), times[math.ceil(.95 * len(times)) - 1],
-                min(medians), max(medians), counts[0]])
+                min(medians), max(medians), counts[0], *(interval or ("", "")), ratio,
+                *(ratio_interval or ("", "")), comparison])
 
 
 def main():
@@ -229,7 +283,7 @@ def main():
     parser.add_argument("--case", action="append")
     parser.add_argument("--mode", action="append", choices=("cold", "resize", "same", "leaf_edit", "build"),
         help="Select scenarios; build additionally times node creation and style installation")
-    parser.add_argument("--rounds", type=int, default=2)
+    parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--samples", type=int, default=9)
     parser.add_argument("--frames-scale", type=int, default=1,
         help="Multiply frames per batch while retaining all-frame geometry verification")
@@ -334,6 +388,11 @@ def main():
     source_paths = [script, script.with_name("css_native.cpp"), script.with_name("css_axisly_adapter.hpp"),
         script.with_name("css_fixture.hpp"), script.parent / "taffy/src/bin/css.rs",
         script.parent / "taffy/Cargo.toml", script.parent / "taffy/Cargo.lock"]
+    # HEAD alone does not identify an uncommitted optimization. Include the
+    # actual library sources and configuration alongside benchmark adapters.
+    source_paths += [repo / name for name in subprocess.check_output(
+        ["git", "ls-files", "src", "include", "cmake", "CMakeLists.txt", "CMakePresets.json"],
+        cwd=repo, text=True).splitlines()]
     meta = dict(platform=platform.platform(), python=sys.version,
         timestamp_utc=datetime.now(timezone.utc).isoformat(), taffy="0.14.0", yoga="3.2.1",
         axisly_api="css::LayoutTree", rounds=rounds, samples=samples, smoke=args.smoke,
@@ -343,15 +402,17 @@ def main():
         cpu_affinity=args.cpu, frames_scale=args.frames_scale,
         record_limits=args.record_limits, resource_limit_groups=len(failures),
         cases=[f["name"] for f in fixtures], source_revision=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
-        source_sha256={str(p.relative_to(repo)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths},
+        source_worktree_dirty=bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=repo, text=True).strip()),
+        source_sha256={str(p.relative_to(repo)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths if p.is_file()},
         executable_sha256=hashes, fixture_sha256={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs.glob("*.txt")},
         geometry_tolerance="abs 0.01px + rel 1e-6; every node, every timed frame; Taffy geometry reference",
         timers="in-process steady_clock/Instant; edit/dirty + compute + three root-relative rectangle reads; build mode additionally includes node creation and style installation; destruction excluded",
         measurement="synthetic fixed and wrapping metrics; identical arithmetic; no real font/rendering",
+        statistics="2000 deterministic hierarchical bootstrap resamples of rounds then batch means; paired rounds and independent engine batches for median ratios; exploratory 95% percentile intervals only with >=3 rounds; smoke has no performance inference",
         results="axisly_css retains flat root-relative geometry and Grid diagnostics; optional axisly_css_retained uses per-node reads without flat output or track diagnostics; Taffy/Yoga retain node-local geometry; no full-array export added to either")
     (args.output / "environment.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     (args.output / "samples.json").write_text(json.dumps(raw, indent=2), encoding="utf-8")
-    summary(raw, args.output / "summary.csv")
+    summary(raw, args.output / "summary.csv", smoke=args.smoke)
     print(f"DONE {len(fixtures)} cases, {len(geometry)} valid engine/mode groups, {len(failures)} limit groups, {len(raw)} timing records: {args.output}")
 
 

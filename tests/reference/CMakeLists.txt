@@ -13,26 +13,20 @@ if(NOT rust_host_match)
 endif()
 set(rust_host "${CMAKE_MATCH_1}")
 set(taffy_manifest "${CMAKE_CURRENT_SOURCE_DIR}/taffy/Cargo.toml")
-set(taffy_output "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/axisly-taffy-reference${CMAKE_EXECUTABLE_SUFFIX}")
 set(taffy_tree_output "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/axisly-taffy-tree-reference${CMAKE_EXECUTABLE_SUFFIX}")
 set(taffy_calc_output "${CMAKE_CURRENT_BINARY_DIR}/cargo/${rust_host}/release/calc_reference${CMAKE_EXECUTABLE_SUFFIX}")
-add_custom_command(OUTPUT "${taffy_output}" "${taffy_tree_output}" "${taffy_calc_output}"
+add_custom_command(OUTPUT "${taffy_tree_output}" "${taffy_calc_output}"
     COMMAND "${AXISLY_CARGO_EXECUTABLE}" build --release --locked --bins
         --manifest-path "${taffy_manifest}" --target "${rust_host}"
         --target-dir "${CMAKE_CURRENT_BINARY_DIR}/cargo"
-    DEPENDS "${taffy_manifest}" taffy/Cargo.lock taffy/src/main.rs taffy/src/advanced.rs
+    DEPENDS "${taffy_manifest}" taffy/Cargo.lock
         taffy/src/bin/tree_reference.rs taffy/src/bin/tree/mod.rs taffy/src/bin/tree/style.rs
         taffy/src/bin/calc_reference.rs
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Building pinned Taffy reference tool (development only)" VERBATIM)
-add_custom_target(axisly_taffy_reference ALL DEPENDS "${taffy_output}" "${taffy_tree_output}" "${taffy_calc_output}")
+add_custom_target(axisly_taffy_reference ALL DEPENDS "${taffy_tree_output}" "${taffy_calc_output}")
 
 include(upstream.cmake)
-
-add_executable(axisly_reference_native native_runner.cpp)
-target_link_libraries(axisly_reference_native PRIVATE axisly::axisly)
-set_target_properties(axisly_reference_native PROPERTIES CXX_EXTENSIONS OFF)
-axisly_enable_warnings(axisly_reference_native)
 
 add_executable(axisly_css_reference_native css_native_runner.cpp)
 target_link_libraries(axisly_css_reference_native PRIVATE axisly::axisly)
@@ -170,20 +164,6 @@ add_executable(axisly_position_matrix_native position_matrix_native.cpp)
 target_link_libraries(axisly_position_matrix_native PRIVATE axisly::axisly)
 set_target_properties(axisly_position_matrix_native PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_position_matrix_native)
-
-add_test(NAME axisly.reference.compare COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/compare.py"
-    --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
-    --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/failures")
-add_test(NAME axisly.reference.harness COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_reference.py"
-    --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}")
-set_tests_properties(axisly.reference.compare axisly.reference.harness PROPERTIES LABELS reference TIMEOUT 120)
-
-add_test(NAME axisly.reference.advanced COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/advanced.py"
-    --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}"
-    --failure-dir "${CMAKE_CURRENT_BINARY_DIR}/advanced-failures")
-add_test(NAME axisly.reference.advanced_harness COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_advanced.py"
-    --axisly "$<TARGET_FILE:axisly_reference_native>" --taffy "${taffy_output}")
-set_tests_properties(axisly.reference.advanced axisly.reference.advanced_harness PROPERTIES LABELS reference TIMEOUT 120)
 
 add_test(NAME axisly.reference.tree COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_tree.py"
     --taffy "${taffy_tree_output}")

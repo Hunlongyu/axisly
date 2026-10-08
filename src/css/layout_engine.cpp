@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -18,6 +19,10 @@ namespace axisly::css::detail {
 }
 
 namespace {
+// Keep host exceptions distinct from the standard exceptions used internally
+// for numeric and work limits. Unwrap only at the outer computation boundary.
+struct MeasurementFailure { std::exception_ptr cause; };
+
 bool suppresses_baseline(Contain contain) noexcept {
     return contain == Contain::Layout || contain == Contain::Content;
 }
@@ -290,6 +295,8 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available,
             }
             *retained = std::move(fragment);
         }
+    } catch (const MeasurementFailure& error) {
+        std::rethrow_exception(error.cause);
     } catch (const LayoutFailure& error) {
         result.error = {error.code, error.node, error.what()};
     } catch (const std::overflow_error& error) {
@@ -602,8 +609,13 @@ Measurement Engine::measure(const LayoutNode& node, const MeasureRequest& reques
     if (++measurements_ > limits_.maximum_measurements) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, node.id, "CSS measurement limit exceeded");
     }
-    const auto result = node.measure ? node.measure(request)
-        : measure_provider_->measure(node.id, node.style, node.measure_context(), request);
+    Measurement result;
+    try {
+        result = node.measure ? node.measure(request)
+            : measure_provider_->measure(node.id, node.style, node.measure_context(), request);
+    } catch (...) {
+        throw MeasurementFailure{std::current_exception()};
+    }
     try { validate_measurement(result); }
     catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidMeasurement, node.id, error.what());

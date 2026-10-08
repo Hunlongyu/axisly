@@ -26,9 +26,11 @@ void set_axis_margin(Insets& margin, bool row, bool main,
 
 double bounded_main_size(const FlexItem& item, double value);
 
-void collect_flex_lines(std::pmr::vector<FlexLine>& lines, const std::pmr::vector<FlexItem>& items,
+void collect_flex_lines(FlexWorkspace& workspace,
     std::optional<Unit> available, Unit gap, FlexWrap wrap,
     std::uint16_t requested_lines) {
+    auto& lines = workspace.lines;
+    const auto& items = workspace.items;
     lines.resize(1);
     if (wrap == FlexWrap::NoWrap) {
         lines.front().items = std::views::iota(std::size_t{0}, items.size());
@@ -37,7 +39,8 @@ void collect_flex_lines(std::pmr::vector<FlexLine>& lines, const std::pmr::vecto
     const bool balanced = wrap == FlexWrap::Balance
         || wrap == FlexWrap::BalanceReverse;
     if (balanced && !items.empty()) {
-        std::vector<Unit> outer_sizes;
+        auto& outer_sizes = workspace.outer_sizes;
+        outer_sizes.clear();
         outer_sizes.reserve(items.size());
         for (const auto& item : items) {
             const Unit hypothetical = item.hypothetical;
@@ -47,7 +50,7 @@ void collect_flex_lines(std::pmr::vector<FlexLine>& lines, const std::pmr::vecto
         }
         const auto counts = balanced_line_counts(outer_sizes,
             available.value_or(std::numeric_limits<Unit>::infinity()),
-            gap, requested_lines, 25'000'000);
+            gap, requested_lines, 25'000'000, workspace.balanced);
         lines.clear();
         std::size_t next = 0;
         for (const auto count : counts) {
@@ -468,7 +471,7 @@ void FlexLayout<IsRow>::collect_items() {
             lines.push_back(FlexLine{std::views::iota(index, index + 1)});
         }
     } else {
-        collect_flex_lines(lines, items,
+        collect_flex_lines(workspace.get(),
             main_size_derived ? std::nullopt : line_available, main_gap,
             node.style.flex_wrap, node.style.flex_line_count);
     }
@@ -477,6 +480,7 @@ void FlexLayout<IsRow>::collect_items() {
             || (main_query == AvailableKind::MinContent
                 && node.style.flex_wrap == FlexWrap::NoWrap);
         auto& outer_sizes = workspace.get().outer_sizes;
+        outer_sizes.clear();
         outer_sizes.reserve(items.size());
         for (const auto& item : items) {
             if (intrinsic_contribution) {
@@ -513,7 +517,7 @@ void FlexLayout<IsRow>::collect_items() {
             && line_available && balanced && !outer_sizes.empty()) {
             const auto unconstrained_counts = balanced_line_counts(outer_sizes,
                 std::numeric_limits<Unit>::infinity(), main_gap,
-                node.style.flex_line_count, 25'000'000);
+                node.style.flex_line_count, 25'000'000, workspace.get().balanced);
             const Unit max_content = checked(static_cast<double>(
                 widest_line(unconstrained_counts)) + decoration, node.id);
             candidate_outer = std::max(candidate_outer,

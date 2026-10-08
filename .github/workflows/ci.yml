@@ -29,6 +29,14 @@ jobs:
             os: ubuntu-latest
             cxx: clang++
             configuration: Debug
+          - name: Linux ARM64
+            os: ubuntu-24.04-arm
+            cxx: g++
+            configuration: Release
+          - name: macOS ARM64
+            os: macos-15
+            cxx: clang++
+            configuration: Release
     env:
       CXX: ${{ matrix.cxx }}
     steps:
@@ -83,6 +91,52 @@ jobs:
           name: sanitizer-${{ matrix.cxx }}
           path: build/sanitizers/Testing/Temporary/LastTest.log
 
+  thread-sanitizer:
+    name: Linux ThreadSanitizer
+    runs-on: ubuntu-24.04
+    env:
+      CXX: clang++
+      TSAN_OPTIONS: halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build/tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAXISLY_ENABLE_TSAN=ON -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=OFF
+      - name: Build concurrent contracts
+        run: cmake --build build/tsan --target axisly_css_memory_tests axisly_css_batch_tests --parallel
+      - name: Detect races in shared memory and parallel layout
+        run: ctest --test-dir build/tsan -R 'axisly.css.(memory|batch)' --output-on-failure --no-tests=error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: thread-sanitizer-failure
+          path: build/tsan/Testing/Temporary/LastTest.log
+
+  coverage:
+    name: LLVM line and branch coverage
+    runs-on: ubuntu-24.04
+    env:
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM coverage tools
+        run: sudo apt-get update && sudo apt-get install -y clang llvm
+      - name: Configure
+        run: cmake -S . -B build/coverage -DCMAKE_BUILD_TYPE=Debug -DAXISLY_ENABLE_COVERAGE=ON -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=ON
+      - name: Build
+        run: cmake --build build/coverage --parallel
+      - name: Test and export coverage
+        run: python3 scripts/coverage.py --build build/coverage --minimum-line 85 --minimum-branch 70
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: llvm-coverage
+          path: |
+            build/coverage/coverage/summary.json
+            build/coverage/coverage/coverage.json
+            build/coverage/coverage/html/
+            build/coverage/coverage/tests.log
+            build/coverage/coverage/diagnostics.log
+
   playground:
     name: Windows SDL3 playground
     runs-on: windows-latest
@@ -120,7 +174,7 @@ jobs:
           if-no-files-found: ignore
 
   reference:
-    name: Taffy common-subset comparison
+    name: Taffy 0.14 reference comparison
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,7 +186,7 @@ jobs:
       - name: Configure optional reference tooling
         run: cmake -S . -B build/reference -DCMAKE_BUILD_TYPE=Release -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=OFF -DAXISLY_BUILD_REFERENCE_TESTS=ON
       - name: Build reference tools
-        run: cmake --build build/reference --target axisly_reference_native axisly_taffy_reference --parallel
+        run: cmake --build build/reference --parallel
       - name: Compare and test the harness
         run: ctest --test-dir build/reference -L reference --output-on-failure --no-tests=error
       - name: Preserve failure fixtures and logs

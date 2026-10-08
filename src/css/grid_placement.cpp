@@ -212,7 +212,7 @@ private:
 
 } // namespace
 
-GridExtent place_grid_items(std::vector<Placement>& placements, std::int32_t explicit_rows,
+GridExtent place_grid_items(std::span<Placement> placements, std::int32_t explicit_rows,
                  std::int32_t explicit_columns, GridAutoFlow flow, NodeId id) {
     const bool by_row = flow == GridAutoFlow::Row || flow == GridAutoFlow::RowDense;
     const bool dense = flow == GridAutoFlow::RowDense || flow == GridAutoFlow::ColumnDense;

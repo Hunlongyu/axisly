@@ -40,6 +40,17 @@
       }
     },
     {
+      "name": "release-clang",
+      "displayName": "Windows Release with clang-cl and the MSVC runtime",
+      "inherits": "release",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/clang-cl.cmake",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "reference-debug",
       "displayName": "Debug with optional Taffy differential tests",
       "inherits": "debug",
@@ -100,6 +111,17 @@
       }
     },
     {
+      "name": "comparison-clang",
+      "displayName": "Windows clang-cl comparison with pinned Taffy and Yoga",
+      "inherits": "comparison-release",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/clang-cl.cmake",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "geeyoou-release",
       "displayName": "GeeyoouUI Showcase / release",
       "inherits": "release",
@@ -117,6 +139,14 @@
     }
   ],
   "buildPresets": [
+    {
+      "name": "release-clang",
+      "configurePreset": "release-clang"
+    },
+    {
+      "name": "comparison-clang",
+      "configurePreset": "comparison-clang"
+    },
     {
       "name": "debug",
       "configurePreset": "debug"
@@ -163,6 +193,18 @@
     }
   ],
   "testPresets": [
+    {
+      "name": "release-clang",
+      "configurePreset": "release-clang",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "comparison-clang",
+      "configurePreset": "comparison-clang",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
     {
       "name": "debug",
       "configurePreset": "debug",

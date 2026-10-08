@@ -20,9 +20,59 @@ foreach(behavior IN ITEMS leaf_and_block leaf_available_constraints topology_and
         errors_and_exception_atomicity cache_and_dirty inherited_float_invalidation
         plain_block_single_measure multi_query_leaf_cache deep_flex_query_budget
         node_storage_lifecycle cache_failure_rollback cached_subtree_depth_limit container_scrollbar_ratio_bounds
-        geometry_snapshot_lifetime)
+        geometry_snapshot_lifetime cache_capacity_churn cached_local_overflow)
     add_test(NAME axisly.css.tree.${behavior} COMMAND axisly_css_tree_tests ${behavior})
 endforeach()
+
+add_executable(axisly_css_storage_tests css/css_storage_tests.cpp)
+target_link_libraries(axisly_css_storage_tests PRIVATE axisly::axisly)
+set_target_properties(axisly_css_storage_tests PROPERTIES CXX_EXTENSIONS OFF)
+axisly_enable_warnings(axisly_css_storage_tests)
+add_test(NAME axisly.css.storage.lifetime COMMAND axisly_css_storage_tests)
+
+add_executable(axisly_css_memory_tests css/css_memory_tests.cpp)
+target_link_libraries(axisly_css_memory_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_memory_tests)
+add_test(NAME axisly.css.memory.contract COMMAND axisly_css_memory_tests)
+
+add_executable(axisly_css_publication_tests css/css_publication_tests.cpp)
+target_link_libraries(axisly_css_publication_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_publication_tests)
+add_test(NAME axisly.css.publication.reuse COMMAND axisly_css_publication_tests)
+
+add_executable(axisly_css_rounding_tests css/css_rounding_tests.cpp)
+target_link_libraries(axisly_css_rounding_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_rounding_tests)
+add_test(NAME axisly.css.rounding.contract COMMAND axisly_css_rounding_tests)
+
+add_executable(axisly_css_lookup_tests css/css_lookup_tests.cpp)
+target_link_libraries(axisly_css_lookup_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_lookup_tests)
+add_test(NAME axisly.css.lookup.contract COMMAND axisly_css_lookup_tests)
+
+add_executable(axisly_css_tree_api_tests css/css_tree_api_tests.cpp)
+target_link_libraries(axisly_css_tree_api_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_tree_api_tests)
+foreach(contract IN ITEMS topology measurement publication)
+    add_test(NAME axisly.css.api.${contract} COMMAND axisly_css_tree_api_tests ${contract})
+endforeach()
+
+add_executable(axisly_css_mutation_failure_tests css/css_mutation_failure_tests.cpp)
+target_link_libraries(axisly_css_mutation_failure_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_mutation_failure_tests)
+add_test(NAME axisly.css.mutation.allocation_failure COMMAND axisly_css_mutation_failure_tests)
+
+add_executable(axisly_css_source_tests css/css_source_tests.cpp)
+target_link_libraries(axisly_css_source_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_source_tests)
+foreach(seed IN ITEMS 1234567 831109 4294967291 1)
+    add_test(NAME axisly.css.source.stateful_${seed} COMMAND axisly_css_source_tests ${seed})
+endforeach()
+
+add_executable(axisly_css_batch_tests css/css_batch_tests.cpp)
+target_link_libraries(axisly_css_batch_tests PRIVATE axisly::axisly)
+axisly_enable_warnings(axisly_css_batch_tests)
+add_test(NAME axisly.css.batch.contract COMMAND axisly_css_batch_tests)
 
 add_executable(axisly_css_block_flow_tests css/css_block_flow_tests.cpp)
 target_link_libraries(axisly_css_block_flow_tests PRIVATE axisly::axisly)
@@ -60,7 +110,7 @@ add_executable(axisly_css_grid_tests css/css_grid_tests.cpp)
 target_link_libraries(axisly_css_grid_tests PRIVATE axisly::axisly)
 set_target_properties(axisly_css_grid_tests PROPERTIES CXX_EXTENSIONS OFF)
 axisly_enable_warnings(axisly_css_grid_tests)
-foreach(behavior IN ITEMS tracks_and_placement implicit_and_negative_lines invalid_style span_and_fit_content named_lines_and_areas automatic_repetition overlarge_grid)
+foreach(behavior IN ITEMS tracks_and_placement implicit_and_negative_lines invalid_style span_and_fit_content named_lines_and_areas automatic_repetition overlarge_grid definite_tracks_measure_once retained_structure_and_reports)
     add_test(NAME axisly.css.grid.${behavior} COMMAND axisly_css_grid_tests ${behavior})
 endforeach()
 
@@ -221,7 +271,7 @@ foreach(behavior IN ITEMS flat_equivalence unchanged targeted_dirty nested_refer
     add_test(NAME axisly.tree.${behavior} COMMAND axisly_tree_tests ${behavior})
 endforeach()
 
-foreach(header IN ITEMS geometry track grid layout measurement result cache rounding measurement_cache tree css_values css_box css_measurement css_grid css_style css_tree axisly)
+foreach(header IN ITEMS geometry track grid layout measurement result cache rounding measurement_cache tree css_values css_box css_measurement css_memory css_batch css_grid css_style css_tree css_source axisly)
     set(source "${CMAKE_CURRENT_BINARY_DIR}/header_${header}.cpp")
     file(WRITE "${source}" "#include <axisly/${header}.hpp>\n")
     list(APPEND header_check_sources "${source}")

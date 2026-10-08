@@ -29,11 +29,9 @@ bool same_geometry(const LayoutResult& a, const LayoutResult& b) {
         && a.grid_tracks.size() == b.grid_tracks.size()
         && std::equal(a.nodes.begin(), a.nodes.end(), b.nodes.begin(), [](const auto& x, const auto& y) {
             return std::tie(x.node, x.parent, x.border_box, x.content_box, x.margin, x.padding,
-                x.border, x.overflow_origin_border, x.scrollbar, x.first_baseline, x.last_baseline,
-                x.scrollable_overflow_rect, x.overflow_coordinate_width)
+                x.border, x.scrollbar, x.first_baseline, x.last_baseline, x.scrollable_overflow_rect)
                 == std::tie(y.node, y.parent, y.border_box, y.content_box, y.margin, y.padding,
-                    y.border, y.overflow_origin_border, y.scrollbar, y.first_baseline, y.last_baseline,
-                    y.scrollable_overflow_rect, y.overflow_coordinate_width);
+                    y.border, y.scrollbar, y.first_baseline, y.last_baseline, y.scrollable_overflow_rect);
         })
         && std::equal(a.grid_tracks.begin(), a.grid_tracks.end(), b.grid_tracks.begin(), [](const auto& x, const auto& y) {
             return std::tie(x.node, x.row_origin, x.column_origin, x.explicit_rows, x.explicit_columns,

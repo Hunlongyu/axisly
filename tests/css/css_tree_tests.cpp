@@ -94,6 +94,65 @@ void leaf_available_constraints() {
                 "Leaf used geometry must agree with its measurement budget");
         }
     }
+    LayoutTree tree;
+    Style parent_style;
+    parent_style.box.size = {Length::length(100), Length::length(60)};
+    const auto parent = tree.create_node(parent_style);
+    Style child_style;
+    child_style.box.min_size = {Length::length(0), Length::length(0)};
+    child_style.flex_basis = Length::length(100);
+    child_style.box.padding = {Length::length(2), Length::length(2), Length::length(2), Length::length(2)};
+    child_style.box.border = {Length::length(1), Length::length(1), Length::length(1), Length::length(1)};
+    std::size_t fixed_queries = 0;
+    Unit content_revision = 0;
+    const auto child = tree.create_node(child_style, [&](const MeasureRequest& request) {
+        if (request.known_content_width && request.known_content_height) {
+            ++fixed_queries;
+            require(request.known_content_width == 94 && request.known_content_height == 54
+                && request.available_width == AvailableSpace::definite(94)
+                && request.available_height == AvailableSpace::definite(54),
+                "A fixed content query must expose its final budget to the host");
+        }
+        return Measurement{{200 + content_revision, 100 + content_revision},
+            20 + content_revision, 30 + content_revision,
+            Size{300 + content_revision, 150 + content_revision}};
+    });
+    tree.append_child(parent, child);
+    const auto& layout = tree.compute(parent,
+        {AvailableSpace::definite(100), AvailableSpace::definite(60)});
+    const auto* placed = layout.find(child);
+    require(layout.succeeded() && fixed_queries == 1 && placed
+        && placed->border_box == Rect{0, 0, 100, 60}
+        && placed->content_box == Rect{3, 3, 94, 54}
+        && placed->first_baseline == 23 && placed->last_baseline == 33
+        && placed->scrollable_overflow_rect == Rect{0, 0, 302, 152},
+        "Final content dimensions must preserve host baselines and painted overflow");
+    const auto snapshot = layout;
+    parent_style.box.size.width = Length::length(150);
+    parent_style.justify_content = ContentAlignment{ContentPosition::End};
+    tree.set_style(parent, parent_style);
+    const auto& shifted = tree.compute(parent,
+        {AvailableSpace::definite(150), AvailableSpace::definite(60)});
+    require(shifted.succeeded() && fixed_queries == 1 && shifted.measurement_count == 0
+        && shifted.find(child)->border_box == Rect{50, 0, 100, 60}
+        && shifted.find(child)->content_box == Rect{53, 3, 94, 54}
+        && shifted.find(child)->first_baseline == 23
+        && shifted.find(child)->scrollable_overflow_rect == Rect{0, 0, 302, 152},
+        "Parent placement changes must reuse content measurement without moving local overflow");
+    content_revision = 5;
+    tree.mark_dirty(child);
+    const auto& refreshed = tree.compute(parent,
+        {AvailableSpace::definite(150), AvailableSpace::definite(60)});
+    require(refreshed.succeeded() && fixed_queries == 2
+        && refreshed.find(child)->border_box == Rect{50, 0, 100, 60}
+        && refreshed.find(child)->first_baseline == 28
+        && refreshed.find(child)->last_baseline == 38
+        && refreshed.find(child)->scrollable_overflow_rect == Rect{0, 0, 307, 157},
+        "Dirty content must refresh baselines and painted overflow even when final dimensions stay fixed");
+    require(snapshot.find(child)->border_box == Rect{0, 0, 100, 60}
+        && snapshot.find(child)->first_baseline == 23
+        && snapshot.find(child)->scrollable_overflow_rect == Rect{0, 0, 302, 152},
+        "Retained geometry snapshots must survive placement and content updates");
 }
 
 void topology_and_hidden() {
@@ -261,6 +320,14 @@ void errors_and_exception_atomicity() {
         {AvailableSpace::definite(100), AvailableSpace::indefinite()});
     require(invalid.error.code == LayoutErrorCode::InvalidMeasurement && invalid.nodes.empty(),
         "Invalid host measurement must publish no geometry");
+    tree.set_measure(root, [](const MeasureRequest& request) {
+        return Measurement{{request.available_width.value, 14}};
+    });
+    (void)tree.compute(root, {AvailableSpace::definite(80), AvailableSpace::indefinite()});
+    const auto& previous = tree.compute(root,
+        {AvailableSpace::definite(120), AvailableSpace::indefinite()});
+    const auto previous_copy = previous;
+    const auto* previous_nodes = previous.nodes.data();
     tree.set_measure(root, [&](const MeasureRequest&) -> Measurement {
         bool rejected = false;
         try { tree.mark_dirty(root); }
@@ -274,6 +341,10 @@ void errors_and_exception_atomicity() {
             {AvailableSpace::definite(100), AvailableSpace::indefinite()});
     } catch (const std::runtime_error&) { thrown = true; }
     require(thrown, "Host exception must propagate");
+    require(previous.nodes.data() == previous_nodes && previous.size == previous_copy.size
+        && previous.nodes.size() == previous_copy.nodes.size()
+        && previous.nodes.front().border_box == previous_copy.nodes.front().border_box,
+        "A throwing callback must preserve the last complete published snapshot");
     require(tree.compute({999999}, {AvailableSpace::indefinite(), AvailableSpace::indefinite()})
         .error.code == LayoutErrorCode::InvalidRoot,
         "Tree must remain usable after callback exception");
@@ -465,7 +536,7 @@ void node_storage_lifecycle() {
     leaf_style.box.size = {Length::length(8), Length::length(2)};
     leaf_style.flex_shrink = 0;
     std::vector<NodeId> leaves, outsiders, removed;
-    // Interleaving identities creates long probe chains across directory growth.
+    // Interleaved trees must not alias each other's slots during storage growth.
     for (std::size_t i = 0; i < 64; ++i) {
         leaves.push_back(tree.create_node(leaf_style));
         tree.append_child(root, leaves.back());
@@ -473,9 +544,13 @@ void node_storage_lifecycle() {
     }
     const auto anchor = leaves[1];
     const auto* anchor_style = &tree.style(anchor);
+    require(!tree.contains(NodeId{root.value & 0xffffffffULL}),
+        "An identity without an epoch must not address an occupied slot");
     for (std::size_t i = 0; i < leaves.size(); i += 3) {
         tree.remove(leaves[i]);
         removed.push_back(leaves[i]);
+        require(!tree.contains(NodeId{leaves[i].value & 0xffffffffULL}),
+            "An identity without an epoch must not address a vacant slot");
     }
     for (std::size_t i = 0; i < 96; ++i) {
         const auto child = tree.create_node(leaf_style);
@@ -500,39 +575,162 @@ void node_storage_lifecycle() {
 }
 
 void cache_failure_rollback() {
+    for (const auto display : {Display::Block, Display::Flex}) {
+        LayoutTree tree;
+        Style root_style;
+        root_style.display = display;
+        root_style.flex_direction = FlexDirection::Column;
+        root_style.box.size.width = Length::percent(1);
+        const auto root = tree.create_node(root_style);
+        std::size_t first_calls{};
+        bool reject_second{};
+        const auto first = tree.create_node({}, [&](const MeasureRequest& request) {
+            ++first_calls;
+            return Measurement{{request.known_content_width.value_or(1), 10}};
+        });
+        const auto second = tree.create_node({}, [&](const MeasureRequest& request) {
+            return Measurement{{reject_second ? std::numeric_limits<Unit>::quiet_NaN()
+                : request.known_content_width.value_or(1), 10}};
+        });
+        tree.append_child(root, first);
+        tree.append_child(root, second);
+        const AvailableSize original{AvailableSpace::definite(100), AvailableSpace::max_content()};
+        const AvailableSize resized{AvailableSpace::definite(200), AvailableSpace::max_content()};
+        reject_second = true;
+        require(tree.compute(root, original).error.code == LayoutErrorCode::InvalidMeasurement,
+            "The first transaction must fail after staging the earlier sibling");
+        const auto initially_failed_calls = first_calls;
+        reject_second = false;
+        require(tree.compute(root, original).succeeded() && first_calls > initially_failed_calls,
+            "A first-compute failure must discard newly initialized node caches");
+        const auto initial_calls = first_calls;
+        reject_second = true;
+        const auto failure = tree.compute(root, resized);
+        require(failure.error.code == LayoutErrorCode::InvalidMeasurement && first_calls > initial_calls,
+            "Failure must follow a staged measurement for the earlier sibling");
+        const auto failed_calls = first_calls;
+        const auto restored = tree.compute(root, original);
+        require(restored.succeeded() && restored.cache_hit && first_calls == failed_calls,
+            "A failed transaction must preserve previously committed root geometry");
+        reject_second = false;
+        const auto retried = tree.compute(root, resized);
+        require(retried.succeeded() && retried.size == Size{200, 20} && first_calls > failed_calls,
+            "A retry must discard measurements staged by the failed transaction");
+    }
+}
+
+void cache_capacity_churn() {
+    const auto run = [](std::size_t capacity) {
+        TreeLimits limits;
+        limits.maximum_cached_layouts = capacity;
+        limits.maximum_cached_measurements = capacity;
+        LayoutTree tree(limits);
+        Style root_style;
+        root_style.display = Display::Block;
+        root_style.box.size.width = Length::percent(1);
+        const auto root = tree.create_node(root_style);
+        std::size_t revision{}, host_calls{};
+        std::array<NodeId, 3> children;
+        for (std::size_t i = 0; i < children.size(); ++i) {
+            children[i] = tree.create_node({}, [&, i](const MeasureRequest& request) {
+                ++host_calls;
+                const Unit width = request.known_content_width.value_or(1);
+                const Unit height = 10 + static_cast<Unit>(i + revision) + width / 8;
+                return Measurement{{width, height}, height - 2, height - 1};
+            });
+            tree.append_child(root, children[i]);
+        }
+        std::vector<Rect> geometry;
+        for (std::size_t frame = 0; frame < 96; ++frame) {
+            // More distinct keys than either cache can retain, then reverse
+            // their order to exercise collision replacement and reuse.
+            const auto phase = frame % 48;
+            const Unit width = 64 + static_cast<Unit>(phase < 24 ? phase : 47 - phase) * 3;
+            if (frame == 48) {
+                ++revision;
+                for (const auto child : children) tree.mark_dirty(child);
+            }
+            const auto& result = tree.compute(root,
+                {AvailableSpace::definite(width), AvailableSpace::max_content()});
+            require(result.succeeded() && result.nodes.size() == 4,
+                "Cache replacement and invalidation must preserve complete output");
+            for (const auto& layout : result.nodes) geometry.push_back(layout.border_box);
+        }
+        if (capacity == 100'000) {
+            const auto replay = [&] {
+                for (int step = 0; step < 7; ++step) {
+                    require(tree.compute(root, {AvailableSpace::definite(64 + step * 3.0f),
+                        AvailableSpace::max_content()}).succeeded(), "Hot queries must succeed");
+                }
+            };
+            replay();
+            const auto warmed_calls = host_calls;
+            replay();
+            require(host_calls == warmed_calls,
+                "A small resident working set must survive hash collisions and size/full queries");
+        }
+        tree.remove(root);
+        const auto leaf = tree.create_node({}, [](const MeasureRequest&) {
+            return Measurement{{17, 13}};
+        });
+        require(tree.compute(leaf, {}).size == Size{17, 13},
+            "Removing cached nodes must release the tree cache budget");
+        return geometry;
+    };
+    const auto constrained = run(1);
+    for (const auto capacity : {std::size_t{3}, std::size_t{16}, std::size_t{100'000}}) {
+        require(run(capacity) == constrained,
+            "Cache budgets, collisions and eviction must not change layout geometry");
+    }
+}
+
+void cached_local_overflow() {
     LayoutTree tree;
     Style root_style;
-    root_style.display = Display::Block;
-    root_style.box.size.width = Length::percent(1);
+    root_style.box.size = {Length::percent(1), Length::length(50)};
+    root_style.justify_content = ContentAlignment{ContentPosition::SpaceBetween};
     const auto root = tree.create_node(root_style);
-    std::size_t first_calls{};
-    bool reject_second{};
-    const auto first = tree.create_node({}, [&](const MeasureRequest& request) {
-        ++first_calls;
-        return Measurement{{request.known_content_width.value_or(1), 10}};
-    });
-    const auto second = tree.create_node({}, [&](const MeasureRequest& request) {
-        return Measurement{{reject_second ? std::numeric_limits<Unit>::quiet_NaN()
-            : request.known_content_width.value_or(1), 10}};
-    });
-    tree.append_child(root, first);
-    tree.append_child(root, second);
-    const AvailableSize original{AvailableSpace::definite(100), AvailableSpace::max_content()};
-    const AvailableSize resized{AvailableSpace::definite(200), AvailableSpace::max_content()};
-    require(tree.compute(root, original).succeeded(), "Initial cache transaction must succeed");
-    const auto initial_calls = first_calls;
-    reject_second = true;
-    const auto failure = tree.compute(root, resized);
-    require(failure.error.code == LayoutErrorCode::InvalidMeasurement && first_calls > initial_calls,
-        "Failure must follow a staged measurement for the earlier sibling");
-    const auto failed_calls = first_calls;
-    const auto restored = tree.compute(root, original);
-    require(restored.succeeded() && restored.cache_hit && first_calls == failed_calls,
-        "A failed transaction must preserve previously committed root geometry");
-    reject_second = false;
-    const auto retried = tree.compute(root, resized);
-    require(retried.succeeded() && retried.size == Size{200, 20} && first_calls > failed_calls,
-        "A retry must discard measurements staged by the failed transaction");
+    Style panel_style;
+    panel_style.box.size = {Length::length(20), Length::length(20)};
+    panel_style.flex_shrink = 0;
+    Style child_style;
+    child_style.position = Position::Absolute;
+    child_style.inset.left = Length::length(-5.25f);
+    child_style.inset.top = Length::length(3.5f);
+    child_style.box.size = {Length::length(40.5f), Length::length(30.25f)};
+    std::array<NodeId, 2> panels, children;
+    for (std::size_t i = 0; i < panels.size(); ++i) {
+        panels[i] = tree.create_node(panel_style);
+        children[i] = tree.create_node(child_style);
+        tree.append_child(panels[i], children[i]);
+        tree.append_child(root, panels[i]);
+    }
+    const auto snapshot = tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()});
+    const Rect expected{-5.25f, 0, 40.5f, 33.75f};
+    require(snapshot.succeeded() && snapshot.find(panels[1])->scrollable_overflow_rect == expected,
+        "Container overflow must include its positioned child's local extent");
+    for (const Unit width : {100'000'000.0f, 140.0f, 120'000'000.0f}) {
+        const auto& result = tree.compute(root,
+            {AvailableSpace::definite(width), AvailableSpace::max_content()});
+        require(result.succeeded() && result.cache_hits > 0,
+            "Container translation must reuse unchanged child layout queries");
+        for (const auto panel : panels) {
+            require(result.find(panel)->scrollable_overflow_rect == expected,
+                "Cached local overflow must not lose precision through ancestor translation");
+        }
+    }
+    child_style.box.size.width = Length::length(60.5f);
+    tree.set_style(children[1], child_style);
+    const auto& changed = tree.compute(root,
+        {AvailableSpace::definite(100), AvailableSpace::max_content()});
+    require(changed.succeeded()
+        && changed.find(panels[0])->scrollable_overflow_rect == expected
+        && changed.find(panels[1])->scrollable_overflow_rect == Rect{-5.25f, 0, 60.5f, 33.75f},
+        "An edited descendant must update only its owning container's cached overflow");
+    tree.remove(root);
+    require(snapshot.find(panels[1])->scrollable_overflow_rect == expected,
+        "Published overflow snapshots must survive cache reuse and tree removal");
 }
 
 void geometry_snapshot_lifetime() {
@@ -622,6 +820,92 @@ void container_scrollbar_ratio_bounds() {
         require(result.nodes.front().scrollbar.width == 10,
             "Scrollbar space must still be reserved in the final content box");
     }
+    // A cached box's maximum ratio transfer changes when the same node gains
+    // or loses children. Style and percentage bases stay unchanged here.
+    LayoutTree tree;
+    Style style;
+    style.box.aspect_ratio = 2;
+    style.box.max_size.width = Length::length(100);
+    const auto root = tree.create_node(style, [](const MeasureRequest&) {
+        return Measurement{{140, 90}};
+    });
+    const AvailableSize available{AvailableSpace::max_content(), AvailableSpace::max_content()};
+    require(tree.compute(root, available).size == Size{100, 90},
+        "A leaf must not transfer the maximum width into a maximum height");
+    Style child_style;
+    child_style.box.size = {Length::length(140), Length::length(90)};
+    const auto child = tree.create_node(child_style);
+    tree.append_child(root, child);
+    require(tree.compute(root, available).size == Size{100, 50},
+        "Gaining children must refresh the cached container ratio bound");
+    tree.detach(child);
+    require(tree.compute(root, available).size == Size{100, 90},
+        "Losing the last child must restore the cached leaf ratio bound");
+
+    // Equal box styles on different nodes remain independent when one is a
+    // container and another is a measured leaf. Churn unrelated styles before
+    // revisiting both, then change only one sibling's style and topology.
+    LayoutTree siblings;
+    Style column;
+    column.flex_direction = FlexDirection::Column;
+    column.align_items = ItemAlignment{ItemPosition::Start};
+    column.box.size.width = Length::length(400);
+    const auto parent = siblings.create_node(column);
+    style.flex_shrink = 0;
+    const auto measured = siblings.create_node(style, [](const MeasureRequest&) {
+        return Measurement{{140, 90}};
+    });
+    const auto container = siblings.create_node(style);
+    siblings.append_child(parent, measured);
+    siblings.append_child(parent, container);
+    const auto nested = siblings.create_node(child_style);
+    siblings.append_child(container, nested);
+    std::vector<NodeId> varied;
+    for (int i = 0; i < 80; ++i) {
+        Style unique;
+        unique.flex_shrink = 0;
+        unique.box.size = {Length::length(10 + static_cast<Unit>(i)), Length::length(3)};
+        varied.push_back(siblings.create_node(unique));
+        siblings.append_child(parent, varied.back());
+    }
+    for (int frame = 0; frame < 3; ++frame) {
+        const auto& layout = siblings.compute(parent,
+            {AvailableSpace::definite(400 + static_cast<Unit>(frame)), AvailableSpace::max_content()});
+        require(layout.succeeded() && layout.find(measured)->border_box.width == 100
+            && layout.find(measured)->border_box.height == 50
+            && layout.find(container)->border_box.width == 100
+            && layout.find(container)->border_box.height == 50,
+            "Flex item ratio bounds must survive shared style resolution");
+        for (std::size_t i = 0; i < varied.size(); ++i) {
+            require(layout.find(varied[i])->border_box.width == 10 + static_cast<Unit>(i),
+                "Resolved box ownership must survive unrelated style eviction");
+        }
+        require(siblings.compute(measured, available).size == Size{100, 90}
+            && siblings.compute(container, available).size == Size{100, 50},
+            "The same tree must distinguish leaf and container bounds in root queries");
+        siblings.mark_dirty(measured);
+    }
+    auto changed = siblings.style(varied.front());
+    changed.box.size.width = Length::calc(Calculation::add(Calculation::length(7), Calculation::percent(0.1F)));
+    siblings.set_style(varied.front(), changed);
+    const auto copied = siblings.create_node(changed);
+    const auto moved = siblings.create_node(std::move(changed));
+    siblings.append_child(parent, copied);
+    siblings.append_child(parent, moved);
+    siblings.detach(nested);
+    siblings.set_measure(container, [](const MeasureRequest&) { return Measurement{{140, 90}}; });
+    const auto& updated = siblings.compute(parent,
+        {AvailableSpace::definite(400), AvailableSpace::max_content()});
+    require(updated.succeeded() && updated.find(container)->border_box.height == 50
+        && updated.find(measured)->border_box.height == 50,
+        "Equivalent measured siblings must retain their parent's Flex item constraints");
+    for (const auto id : {varied.front(), copied, moved}) {
+        require(updated.find(id)->border_box.width == 47,
+            "Copied and moved styles must retain calc ownership across later computations");
+    }
+    require(siblings.compute(container, available).size == Size{100, 90}
+        && siblings.compute(measured, available).size == Size{100, 90},
+        "A sibling topology change must refresh only its own container semantics");
 }
 
 void cached_subtree_depth_limit() {
@@ -733,6 +1017,8 @@ int main(int argc, char** argv) {
         else if (name == "deep_flex_query_budget") deep_flex_query_budget();
         else if (name == "node_storage_lifecycle") node_storage_lifecycle();
         else if (name == "cache_failure_rollback") cache_failure_rollback();
+        else if (name == "cache_capacity_churn") cache_capacity_churn();
+        else if (name == "cached_local_overflow") cached_local_overflow();
         else if (name == "cached_subtree_depth_limit") cached_subtree_depth_limit();
         else if (name == "container_scrollbar_ratio_bounds") container_scrollbar_ratio_bounds();
         else if (name == "geometry_snapshot_lifetime") geometry_snapshot_lifetime();

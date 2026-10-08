@@ -57,3 +57,11 @@ add_test(NAME axisly.reference.upstream COMMAND "${Python3_EXECUTABLE}"
     --taffy "${taffy_tree_output}"
     --output "${CMAKE_CURRENT_BINARY_DIR}/upstream-audit.json")
 set_tests_properties(axisly.reference.upstream PROPERTIES LABELS reference TIMEOUT 240)
+
+add_test(NAME axisly.reference.upstream_rounding COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_upstream_rounding.py"
+    --cases "${axisly_upstream_cases}"
+    --axisly "$<TARGET_FILE:axisly_upstream_native>"
+    --taffy "${taffy_tree_output}"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/upstream-rounding-audit.json")
+set_tests_properties(axisly.reference.upstream_rounding PROPERTIES LABELS reference TIMEOUT 240)

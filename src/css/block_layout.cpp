@@ -1,6 +1,7 @@
 #include "block_item_sizing.hpp"
 #include "block_flow_state.hpp"
 #include "block_float_context.hpp"
+#include "block_workspace.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -42,14 +43,10 @@ Unit block_alignment_offset(Unit free, ContentAlignment alignment) {
 } // namespace
 
 Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
-                       const ResolvedBox& box, std::size_t depth,
+                       const LayoutBox& box, std::size_t depth,
                        BlockContext* block_context) {
     const auto decoration_width = box.horizontal_decoration();
     const auto decoration_height = box.vertical_decoration();
-    if (!decoration_width || !decoration_height) {
-        throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
-            "Block decoration requires a definite containing inline size");
-    }
     auto requested = requested_size(constraints, box);
     if (box.aspect_ratio && (constraints.known_width || constraints.known_height)) {
         // Taffy transfers parent-known Block dimensions as border-box values.
@@ -70,14 +67,14 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             || !available_width);
     const ResolvedDimensions early_content_basis{
         preferred_width ? std::optional<Unit>(std::max(Unit{0},
-            *preferred_width - *decoration_width)) : std::nullopt,
+            *preferred_width - decoration_width)) : std::nullopt,
         requested.height && (!constraints.known_height || constraints.known_height_is_definite)
-            ? std::optional<Unit>(std::max(Unit{0}, *requested.height - *decoration_height))
+            ? std::optional<Unit>(std::max(Unit{0}, *requested.height - decoration_height))
             : std::nullopt};
     const Unit measured_width = content_based_width
         ? checked(static_cast<double>(block_content_based_width(node,
-            subtract_decoration(constraints.available.width, *decoration_width),
-            early_content_basis, depth)) + *decoration_width, node.id) : Unit{0};
+            subtract_decoration(constraints.available.width, decoration_width),
+            early_content_basis, depth)) + decoration_width, node.id) : Unit{0};
     const Unit outer_width = constraints.known_width_is_final && constraints.known_width
         ? *constraints.known_width : constrain_axis(
         preferred_width.value_or(content_based_width
@@ -86,11 +83,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     // A content-sized Block determines its outer width before cyclic percentage
     // edges can be used. Taffy then resolves those edges against that width for
     // child layout while retaining the original reported box edges.
-    const ResolvedBox flow_box = constraints.containing_width ? box
+    const LayoutBox flow_box = constraints.containing_width ? box
         : resolve_layout_box(node, outer_width, constraints.containing_height);
     const auto flow_decoration_width = flow_box.horizontal_decoration();
     const auto flow_decoration_height = flow_box.vertical_decoration();
-    const Unit positioning_width = outer_width - *flow_decoration_width;
+    const Unit positioning_width = outer_width - flow_decoration_width;
     const Unit content_width = std::max(Unit{0}, positioning_width);
     // An intrinsic outer width provides space for placement, but it does not
     // turn the containing block into a definite percentage basis for children.
@@ -104,13 +101,16 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             box.minimum.height, box.maximum.height);
     }
     const Unit content_height_basis = preferred_height
-        ? std::max(Unit{0}, *preferred_height - *flow_decoration_height) : Unit{0};
-    const auto border = edges(flow_box.border, node.id);
-    const auto padding = edges(flow_box.padding, node.id);
+        ? std::max(Unit{0}, *preferred_height - flow_decoration_height) : Unit{0};
+    const auto border = edges(flow_box.border(), node.id);
+    const auto padding = edges(flow_box.padding(), node.id);
     const Unit x_origin = content_origin_x(flow_box, border, padding, node.id);
     const Unit y_origin = checked(static_cast<double>(border.top) + padding.top, node.id);
-    std::vector<Fragment> fragments(node.children.size());
-    std::vector<std::optional<Unit>> static_block_y(node.children.size());
+    WorkspacePool<BlockWorkspace>::Lease workspace(cache_.block_workspace());
+    auto& fragments = workspace.get().fragments;
+    auto& static_block_y = workspace.get().static_block_y;
+    fragments.resize(node.layout_children().size());
+    static_block_y.resize(node.layout_children().size());
     FloatContext owned_floats;
     BlockContext root_context{owned_floats, 0, 0};
     BlockContext& context = block_context ? *block_context : root_context;
@@ -118,7 +118,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     const FloatBounds float_bounds{context.origin_x,
         checked(static_cast<double>(context.origin_x) + content_width, node.id)};
     const auto inline_position = [&](Fragment& fragment,
-        const ResolvedBox& child_box, Insets margin,
+        const LayoutBox& child_box, Insets margin,
         const std::optional<FloatSlot>& slot, NodeId child_id) {
         const bool auto_left = child_box.margin.left.kind == EdgeKind::Auto;
         const bool auto_right = child_box.margin.right.kind == EdgeKind::Auto;
@@ -130,8 +130,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 / (static_cast<int>(auto_left) + static_cast<int>(auto_right)), child_id);
             if (auto_left) used_left = share;
             if (auto_right) used_right = share;
-            fragment.root_layout().margin.left = used_left;
-            fragment.root_layout().margin.right = used_right;
+            auto& resolved_margin = fragment.mutable_root_layout().margin;
+            resolved_margin.left = used_left;
+            resolved_margin.right = used_right;
         }
         const bool rtl = node.style.box.direction == Direction::Rtl;
         Unit x = rtl
@@ -181,8 +182,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         return std::nullopt;
     };
-    for (std::size_t source = 0; source < node.children.size(); ++source) {
-        const auto child_id = node.children[source];
+    LayoutBox item_box;
+    for (std::size_t source = 0; source < node.layout_children().size(); ++source) {
+        const auto child_id = node.layout_children()[source];
         const auto& child = get(child_id);
         if (child.style.display == Display::None) {
             fragments[source] = hidden(child, depth + 1);
@@ -196,9 +198,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             && (constraints.known_height_is_definite || box.preferred.height)
             ? std::optional<Unit>{content_height_basis} : std::nullopt;
         auto sizing = resolve_block_item(child,
-            {child_percentage_width, height_basis}, content_width);
+            {child_percentage_width, height_basis}, content_width, item_box);
         auto& child_constraints = sizing.constraints;
-        const auto& child_box = sizing.box;
+        const auto& child_box = *sizing.box;
         const auto margin = edges(child_box.margin, child_id);
         const bool intrinsic_width = sizing.intrinsic_width;
         const bool unresolved_normal_width = sizing.unresolved_normal_width;
@@ -230,7 +232,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             && child.style.position != Position::Absolute
             && !intrinsic_width && !avoids_floats_as_block_item(child)
             && !child.style.align_content.has_value();
-        const bool share_float_context = same_bfc && !child.children.empty()
+        const bool share_float_context = same_bfc && !child.is_leaf()
             && (!floats.empty() || has_float_subtree(child_id, depth + 1));
         Fragment nested;
         if (share_float_context) {
@@ -241,8 +243,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             if (const auto cleared = clear_threshold(child.style.clear, child_id)) {
                 y = std::max(y, *cleared);
             }
-            const auto child_border = edges(child_box.border, child_id);
-            const auto child_padding = edges(child_box.padding, child_id);
+            const auto child_border = edges(child_box.border(), child_id);
+            const auto child_padding = edges(child_box.padding(), child_id);
             // Same-BFC descendants use the containing block's inline insets.
             // The child's final border-box x may differ under RTL, auto margins,
             // or text-align; it does not redefine the float coordinate space.
@@ -252,16 +254,16 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 checked(static_cast<double>(context.origin_y) + y
                     + child_border.top + child_padding.top, child_id),
                 context.adjoining_floats, {}};
-            nested = layout(child_id, child_constraints, depth + 1, &child_context);
+            nested = layout(child, child_constraints, depth + 1, &child_context);
             context.merge_adjoining(child_context);
         } else {
-            nested = layout(child_id, child_constraints, depth + 1);
+            nested = layout(child, child_constraints, depth + 1);
         }
         // Block item metadata is resolved when the parent's item list is
         // formed. The child's own layout may use a later containing width,
         // but it does not replace the parent's reported padding and border.
-        const auto item_padding = edges(child_box.padding, child_id);
-        const auto item_border = edges(child_box.border, child_id);
+        const auto item_padding = edges(child_box.padding(), child_id);
+        const auto item_border = edges(child_box.border(), child_id);
         if (nested.root_layout().padding != item_padding
             || nested.root_layout().border != item_border) {
             publish_item_box(nested, child, child_box);
@@ -309,10 +311,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
                 nested.size.height, child_id);
             if (!child_through || placed.clearance) context.commit_strut();
         }
-        const auto [relative_x, relative_y] = relative_offset(child,
+        apply_relative_position(nested, child,
             Size{content_width, content_height_basis},
             node.style.box.direction, node.id);
-        translate(nested, relative_x, relative_y, child_id);
         fragments[source] = std::move(nested);
     }
     const bool through = collapsible_top && collapsible_bottom
@@ -327,7 +328,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         || scroll_container(node.style.overflow_x)
         || scroll_container(node.style.overflow_y);
     Unit intrinsic_outer_height = checked(
-        static_cast<double>(content_height) + *flow_decoration_height, node.id);
+        static_cast<double>(content_height) + flow_decoration_height, node.id);
     if (contains_floats) {
         intrinsic_outer_height = std::max(intrinsic_outer_height, checked(
             static_cast<double>(y_origin) + floats.maximum_bottom()
@@ -359,8 +360,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
             - intrinsic_outer_height, node.id);
         const Unit offset = block_alignment_offset(free, *node.style.align_content);
         if (offset != 0) {
-            for (std::size_t source = 0; source < node.children.size(); ++source) {
-                const auto& child = get(node.children[source]);
+            for (std::size_t source = 0; source < node.layout_children().size(); ++source) {
+                const auto& child = get(node.layout_children()[source]);
                 if (child.style.display != Display::None
                     && child.style.position != Position::Absolute) {
                     translate(fragments[source], 0, offset, child.id);
@@ -371,26 +372,27 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     Fragment result;
     result.size = candidate;
     result.root = make_layout(node, candidate, box);
-    result.root_layout().overflow_origin_border = border;
-    result.root_layout().margin.top = margins.top.resolve(node.id);
-    result.root_layout().margin.bottom = margins.bottom.resolve(node.id);
+    auto& root_layout = result.mutable_root_layout();
+    result.root.write().overflow_origin_border = border;
+    root_layout.margin.top = margins.top.resolve(node.id);
+    root_layout.margin.bottom = margins.bottom.resolve(node.id);
     result.block_margins = margins;
     if (detail_ == FragmentDetail::Size) return result;
-    if (detail_ == FragmentDetail::Full) result.reserve_children(node.children.size());
-    for (std::size_t source = 0; source < node.children.size(); ++source) {
-        const auto& child = get(node.children[source]);
+    if (detail_ == FragmentDetail::Full) result.reserve_children(node.layout_children().size());
+    for (std::size_t source = 0; source < node.layout_children().size(); ++source) {
+        const auto& child = get(node.layout_children()[source]);
         if (child.style.display == Display::None
             || child.style.position == Position::Absolute
             || child.style.float_side != FloatSide::None) continue;
         const auto baseline = child_baseline(fragments[source], child.style);
         if (!baseline) continue;
-        result.root_layout().first_baseline = checked(
+        result.mutable_root_layout().first_baseline = checked(
             static_cast<double>(fragments[source].root_layout().border_box.y)
                 + *baseline, node.id);
         break;
     }
-    for (std::size_t source = 0; source < node.children.size(); ++source) {
-        const auto id = node.children[source];
+    for (std::size_t source = 0; source < node.layout_children().size(); ++source) {
+        const auto id = node.layout_children()[source];
         if (get(id).style.position == Position::Absolute
             && get(id).style.display != Display::None) {
             fragments[source] = absolute(node, id, candidate, flow_box, depth,
@@ -398,10 +400,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         auto& nested = fragments[source];
         if (detail_ == FragmentDetail::Full) {
-            result.append_nodes(std::move(nested));
-            result.grid_tracks.insert(result.grid_tracks.end(),
-                std::make_move_iterator(nested.grid_tracks.begin()),
-                std::make_move_iterator(nested.grid_tracks.end()));
+            append_fragment(result, std::move(nested));
         }
     }
     return result;

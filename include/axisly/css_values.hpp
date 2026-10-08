@@ -14,7 +14,10 @@
 namespace axisly::css {
 
 namespace detail {
+struct BoxResolutionCache;
+class NumericBasis;
 [[noreturn]] void invalid_numeric_value(const char* message);
+[[noreturn]] void invalid_definite_space(Unit value);
 [[noreturn]] void numeric_value_overflow(const char* message);
 } // namespace detail
 
@@ -57,6 +60,8 @@ enum class LengthKind : std::uint8_t {
 };
 
 class Length {
+    friend struct detail::BoxResolutionCache;
+    friend class detail::NumericBasis;
 public:
     Length(const Length& other) noexcept : representation_(other.representation_) {
         if (kind() == LengthKind::Calc) retain_calculation();
@@ -98,6 +103,14 @@ public:
         if (basis && (!std::isfinite(*basis) || *basis < 0)) {
             detail::invalid_numeric_value("CSS percentage basis must be finite and nonnegative");
         }
+        return resolve_numeric_validated(basis);
+    }
+    // The fit-content limit is separate from the min/max-content formula.
+    [[nodiscard]] std::optional<Unit> resolve_fit_content_limit(std::optional<Unit> basis) const;
+    [[nodiscard]] bool operator==(const Length& other) const noexcept;
+
+private:
+    [[nodiscard]] std::optional<Unit> resolve_numeric_validated(std::optional<Unit> basis) const {
         if (kind() == LengthKind::Length) return numeric_value();
         if (kind() == LengthKind::Percent && basis) {
             const double result = static_cast<double>(numeric_value()) * *basis;
@@ -111,11 +124,6 @@ public:
         if (kind() == LengthKind::Calc && basis) return resolve_calculation(basis);
         return std::nullopt;
     }
-    // The fit-content limit is separate from the min/max-content formula.
-    [[nodiscard]] std::optional<Unit> resolve_fit_content_limit(std::optional<Unit> basis) const;
-    [[nodiscard]] bool operator==(const Length& other) const noexcept;
-
-private:
     // Numeric values store their float bits in the upper half. Expressions use
     // a 16-byte-aligned shared payload, leaving four low bits for the kind.
     // This keeps the common numeric and keyword representation allocation-free.
@@ -151,8 +159,9 @@ struct AvailableSpace {
     Unit value{};
 
     [[nodiscard]] static AvailableSpace definite(Unit value) {
-        if (!std::isfinite(value)) detail::invalid_numeric_value("CSS numeric value must be finite");
-        if (value < 0) detail::invalid_numeric_value("Definite space must be nonnegative");
+        if (!(value >= 0 && value <= std::numeric_limits<Unit>::max())) {
+            detail::invalid_definite_space(value);
+        }
         return {AvailableKind::Definite, value};
     }
     [[nodiscard]] static AvailableSpace indefinite() noexcept { return {AvailableKind::Indefinite, 0}; }

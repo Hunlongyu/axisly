@@ -89,6 +89,26 @@ struct GridExtent {
     std::int32_t column_start{}, column_end{};
 };
 
+struct GridStructureKey {
+    std::optional<Unit> width, height;
+    Unit column_gap{}, row_gap{};
+    bool minimum_width{}, minimum_height{};
+    bool operator==(const GridStructureKey&) const = default;
+};
+
+// Templates and placement depend on style/topology. Only automatic repeats
+// also depend on the repeat-sizing input. Mutable track sizes remain local to
+// each layout query, so intrinsic and final passes can share this structure.
+struct GridStructure {
+    explicit GridStructure(std::pmr::memory_resource* memory)
+        : placements(memory), absolute_rows(memory), absolute_columns(memory) {}
+    GridStructureKey key;
+    ExpandedTemplate columns, rows;
+    std::pmr::vector<Placement> placements;
+    std::pmr::vector<AbsoluteGridPlacement> absolute_rows, absolute_columns;
+    GridExtent extent;
+};
+
 [[nodiscard]] ExpandedTemplate expand_grid_template(
     const std::vector<TemplateTrack>& components,
     const std::vector<std::vector<std::string>>& line_names,
@@ -107,7 +127,7 @@ void apply_grid_template_areas(const GridStyle& style,
     Direction direction, NodeId id);
 [[nodiscard]] AxisEstimate estimate_grid_axis(const GridPlacement& value,
     std::int32_t explicit_count);
-[[nodiscard]] GridExtent place_grid_items(std::vector<Placement>& placements,
+[[nodiscard]] GridExtent place_grid_items(std::span<Placement> placements,
     std::int32_t explicit_rows, std::int32_t explicit_columns,
     GridAutoFlow flow, NodeId id);
 
@@ -116,8 +136,8 @@ void apply_grid_template_areas(const GridStyle& style,
     std::int32_t maximum_line, std::optional<Unit> available, Unit gap, NodeId id);
 [[nodiscard]] bool has_cyclic_percentage(const TrackAxis& axis);
 void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
-    const std::vector<Placement>& placements, bool columns);
-[[nodiscard]] Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
+    std::span<const Placement> placements, bool columns);
+[[nodiscard]] Unit grid_item_minimum(const LayoutNode& child, const LayoutBox& box,
     const Placement& placement, const TrackAxis& axis, Unit min_content, bool columns);
 struct AxisSizingSpace {
     AvailableSpace grid_space;
@@ -126,7 +146,7 @@ struct AxisSizingSpace {
     std::optional<Unit> maximum;
     ContentAlignment alignment;
 };
-void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
+void size_axis(TrackAxis& axis, std::span<const ItemContribution> items,
     bool columns, const AxisSizingSpace& space, NodeId id);
 void align_tracks(TrackAxis& axis, Unit available, ContentAlignment alignment, NodeId id);
 

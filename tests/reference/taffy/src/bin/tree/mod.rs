@@ -110,6 +110,8 @@ struct Document {
 #[serde(deny_unknown_fields)]
 struct Case {
     name: String,
+    #[serde(default)]
+    rounding: bool,
     available: [SpaceInput; 2],
     nodes: Vec<NodeInput>,
 }
@@ -333,7 +335,9 @@ fn run_case(case: Case, allowed_fields: &[String], include_grid_details: bool) -
         height: available_height.into_taffy()?,
     };
     let mut tree: TaffyTree<LeafContent> = TaffyTree::new();
-    tree.disable_rounding();
+    if !case.rounding {
+        tree.disable_rounding();
+    }
     let mut nodes = vec![None; case.nodes.len()];
     for index in (0..case.nodes.len()).rev() {
         let input = &case.nodes[index];

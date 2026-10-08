@@ -9,6 +9,17 @@ include(GNUInstallDirs)
 
 option(AXISLY_BUILD_TESTS "Build the axisly contract tests" ${PROJECT_IS_TOP_LEVEL})
 option(AXISLY_ENABLE_SANITIZERS "Instrument development builds with ASan (and UBSan on GCC/Clang Unix)" OFF)
+option(AXISLY_ENABLE_TSAN "Instrument Linux development builds with ThreadSanitizer" OFF)
+option(AXISLY_ENABLE_COVERAGE "Instrument Clang development builds with LLVM source coverage" OFF)
+if(AXISLY_ENABLE_TSAN AND (AXISLY_ENABLE_SANITIZERS OR NOT CMAKE_SYSTEM_NAME STREQUAL "Linux"))
+    message(FATAL_ERROR "ThreadSanitizer requires a separate Linux build without ASan/UBSan")
+endif()
+if(AXISLY_ENABLE_TSAN AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(FATAL_ERROR "ThreadSanitizer requires GCC or Clang")
+endif()
+if(AXISLY_ENABLE_COVERAGE AND (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR AXISLY_ENABLE_SANITIZERS OR AXISLY_ENABLE_TSAN))
+    message(FATAL_ERROR "LLVM coverage requires a separate Clang build without sanitizers")
+endif()
 if(AXISLY_ENABLE_SANITIZERS AND MSVC)
     # /RTC is incompatible with AddressSanitizer. Retain normal Debug behavior
     # when the explicit sanitizer option is off.
@@ -30,13 +41,17 @@ endif()
 
 add_library(axisly STATIC
     src/css_box.cpp
+    src/css_batch.cpp
     src/css_grid.cpp
     src/css_measurement.cpp
+    src/css_memory.cpp
     src/css_style.cpp
     src/css_tree.cpp
     src/css/layout_engine.cpp
+    src/css/layout_source.cpp
     src/css/layout_cache.cpp
     src/css/layout_fragment.cpp
+    src/css/layout_rounding.cpp
     src/css/leaf_layout.cpp
     src/css/block_layout.cpp
     src/css/block_item_sizing.cpp
@@ -46,6 +61,7 @@ add_library(axisly STATIC
     src/css/flex_layout.cpp
     src/css/flex_item_sizing.cpp
     src/css/grid_layout.cpp
+    src/css/grid_structure.cpp
     src/css/grid_template.cpp
     src/css/grid_placement.cpp
     src/css/grid_positioned_area.cpp
@@ -75,6 +91,9 @@ set_target_properties(axisly PROPERTIES
     CXX_EXTENSIONS OFF
 )
 target_compile_features(axisly PUBLIC cxx_std_20)
+find_package(Threads REQUIRED)
+target_link_libraries(axisly PUBLIC Threads::Threads)
+include(cmake/AxislyPgo.cmake)
 target_include_directories(axisly PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -97,8 +116,39 @@ function(axisly_enable_warnings target)
             message(FATAL_ERROR "AXISLY_ENABLE_SANITIZERS requires MSVC, Clang or GCC")
         endif()
     endif()
+    if(AXISLY_ENABLE_TSAN)
+        target_compile_options(${target} PRIVATE -fsanitize=thread -fno-omit-frame-pointer)
+        target_link_options(${target} PRIVATE -fsanitize=thread)
+    endif()
+    if(AXISLY_ENABLE_COVERAGE)
+        if(MSVC)
+            target_compile_options(${target} PRIVATE /clang:-fprofile-instr-generate /clang:-fcoverage-mapping)
+        else()
+            target_compile_options(${target} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+            target_link_options(${target} PRIVATE -fprofile-instr-generate)
+        endif()
+    endif()
 endfunction()
 axisly_enable_warnings(axisly)
+if(AXISLY_ENABLE_TSAN)
+    target_link_options(axisly INTERFACE -fsanitize=thread)
+endif()
+if(AXISLY_ENABLE_COVERAGE)
+    if(MSVC)
+        if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR CMAKE_SYSTEM_PROCESSOR MATCHES "ARM|arm|aarch")
+            message(FATAL_ERROR "Windows LLVM coverage currently requires x64")
+        endif()
+        execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
+            OUTPUT_VARIABLE axisly_profile_resource OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        set(axisly_profile_runtime "${axisly_profile_resource}/lib/windows/clang_rt.profile-x86_64.lib")
+        if(NOT EXISTS "${axisly_profile_runtime}")
+            message(FATAL_ERROR "Clang profile runtime is missing: ${axisly_profile_runtime}")
+        endif()
+        target_link_libraries(axisly INTERFACE "${axisly_profile_runtime}")
+    else()
+        target_link_options(axisly INTERFACE -fprofile-instr-generate)
+    endif()
+endif()
 if(AXISLY_ENABLE_SANITIZERS AND NOT MSVC)
     target_link_options(axisly INTERFACE -fsanitize=address,undefined)
 elseif(AXISLY_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

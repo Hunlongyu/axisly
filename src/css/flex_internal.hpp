@@ -23,8 +23,11 @@ inline std::optional<Unit> flex_axis(const ResolvedDimensions& size, bool row, b
 struct FlexItem {
     NodeId id;
     std::size_t source_index{};
-    ResolvedBox box;
-    Insets margin;
+    const LayoutBox* box{};
+    // Project physical axes once when collecting items. Every Flex phase then
+    // reads the same fields for row and column containers.
+    struct Margins { Unit main_start{}, main_end{}, cross_start{}, cross_end{}; } margin;
+    ItemAlignment alignment;
     // Flex base size includes padding and border; shrink weights use its content size.
     Unit base{};
     Unit inner_base{};
@@ -33,8 +36,7 @@ struct FlexItem {
     Unit target{};
     Unit minimum{};
     std::optional<Unit> maximum;
-    Unit hypothetical_minimum{};
-    std::optional<Unit> hypothetical_maximum;
+    Unit hypothetical{};
     Unit grow{}, shrink{};
     Unit cross{};
     bool auto_main_start{}, auto_main_end{};
@@ -42,9 +44,9 @@ struct FlexItem {
     bool content_based_cross_width{};
     bool main_size_is_definite{}, cross_size_is_definite{};
     bool scroll_container{};
-    Constraints final_constraints;
     double violation{};
     bool frozen{};
+    const LayoutNode* node{};
 };
 
 

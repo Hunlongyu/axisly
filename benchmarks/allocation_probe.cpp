@@ -52,7 +52,9 @@ void release(void* pointer) noexcept {
 }
 }
 
-void* operator new(std::size_t size) { return allocate(size,alignof(std::max_align_t)); }
+// MSVC's max_align_t can be smaller than the alignment promised by ordinary
+// operator new. Compilers may use aligned stores even for an 8-aligned type.
+void* operator new(std::size_t size) { return allocate(size,__STDCPP_DEFAULT_NEW_ALIGNMENT__); }
 void* operator new[](std::size_t size) { return ::operator new(size); }
 void operator delete(void* pointer) noexcept { release(pointer); }
 void operator delete[](void* pointer) noexcept { release(pointer); }
@@ -96,7 +98,9 @@ void allocation_self_test() {
     void* array = ::operator new[](23,std::nothrow);
     void* aligned = ::operator new(128,std::align_val_t{64});
     void* aligned_array = ::operator new[](256,std::align_val_t{128},std::nothrow);
-    const bool alignment_ok = reinterpret_cast<std::uintptr_t>(aligned)%64 == 0 &&
+    const bool alignment_ok = reinterpret_cast<std::uintptr_t>(plain)%__STDCPP_DEFAULT_NEW_ALIGNMENT__ == 0 &&
+        reinterpret_cast<std::uintptr_t>(array)%__STDCPP_DEFAULT_NEW_ALIGNMENT__ == 0 &&
+        reinterpret_cast<std::uintptr_t>(aligned)%64 == 0 &&
         reinterpret_cast<std::uintptr_t>(aligned_array)%128 == 0;
     ::operator delete(plain,std::size_t{37});
     ::operator delete[](array,std::nothrow);

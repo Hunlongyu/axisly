@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('debug', 'release', 'reference-debug', 'reference-release', 'playground-debug', 'playground-release', 'benchmark-debug', 'benchmark-release', 'comparison-release', 'geeyoou-release', 'geeyoou-debug')]
+    [ValidateSet('debug', 'release', 'release-clang', 'reference-debug', 'reference-release', 'playground-debug', 'playground-release', 'benchmark-debug', 'benchmark-release', 'comparison-release', 'comparison-clang', 'geeyoou-release', 'geeyoou-debug')]
     [string]$Preset = 'release',
     [string]$SdlSource = ''
 )
@@ -37,8 +37,11 @@ if ($SdlSource) {
 
 Push-Location $projectRoot
 try {
+    # Clang presets discover clang-cl/lld-link in their toolchain file. Both
+    # compilers still need the same vcvars64 SDK and runtime environment.
+    $compilerArgument = if ($Preset.EndsWith('-clang')) { '' } else { ' -DCMAKE_CXX_COMPILER=cl' }
     $configure = 'call "' + $vcvars + '" >nul && "' + $cmake + '" --preset ' + $Preset + ' ' + $fresh +
-        ' -DCMAKE_CXX_COMPILER=cl "-DCMAKE_MAKE_PROGRAM=' + $ninja + '"' + $sdlArgument
+        $compilerArgument + ' "-DCMAKE_MAKE_PROGRAM=' + $ninja + '"' + $sdlArgument
     & $env:ComSpec /d /s /c $configure
     if ($LASTEXITCODE) { throw "CMake configuration failed: $LASTEXITCODE" }
     $build = 'call "' + $vcvars + '" >nul && "' + $cmake + '" --build --preset ' + $Preset

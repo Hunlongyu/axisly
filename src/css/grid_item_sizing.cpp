@@ -4,7 +4,7 @@
 
 namespace axisly::css::detail {
 
-GridItemSizing resolve_grid_item_sizing(const ResolvedBox& box,
+GridItemSizing resolve_grid_item_sizing(const LayoutBox& box,
     ResolvedDimensions stretch, GridItemSizingPhase phase) {
     auto ratio_box = box;
     // Item stretch dimensions are already border-box sizes. Scrollbars reduce
@@ -17,8 +17,8 @@ GridItemSizing resolve_grid_item_sizing(const ResolvedBox& box,
     result.minimum = box.minimum;
     result.maximum = transfer_aspect_ratio(box.specified_maximum, bound_box);
     if (phase == GridItemSizingPhase::Final) {
-        const Unit width_floor = bound_box.horizontal_decoration().value_or(0);
-        const Unit height_floor = bound_box.vertical_decoration().value_or(0);
+        const Unit width_floor = bound_box.horizontal_decoration();
+        const Unit height_floor = bound_box.vertical_decoration();
         result.minimum = {
             std::max(box.specified_minimum.width.value_or(width_floor), width_floor),
             std::max(box.specified_minimum.height.value_or(height_floor), height_floor)};
@@ -39,7 +39,7 @@ GridItemSizing resolve_grid_item_sizing(const ResolvedBox& box,
     return result;
 }
 
-void finalize_grid_item_fragment(Fragment& fragment, const ResolvedBox& box,
+void finalize_grid_item_fragment(Fragment& fragment, const LayoutBox& box,
     const GridItemSizing& sizing, ResolvedDimensions known) {
     const Size size{
         constrain_axis(known.width.value_or(fragment.size.width),

@@ -74,7 +74,7 @@ bool has_cyclic_percentage(const TrackAxis& axis) {
 }
 
 void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
-                       const std::vector<Placement>& placements, bool columns) {
+                       std::span<const Placement> placements, bool columns) {
     for (std::size_t index = 0; index < definition.auto_fit.size(); ++index) {
         if (!definition.auto_fit[index]) continue;
         const auto occupied = std::any_of(placements.begin(), placements.end(),
@@ -180,7 +180,7 @@ double size_of_fraction_unit(const TrackAxis& axis, std::int32_t start,
     return unit;
 }
 
-Unit grid_item_minimum(const LayoutNode& child, const ResolvedBox& box,
+Unit grid_item_minimum(const LayoutNode& child, const LayoutBox& box,
                        const Placement& placement, const TrackAxis& axis,
                        Unit min_content, bool columns) {
     const auto preferred = columns ? box.preferred.width : box.preferred.height;
@@ -340,7 +340,7 @@ std::vector<double> plan_spanning_growth_limit_increase(const TrackAxis& axis,
 }
 } // namespace
 
-void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
+void size_axis(TrackAxis& axis, std::span<const ItemContribution> items,
                bool columns, const AxisSizingSpace& space, NodeId id) {
     const auto query = space.grid_space.kind;
     const auto range = [&](const ItemContribution& item) {
@@ -362,343 +362,345 @@ void size_axis(TrackAxis& axis, const std::vector<ItemContribution>& items,
             : static_cast<double>(item.margin.top) + item.margin.bottom;
         return checked(std::max(0.0, static_cast<double>(content) + margin), id);
     };
-    const bool intrinsic_query = query == AvailableKind::MinContent
-        || query == AvailableKind::MaxContent;
-    struct SpanningItem {
-        const ItemContribution* item;
-        std::int32_t start, span;
-        bool crosses_flexible_track;
-        bool crosses_intrinsic_track;
-    };
-    std::vector<SpanningItem> spanning_items;
-    spanning_items.reserve(items.size());
-    std::vector<bool> has_single_growth_limit(axis.tracks.size());
-    const auto intrinsic_breadth = [](TrackBreadthKind kind) {
-        return kind == TrackBreadthKind::Auto
-            || kind == TrackBreadthKind::MinContent
-            || kind == TrackBreadthKind::MaxContent
-            || kind == TrackBreadthKind::FitContentLength
-            || kind == TrackBreadthKind::FitContentPercent;
-    };
-    for (const auto& item : items) {
-        const auto [start, end] = range(item);
-        if (end - start <= 1) continue;
-        bool crosses_flexible_track = false;
-        bool crosses_intrinsic_track = false;
-        for (auto index = start; index < end; ++index) {
-            const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-            crosses_flexible_track |= track.style.maximum.kind() == TrackBreadthKind::Fraction;
-            crosses_intrinsic_track |= intrinsic_breadth(track.style.minimum.kind())
-                || intrinsic_breadth(track.style.maximum.kind());
-        }
-        spanning_items.push_back({&item, start, end - start,
-            crosses_flexible_track, crosses_intrinsic_track});
-    }
-    std::stable_sort(spanning_items.begin(), spanning_items.end(),
-        [](const SpanningItem& a, const SpanningItem& b) {
-            if (a.crosses_flexible_track != b.crosses_flexible_track) {
-                return !a.crosses_flexible_track;
-            }
-            if (a.span != b.span) return a.span < b.span;
-            return a.start < b.start;
-        });
-    const auto scaled_flexible_contribution = [&](const SpanningItem& spanning,
-                                                   ContributionKind kind) {
-        const auto& item = *spanning.item;
-        const double raw = contribution(item, kind);
-        const bool scrolls = columns ? item.scrolls_x : item.scrolls_y;
-        if (!intrinsic_query || !spanning.crosses_flexible_track || scrolls) {
-            return raw;
-        }
-        const auto [start, end] = range(item);
-        double inflexible = 0, factors = 0;
-        for (auto index = start; index < end; ++index) {
-            const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-            if (track.style.maximum.kind() == TrackBreadthKind::Fraction) {
-                factors += track.flex;
-            } else {
-                inflexible += track.size;
-            }
-        }
-        const double scaled = inflexible
-            + std::max(0.0, raw - inflexible) * std::min(factors, 1.0);
-        return std::max(scaled,
-            static_cast<double>(contribution(item, ContributionKind::Minimum)));
-    };
-    for (const auto& item : items) {
-        const auto [start, end] = range(item);
-        const auto count = end - start;
-        if (count != 1) continue;
-        auto& track = axis.tracks[static_cast<std::size_t>(start - axis.origin)];
-        const auto minimum = contribution(item, ContributionKind::MinContent);
-        const auto minimum_contribution = contribution(item, ContributionKind::Minimum);
-        const auto preferred = contribution(item, query == AvailableKind::MinContent
-            ? ContributionKind::MinContent : ContributionKind::MaxContent);
-        if (track.intrinsic_min
-            && track.style.maximum.kind() != TrackBreadthKind::Fraction) {
-            const auto kind = track.style.minimum.kind();
-            track.size = std::max(track.size,
-                kind == TrackBreadthKind::MaxContent
-                    ? contribution(item, ContributionKind::MaxContent)
-                    : kind == TrackBreadthKind::Auto
-                        ? intrinsic_query && !(columns ? item.scrolls_x : item.scrolls_y)
-                            ? std::max(minimum_contribution,
-                                std::min(minimum, track.maximum.value_or(minimum)))
-                            : minimum_contribution
-                        : minimum);
-        }
-        if (track.intrinsic_max) {
-            const auto kind = track.style.maximum.kind();
-            const Unit growth = kind == TrackBreadthKind::MinContent
-                ? minimum : preferred;
-            if (growth > 0) {
-                has_single_growth_limit[static_cast<std::size_t>(start - axis.origin)] = true;
-                track.preferred = std::max(track.preferred, growth);
-            }
-        }
-        if (track.flex > 0) track.preferred = std::max(track.preferred, preferred);
-    }
-    const auto grow_spanning_bases = [&](ContributionKind kind, auto eligible) {
-        std::vector<Unit> planned(axis.tracks.size());
-        std::vector<std::size_t> touched;
-        for (std::size_t first = 0; first < spanning_items.size();) {
-            std::size_t last = first + 1;
-            while (last < spanning_items.size()
-                && spanning_items[last].crosses_flexible_track
-                    == spanning_items[first].crosses_flexible_track
-                && spanning_items[last].span == spanning_items[first].span) {
-                ++last;
-            }
-            for (auto item_index = first; item_index < last; ++item_index) {
-                const auto& spanning = spanning_items[item_index];
-                if (spanning.crosses_flexible_track) continue;
-                if (kind == ContributionKind::Minimum
-                    && !spanning.crosses_intrinsic_track) continue;
-                const auto& item = *spanning.item;
-                const auto [start, end] = range(item);
-                double occupied = 0;
-                std::vector<std::size_t> affected;
-                for (auto index = start; index < end; ++index) {
-                    const auto slot = static_cast<std::size_t>(index - axis.origin);
-                    const auto& track = axis.tracks[slot];
-                    occupied += track.size;
-                    if (index + 1 < end) occupied += axis.gutter_after[slot];
-                    if (eligible(track, start, end)) affected.push_back(slot);
-                }
-                double target = contribution(item, kind);
-                if (kind == ContributionKind::Minimum && intrinsic_query
-                    && !(columns ? item.scrolls_x : item.scrolls_y)) {
-                    double limit = 0;
-                    bool all_fixed = true;
-                    for (auto index = start; index < end; ++index) {
-                        const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-                        if (!track.maximum) { all_fixed = false; break; }
-                        limit += *track.maximum;
-                    }
-                    const double min_content = contribution(item, ContributionKind::MinContent);
-                    target = std::max(target, all_fixed ? std::min(min_content, limit) : min_content);
-                }
-                const double deficit = target - occupied;
-                if (deficit <= 0 || affected.empty()) continue;
-                const auto increases = plan_spanning_base_increase(axis, affected,
-                    has_single_growth_limit, deficit,
-                    kind == ContributionKind::MaxContent);
-                for (std::size_t i = 0; i < affected.size(); ++i) {
-                    const auto slot = affected[i];
-                    const Unit added = checked(increases[i], id);
-                    if (added <= 0) continue;
-                    if (planned[slot] == 0) touched.push_back(slot);
-                    planned[slot] = std::max(planned[slot], added);
-                }
-            }
-            for (const auto slot : touched) {
-                axis.tracks[slot].size = checked(static_cast<double>(axis.tracks[slot].size)
-                    + planned[slot], id);
-                planned[slot] = 0;
-            }
-            touched.clear();
-            first = last;
-        }
-    };
-    grow_spanning_bases(ContributionKind::Minimum,
-        [](const TrackState& track, std::int32_t, std::int32_t) {
-            return track.intrinsic_min;
-        });
-    grow_spanning_bases(ContributionKind::MinContent,
-        [](const TrackState& track, std::int32_t, std::int32_t) {
-            const auto kind = track.style.minimum.kind();
-            return kind == TrackBreadthKind::MinContent
-                || kind == TrackBreadthKind::MaxContent;
-        });
-    if (query == AvailableKind::MaxContent) {
-        grow_spanning_bases(ContributionKind::MaxContent,
-            [&](const TrackState& track, std::int32_t start, std::int32_t end) {
-                const auto kind = track.style.minimum.kind();
-                const bool has_max_content_min = std::any_of(
-                    axis.tracks.begin() + (start - axis.origin),
-                    axis.tracks.begin() + (end - axis.origin),
-                    [](const TrackState& candidate) {
-                        return candidate.style.minimum.kind()
-                            == TrackBreadthKind::MaxContent;
-                    });
-                return has_max_content_min
-                    ? kind == TrackBreadthKind::MaxContent
-                    : kind == TrackBreadthKind::Auto
-                        && track.style.maximum.kind() != TrackBreadthKind::MinContent;
-            });
-    }
-    grow_spanning_bases(ContributionKind::MaxContent,
-        [](const TrackState& track, std::int32_t, std::int32_t) {
-            return track.style.minimum.kind() == TrackBreadthKind::MaxContent;
-        });
-    // Items crossing flexible tracks are sized as one batch, regardless of
-    // their span. Each item sees the same base sizes; competing contributions
-    // are combined by the largest planned increase on each track.
-    {
-        std::vector<Unit> planned(axis.tracks.size());
-        for (const auto& item : items) {
-            const auto [start, end] = range(item);
-            bool crosses_flex = false;
-            double occupied = 0, factor_sum = 0, inflexible = 0;
-            std::size_t affected_count = 0;
-            for (auto index = start; index < end; ++index) {
-                const auto slot = static_cast<std::size_t>(index - axis.origin);
-                const auto& track = axis.tracks[slot];
-                crosses_flex |= track.style.maximum.kind()
-                    == TrackBreadthKind::Fraction;
-                occupied += track.size;
-                if (index + 1 < end) occupied += axis.gutter_after[slot];
-                if (track.style.maximum.kind() == TrackBreadthKind::Fraction
-                    && track.intrinsic_min) {
-                    factor_sum += track.flex;
-                    ++affected_count;
-                } else inflexible += track.size;
-            }
-            if (!crosses_flex) continue;
-            if (affected_count == 0) continue;
-            const double minimum = contribution(item, ContributionKind::Minimum);
-            double target = minimum;
-            if (intrinsic_query && !(columns ? item.scrolls_x : item.scrolls_y)) {
-                const double min_content = contribution(item, ContributionKind::MinContent);
-                target = std::max(minimum, inflexible
-                    + std::max(0.0, min_content - inflexible)
-                        * std::min(factor_sum, 1.0));
-            }
-            const double deficit = target - occupied;
-            if (deficit <= 0) continue;
-            for (auto index = start; index < end; ++index) {
-                const auto slot = static_cast<std::size_t>(index - axis.origin);
-                const auto& track = axis.tracks[slot];
-                if (track.style.maximum.kind() != TrackBreadthKind::Fraction
-                    || !track.intrinsic_min) continue;
-                const double weight = factor_sum > 0 ? track.flex : 1.0;
-                const double total = factor_sum > 0 ? factor_sum : affected_count;
-                planned[slot] = std::max(planned[slot], checked(
-                    deficit * weight / total, id));
-            }
-        }
-        for (std::size_t slot = 0; slot < axis.tracks.size(); ++slot) {
-            if (planned[slot] > 0) {
-                axis.tracks[slot].size = checked(
-                    static_cast<double>(axis.tracks[slot].size) + planned[slot], id);
-            }
-        }
-    }
-    std::vector<bool> growth_limit_set = has_single_growth_limit;
-    std::vector<bool> infinitely_growable(axis.tracks.size());
-    const auto grow_spanning_limits = [&](ContributionKind kind, auto eligible,
-                                           bool mark_infinitely_growable) {
-        std::vector<Unit> planned(axis.tracks.size());
-        for (std::size_t first = 0; first < spanning_items.size();) {
-            std::size_t last = first + 1;
-            while (last < spanning_items.size()
-                && spanning_items[last].crosses_flexible_track
-                    == spanning_items[first].crosses_flexible_track
-                && spanning_items[last].span == spanning_items[first].span) ++last;
-            for (std::size_t item_index = first; item_index < last; ++item_index) {
-                const auto& spanning = spanning_items[item_index];
-                if (spanning.crosses_flexible_track) continue;
-                const auto [start, end] = range(*spanning.item);
-                double occupied = 0;
-                std::vector<std::size_t> affected;
-                for (auto index = start; index < end; ++index) {
-                    const auto slot = static_cast<std::size_t>(index - axis.origin);
-                    const auto& track = axis.tracks[slot];
-                    occupied += track.intrinsic_max
-                        ? std::max(track.size, track.preferred)
-                        : track.maximum.value_or(track.size);
-                    if (index + 1 < end) occupied += axis.gutter_after[slot];
-                    if (eligible(track)) affected.push_back(slot);
-                }
-                const double deficit = contribution(*spanning.item, kind) - occupied;
-                if (deficit <= 0 || affected.empty()) continue;
-                const auto increases = plan_spanning_growth_limit_increase(axis,
-                    affected, growth_limit_set, infinitely_growable, deficit);
-                for (std::size_t i = 0; i < affected.size(); ++i) {
-                    const auto slot = affected[i];
-                    planned[slot] = std::max(planned[slot], checked(increases[i], id));
-                }
-            }
-            for (std::size_t slot = 0; slot < axis.tracks.size(); ++slot) {
-                if (planned[slot] <= 0) continue;
-                auto& track = axis.tracks[slot];
-                track.preferred = checked(std::max(track.size, track.preferred)
-                    + planned[slot], id);
-                growth_limit_set[slot] = true;
-                infinitely_growable[slot] = mark_infinitely_growable;
-                planned[slot] = 0;
-            }
-            first = last;
-        }
-    };
-    grow_spanning_limits(ContributionKind::MinContent,
-        [](const TrackState& track) { return track.intrinsic_max; }, true);
-    grow_spanning_limits(ContributionKind::MaxContent,
-        [](const TrackState& track) {
-            const auto kind = track.style.maximum.kind();
+    if (!items.empty()) {
+        const bool intrinsic_query = query == AvailableKind::MinContent
+            || query == AvailableKind::MaxContent;
+        struct SpanningItem {
+            const ItemContribution* item;
+            std::int32_t start, span;
+            bool crosses_flexible_track;
+            bool crosses_intrinsic_track;
+        };
+        std::vector<SpanningItem> spanning_items;
+        spanning_items.reserve(items.size());
+        std::vector<bool> has_single_growth_limit(axis.tracks.size());
+        const auto intrinsic_breadth = [](TrackBreadthKind kind) {
             return kind == TrackBreadthKind::Auto
+                || kind == TrackBreadthKind::MinContent
                 || kind == TrackBreadthKind::MaxContent
                 || kind == TrackBreadthKind::FitContentLength
                 || kind == TrackBreadthKind::FitContentPercent;
-        }, false);
-    for (const auto& spanning_item : spanning_items) {
-        if (!spanning_item.crosses_flexible_track) continue;
-        const auto& item = *spanning_item.item;
-        const auto [start, end] = range(item);
-        const bool weighted = intrinsic_query
-            && spanning_item.crosses_flexible_track
-            && !(columns ? item.scrolls_x : item.scrolls_y);
-        double preferred_occupied = 0;
-        for (auto index = start; index + 1 < end; ++index) {
-            preferred_occupied += axis.gutter_after[static_cast<std::size_t>(index - axis.origin)];
+        };
+        for (const auto& item : items) {
+            const auto [start, end] = range(item);
+            if (end - start <= 1) continue;
+            bool crosses_flexible_track = false;
+            bool crosses_intrinsic_track = false;
+            for (auto index = start; index < end; ++index) {
+                const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+                crosses_flexible_track |= track.style.maximum.kind() == TrackBreadthKind::Fraction;
+                crosses_intrinsic_track |= intrinsic_breadth(track.style.minimum.kind())
+                    || intrinsic_breadth(track.style.maximum.kind());
+            }
+            spanning_items.push_back({&item, start, end - start,
+                crosses_flexible_track, crosses_intrinsic_track});
         }
-        double weight_sum = 0;
-        for (auto index = start; index < end; ++index) {
-            const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
-            preferred_occupied += track.intrinsic_max || track.flex > 0
-                ? std::max(track.size, track.preferred)
-                : track.maximum.value_or(track.size);
-            if (spanning_item.crosses_flexible_track
-                ? track.style.maximum.kind() == TrackBreadthKind::Fraction
-                : track.intrinsic_max || track.flex > 0) {
-                weight_sum += weighted ? track.flex : 1.0;
+        std::stable_sort(spanning_items.begin(), spanning_items.end(),
+            [](const SpanningItem& a, const SpanningItem& b) {
+                if (a.crosses_flexible_track != b.crosses_flexible_track) {
+                    return !a.crosses_flexible_track;
+                }
+                if (a.span != b.span) return a.span < b.span;
+                return a.start < b.start;
+            });
+        const auto scaled_flexible_contribution = [&](const SpanningItem& spanning,
+                                                       ContributionKind kind) {
+            const auto& item = *spanning.item;
+            const double raw = contribution(item, kind);
+            const bool scrolls = columns ? item.scrolls_x : item.scrolls_y;
+            if (!intrinsic_query || !spanning.crosses_flexible_track || scrolls) {
+                return raw;
+            }
+            const auto [start, end] = range(item);
+            double inflexible = 0, factors = 0;
+            for (auto index = start; index < end; ++index) {
+                const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+                if (track.style.maximum.kind() == TrackBreadthKind::Fraction) {
+                    factors += track.flex;
+                } else {
+                    inflexible += track.size;
+                }
+            }
+            const double scaled = inflexible
+                + std::max(0.0, raw - inflexible) * std::min(factors, 1.0);
+            return std::max(scaled,
+                static_cast<double>(contribution(item, ContributionKind::Minimum)));
+        };
+        for (const auto& item : items) {
+            const auto [start, end] = range(item);
+            const auto count = end - start;
+            if (count != 1) continue;
+            auto& track = axis.tracks[static_cast<std::size_t>(start - axis.origin)];
+            const auto minimum = contribution(item, ContributionKind::MinContent);
+            const auto minimum_contribution = contribution(item, ContributionKind::Minimum);
+            const auto preferred = contribution(item, query == AvailableKind::MinContent
+                ? ContributionKind::MinContent : ContributionKind::MaxContent);
+            if (track.intrinsic_min
+                && track.style.maximum.kind() != TrackBreadthKind::Fraction) {
+                const auto kind = track.style.minimum.kind();
+                track.size = std::max(track.size,
+                    kind == TrackBreadthKind::MaxContent
+                        ? contribution(item, ContributionKind::MaxContent)
+                        : kind == TrackBreadthKind::Auto
+                            ? intrinsic_query && !(columns ? item.scrolls_x : item.scrolls_y)
+                                ? std::max(minimum_contribution,
+                                    std::min(minimum, track.maximum.value_or(minimum)))
+                                : minimum_contribution
+                            : minimum);
+            }
+            if (track.intrinsic_max) {
+                const auto kind = track.style.maximum.kind();
+                const Unit growth = kind == TrackBreadthKind::MinContent
+                    ? minimum : preferred;
+                if (growth > 0) {
+                    has_single_growth_limit[static_cast<std::size_t>(start - axis.origin)] = true;
+                    track.preferred = std::max(track.preferred, growth);
+                }
+            }
+            if (track.flex > 0) track.preferred = std::max(track.preferred, preferred);
+        }
+        const auto grow_spanning_bases = [&](ContributionKind kind, auto eligible) {
+            std::vector<Unit> planned(axis.tracks.size());
+            std::vector<std::size_t> touched;
+            for (std::size_t first = 0; first < spanning_items.size();) {
+                std::size_t last = first + 1;
+                while (last < spanning_items.size()
+                    && spanning_items[last].crosses_flexible_track
+                        == spanning_items[first].crosses_flexible_track
+                    && spanning_items[last].span == spanning_items[first].span) {
+                    ++last;
+                }
+                for (auto item_index = first; item_index < last; ++item_index) {
+                    const auto& spanning = spanning_items[item_index];
+                    if (spanning.crosses_flexible_track) continue;
+                    if (kind == ContributionKind::Minimum
+                        && !spanning.crosses_intrinsic_track) continue;
+                    const auto& item = *spanning.item;
+                    const auto [start, end] = range(item);
+                    double occupied = 0;
+                    std::vector<std::size_t> affected;
+                    for (auto index = start; index < end; ++index) {
+                        const auto slot = static_cast<std::size_t>(index - axis.origin);
+                        const auto& track = axis.tracks[slot];
+                        occupied += track.size;
+                        if (index + 1 < end) occupied += axis.gutter_after[slot];
+                        if (eligible(track, start, end)) affected.push_back(slot);
+                    }
+                    double target = contribution(item, kind);
+                    if (kind == ContributionKind::Minimum && intrinsic_query
+                        && !(columns ? item.scrolls_x : item.scrolls_y)) {
+                        double limit = 0;
+                        bool all_fixed = true;
+                        for (auto index = start; index < end; ++index) {
+                            const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+                            if (!track.maximum) { all_fixed = false; break; }
+                            limit += *track.maximum;
+                        }
+                        const double min_content = contribution(item, ContributionKind::MinContent);
+                        target = std::max(target, all_fixed ? std::min(min_content, limit) : min_content);
+                    }
+                    const double deficit = target - occupied;
+                    if (deficit <= 0 || affected.empty()) continue;
+                    const auto increases = plan_spanning_base_increase(axis, affected,
+                        has_single_growth_limit, deficit,
+                        kind == ContributionKind::MaxContent);
+                    for (std::size_t i = 0; i < affected.size(); ++i) {
+                        const auto slot = affected[i];
+                        const Unit added = checked(increases[i], id);
+                        if (added <= 0) continue;
+                        if (planned[slot] == 0) touched.push_back(slot);
+                        planned[slot] = std::max(planned[slot], added);
+                    }
+                }
+                for (const auto slot : touched) {
+                    axis.tracks[slot].size = checked(static_cast<double>(axis.tracks[slot].size)
+                        + planned[slot], id);
+                    planned[slot] = 0;
+                }
+                touched.clear();
+                first = last;
+            }
+        };
+        grow_spanning_bases(ContributionKind::Minimum,
+            [](const TrackState& track, std::int32_t, std::int32_t) {
+                return track.intrinsic_min;
+            });
+        grow_spanning_bases(ContributionKind::MinContent,
+            [](const TrackState& track, std::int32_t, std::int32_t) {
+                const auto kind = track.style.minimum.kind();
+                return kind == TrackBreadthKind::MinContent
+                    || kind == TrackBreadthKind::MaxContent;
+            });
+        if (query == AvailableKind::MaxContent) {
+            grow_spanning_bases(ContributionKind::MaxContent,
+                [&](const TrackState& track, std::int32_t start, std::int32_t end) {
+                    const auto kind = track.style.minimum.kind();
+                    const bool has_max_content_min = std::any_of(
+                        axis.tracks.begin() + (start - axis.origin),
+                        axis.tracks.begin() + (end - axis.origin),
+                        [](const TrackState& candidate) {
+                            return candidate.style.minimum.kind()
+                                == TrackBreadthKind::MaxContent;
+                        });
+                    return has_max_content_min
+                        ? kind == TrackBreadthKind::MaxContent
+                        : kind == TrackBreadthKind::Auto
+                            && track.style.maximum.kind() != TrackBreadthKind::MinContent;
+                });
+        }
+        grow_spanning_bases(ContributionKind::MaxContent,
+            [](const TrackState& track, std::int32_t, std::int32_t) {
+                return track.style.minimum.kind() == TrackBreadthKind::MaxContent;
+            });
+        // Items crossing flexible tracks are sized as one batch, regardless of
+        // their span. Each item sees the same base sizes; competing contributions
+        // are combined by the largest planned increase on each track.
+        {
+            std::vector<Unit> planned(axis.tracks.size());
+            for (const auto& item : items) {
+                const auto [start, end] = range(item);
+                bool crosses_flex = false;
+                double occupied = 0, factor_sum = 0, inflexible = 0;
+                std::size_t affected_count = 0;
+                for (auto index = start; index < end; ++index) {
+                    const auto slot = static_cast<std::size_t>(index - axis.origin);
+                    const auto& track = axis.tracks[slot];
+                    crosses_flex |= track.style.maximum.kind()
+                        == TrackBreadthKind::Fraction;
+                    occupied += track.size;
+                    if (index + 1 < end) occupied += axis.gutter_after[slot];
+                    if (track.style.maximum.kind() == TrackBreadthKind::Fraction
+                        && track.intrinsic_min) {
+                        factor_sum += track.flex;
+                        ++affected_count;
+                    } else inflexible += track.size;
+                }
+                if (!crosses_flex) continue;
+                if (affected_count == 0) continue;
+                const double minimum = contribution(item, ContributionKind::Minimum);
+                double target = minimum;
+                if (intrinsic_query && !(columns ? item.scrolls_x : item.scrolls_y)) {
+                    const double min_content = contribution(item, ContributionKind::MinContent);
+                    target = std::max(minimum, inflexible
+                        + std::max(0.0, min_content - inflexible)
+                            * std::min(factor_sum, 1.0));
+                }
+                const double deficit = target - occupied;
+                if (deficit <= 0) continue;
+                for (auto index = start; index < end; ++index) {
+                    const auto slot = static_cast<std::size_t>(index - axis.origin);
+                    const auto& track = axis.tracks[slot];
+                    if (track.style.maximum.kind() != TrackBreadthKind::Fraction
+                        || !track.intrinsic_min) continue;
+                    const double weight = factor_sum > 0 ? track.flex : 1.0;
+                    const double total = factor_sum > 0 ? factor_sum : affected_count;
+                    planned[slot] = std::max(planned[slot], checked(
+                        deficit * weight / total, id));
+                }
+            }
+            for (std::size_t slot = 0; slot < axis.tracks.size(); ++slot) {
+                if (planned[slot] > 0) {
+                    axis.tracks[slot].size = checked(
+                        static_cast<double>(axis.tracks[slot].size) + planned[slot], id);
+                }
             }
         }
-        const auto preferred_kind = query == AvailableKind::MinContent
-            ? ContributionKind::MinContent : ContributionKind::MaxContent;
-        const double target = weighted
-            ? scaled_flexible_contribution(spanning_item, preferred_kind)
-            : contribution(item, preferred_kind);
-        const double preferred_deficit = target - preferred_occupied;
-        if (preferred_deficit > 0 && weight_sum > 0) {
-            const double unit = preferred_deficit / weight_sum;
+        std::vector<bool> growth_limit_set = has_single_growth_limit;
+        std::vector<bool> infinitely_growable(axis.tracks.size());
+        const auto grow_spanning_limits = [&](ContributionKind kind, auto eligible,
+                                               bool mark_infinitely_growable) {
+            std::vector<Unit> planned(axis.tracks.size());
+            for (std::size_t first = 0; first < spanning_items.size();) {
+                std::size_t last = first + 1;
+                while (last < spanning_items.size()
+                    && spanning_items[last].crosses_flexible_track
+                        == spanning_items[first].crosses_flexible_track
+                    && spanning_items[last].span == spanning_items[first].span) ++last;
+                for (std::size_t item_index = first; item_index < last; ++item_index) {
+                    const auto& spanning = spanning_items[item_index];
+                    if (spanning.crosses_flexible_track) continue;
+                    const auto [start, end] = range(*spanning.item);
+                    double occupied = 0;
+                    std::vector<std::size_t> affected;
+                    for (auto index = start; index < end; ++index) {
+                        const auto slot = static_cast<std::size_t>(index - axis.origin);
+                        const auto& track = axis.tracks[slot];
+                        occupied += track.intrinsic_max
+                            ? std::max(track.size, track.preferred)
+                            : track.maximum.value_or(track.size);
+                        if (index + 1 < end) occupied += axis.gutter_after[slot];
+                        if (eligible(track)) affected.push_back(slot);
+                    }
+                    const double deficit = contribution(*spanning.item, kind) - occupied;
+                    if (deficit <= 0 || affected.empty()) continue;
+                    const auto increases = plan_spanning_growth_limit_increase(axis,
+                        affected, growth_limit_set, infinitely_growable, deficit);
+                    for (std::size_t i = 0; i < affected.size(); ++i) {
+                        const auto slot = affected[i];
+                        planned[slot] = std::max(planned[slot], checked(increases[i], id));
+                    }
+                }
+                for (std::size_t slot = 0; slot < axis.tracks.size(); ++slot) {
+                    if (planned[slot] <= 0) continue;
+                    auto& track = axis.tracks[slot];
+                    track.preferred = checked(std::max(track.size, track.preferred)
+                        + planned[slot], id);
+                    growth_limit_set[slot] = true;
+                    infinitely_growable[slot] = mark_infinitely_growable;
+                    planned[slot] = 0;
+                }
+                first = last;
+            }
+        };
+        grow_spanning_limits(ContributionKind::MinContent,
+            [](const TrackState& track) { return track.intrinsic_max; }, true);
+        grow_spanning_limits(ContributionKind::MaxContent,
+            [](const TrackState& track) {
+                const auto kind = track.style.maximum.kind();
+                return kind == TrackBreadthKind::Auto
+                    || kind == TrackBreadthKind::MaxContent
+                    || kind == TrackBreadthKind::FitContentLength
+                    || kind == TrackBreadthKind::FitContentPercent;
+            }, false);
+        for (const auto& spanning_item : spanning_items) {
+            if (!spanning_item.crosses_flexible_track) continue;
+            const auto& item = *spanning_item.item;
+            const auto [start, end] = range(item);
+            const bool weighted = intrinsic_query
+                && spanning_item.crosses_flexible_track
+                && !(columns ? item.scrolls_x : item.scrolls_y);
+            double preferred_occupied = 0;
+            for (auto index = start; index + 1 < end; ++index) {
+                preferred_occupied += axis.gutter_after[static_cast<std::size_t>(index - axis.origin)];
+            }
+            double weight_sum = 0;
             for (auto index = start; index < end; ++index) {
-                auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+                const auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+                preferred_occupied += track.intrinsic_max || track.flex > 0
+                    ? std::max(track.size, track.preferred)
+                    : track.maximum.value_or(track.size);
                 if (spanning_item.crosses_flexible_track
                     ? track.style.maximum.kind() == TrackBreadthKind::Fraction
                     : track.intrinsic_max || track.flex > 0) {
-                    track.preferred = checked(std::max(track.size, track.preferred)
-                        + unit * (weighted ? track.flex : 1.0), id);
+                    weight_sum += weighted ? track.flex : 1.0;
+                }
+            }
+            const auto preferred_kind = query == AvailableKind::MinContent
+                ? ContributionKind::MinContent : ContributionKind::MaxContent;
+            const double target = weighted
+                ? scaled_flexible_contribution(spanning_item, preferred_kind)
+                : contribution(item, preferred_kind);
+            const double preferred_deficit = target - preferred_occupied;
+            if (preferred_deficit > 0 && weight_sum > 0) {
+                const double unit = preferred_deficit / weight_sum;
+                for (auto index = start; index < end; ++index) {
+                    auto& track = axis.tracks[static_cast<std::size_t>(index - axis.origin)];
+                    if (spanning_item.crosses_flexible_track
+                        ? track.style.maximum.kind() == TrackBreadthKind::Fraction
+                        : track.intrinsic_max || track.flex > 0) {
+                        track.preferred = checked(std::max(track.size, track.preferred)
+                            + unit * (weighted ? track.flex : 1.0), id);
+                    }
                 }
             }
         }

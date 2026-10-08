@@ -49,6 +49,97 @@ void tracks_and_placement() {
         "CSS track geometry must be observable");
 }
 
+void definite_tracks_measure_once() {
+    for (const bool flexible : {false, true}) {
+        LayoutTree tree;
+        Style grid;
+        grid.display = Display::Grid;
+        grid.box.size = {Length::length(100), Length::length(50)};
+        grid.grid.template_columns = {flexible
+            ? TrackSizing::minmax(TrackBreadth::length(0), TrackBreadth::fraction(1))
+            : TrackSizing::fixed(80)};
+        grid.grid.template_rows = {TrackSizing::fixed(40)};
+        grid.align_items = ItemAlignment{ItemPosition::Start};
+        grid.justify_items = ItemAlignment{ItemPosition::Start};
+        const auto root = tree.create_node(grid);
+        std::size_t calls{};
+        const auto leaf = tree.create_node({}, [&](const MeasureRequest&) {
+            ++calls;
+            return Measurement{{27, 12}, 9, 10};
+        });
+        tree.append_child(root, leaf);
+        const auto& result = tree.compute(root, {});
+        require(result.succeeded() && calls == 1 && result.measurement_count == 1,
+            "Content-independent tracks need only the final leaf measurement");
+        require(result.find(leaf)->border_box == Rect{0, 0, 27, 12}
+            && result.find(leaf)->first_baseline == 9
+            && result.grid_tracks.front().columns.front() == (flexible ? 100 : 80),
+            "Skipping unused intrinsic contributions must retain geometry and baselines");
+    }
+}
+
+void retained_structure_and_reports() {
+    LayoutTree tree;
+    Style grid;
+    grid.display = Display::Grid;
+    grid.box.size = {Length::percent(1), Length::length(100)};
+    grid.grid.template_columns = {GridRepeat{RepeatKind::AutoFill, 1, {TrackSizing::fixed(30)}, {}}};
+    grid.grid.template_rows = {TrackSizing::fixed(20)};
+    grid.grid.auto_rows = {TrackSizing::fixed(20)};
+    const auto root = tree.create_node(grid);
+    Style item;
+    item.box.size = {Length::length(10), Length::length(10)};
+    std::vector<NodeId> children;
+    for (int i = 0; i < 4; ++i) {
+        children.push_back(tree.create_node(item));
+        tree.append_child(root, children.back());
+    }
+    const auto compute = [&](Unit width) -> const LayoutResult& {
+        const auto& result = tree.compute(root, {AvailableSpace::definite(width), AvailableSpace::max_content()});
+        require(result.succeeded(), "Retained Grid structure must produce a complete result");
+        return result;
+    };
+    auto snapshot = compute(100);
+    require(snapshot.grid_tracks.front().columns == std::vector<Unit>{30, 30, 30}
+        && snapshot.find(children[3])->border_box == Rect{0, 20, 10, 10},
+        "Initial automatic repetition and placement must match the available width");
+    snapshot.grid_tracks.front().columns[0] = 777;
+    snapshot.grid_tracks.front().items.clear();
+    const auto& narrower = compute(70);
+    require(narrower.grid_tracks.front().columns == std::vector<Unit>{30, 30}
+        && narrower.find(children[2])->border_box == Rect{0, 20, 10, 10},
+        "Automatic-repeat input changes must rebuild retained placement");
+    item.grid.column.start = GridLine::index(2);
+    tree.set_style(children[0], item);
+    require(compute(70).find(children[0])->border_box.x == 30,
+        "A child's grid-line edit must invalidate its parent's retained placement");
+    item.display = Display::None;
+    tree.set_style(children[0], item);
+    require(compute(70).grid_tracks.front().items.size() == 3,
+        "Hidden children must leave the retained placement plan");
+    tree.remove(children[1]);
+    const auto& removed = compute(70);
+    require(removed.nodes.size() == 4 && removed.grid_tracks.front().items.size() == 2,
+        "Topology changes must remove stale placement identities");
+    auto positioned = tree.style(children[2]);
+    positioned.position = Position::Absolute;
+    positioned.inset.left = Length::length(5);
+    tree.set_style(children[2], positioned);
+    const auto& absolute = compute(70);
+    require(absolute.grid_tracks.front().items.size() == 1
+        && absolute.find(children[2])->border_box.x == 5,
+        "Position changes must rebuild the absolute-placement metadata");
+    grid.grid.template_columns = {TrackSizing::fixed(50)};
+    tree.set_style(root, grid);
+    require(compute(100).grid_tracks.front().columns.front() == 50,
+        "Template edits must invalidate the compiled Grid structure");
+    tree.remove(root);
+    require(snapshot.grid_tracks.front().columns.front() == 777
+        && snapshot.grid_tracks.front().items.empty()
+        && snapshot.find(children[3])->border_box == Rect{0, 20, 10, 10},
+        "Published geometry and mutable track reports must outlive and remain independent of the tree");
+}
+
 void implicit_and_negative_lines() {
     LayoutTree tree;
     Style root_style;
@@ -295,6 +386,8 @@ int main(int argc, char** argv) {
         require(argc == 2, "Expected test case name");
         const std::string_view name = argv[1];
         if (name == "tracks_and_placement") tracks_and_placement();
+        else if (name == "definite_tracks_measure_once") definite_tracks_measure_once();
+        else if (name == "retained_structure_and_reports") retained_structure_and_reports();
         else if (name == "implicit_and_negative_lines") implicit_and_negative_lines();
         else if (name == "invalid_style") invalid_style();
         else if (name == "span_and_fit_content") span_and_fit_content();

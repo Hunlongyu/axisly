@@ -38,8 +38,34 @@ bool css_consumer_valid() {
     text_width = 25;
     tree.mark_dirty(leaf);
     const auto& changed = tree.compute(root, available);
-    return changed.succeeded() && !changed.cache_hit
-        && changed.measurement_count > 0 && changed.nodes.size() == 3;
+    if (!changed.succeeded() || changed.cache_hit
+        || changed.measurement_count == 0 || changed.nodes.size() != 3) return false;
+    css::LayoutOptions options;
+    options.publish_nodes = false;
+    options.collect_grid_tracks = false;
+    options.rounding = axisly::PixelRounding{1.5F};
+    if (!tree.compute(root, available, options).succeeded() || !tree.unrounded_layout(leaf)
+        || !tree.layout(leaf, css::CoordinateSpace::Parent)) return false;
+    css::LayoutBatch batch;
+    const std::array requests{css::LayoutRequest{&tree, root, available}};
+    if (!batch.compute(requests).front().succeeded()) return false;
+
+    struct Host final : css::LayoutSource {
+        css::Style parent_style, child_style;
+        std::array<css::NodeId, 1> children{css::NodeId{202}};
+        Host() { child_style.box.size = {css::Length::length(23), css::Length::length(11)}; }
+        std::optional<css::LayoutNodeView> node(css::NodeId id) const override {
+            if (id.value == 101) return css::LayoutNodeView{parent_style, children};
+            if (id.value == 202) return css::LayoutNodeView{child_style, {}, css::NodeId{101}};
+            return std::nullopt;
+        }
+    } host;
+    auto memory = std::make_shared<css::LayoutMemory>();
+    css::LayoutSession session(host, {}, memory);
+    if (!session.compute({101}, {}).succeeded() || session.layout({202})->border_box.width != 23) return false;
+    host.child_style.box.size.width = css::Length::length(29);
+    session.mark_dirty({202});
+    return session.compute({101}, {}).succeeded() && session.layout({202})->border_box.width == 29;
 }
 
 int main() {

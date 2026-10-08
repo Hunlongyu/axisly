@@ -32,46 +32,16 @@ void unite(Rect& destination, Unit left, Unit top, Unit edge_right,
 }
 } // namespace
 
-void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
-    const LayoutNodes& nodes) {
-    // Published fragments are in preorder. A depth stack recovers parent
-    // indices in linear time without allocating a hash node for each box.
-    constexpr auto no_parent = std::numeric_limits<std::size_t>::max();
-    std::vector<std::size_t> parents(layouts.size(), no_parent);
-    std::vector<const LayoutNode*> layout_nodes;
-    layout_nodes.reserve(layouts.size());
-    std::vector<std::size_t> ancestors;
-    std::vector<Rect> inflow(layouts.size());
-    std::vector<Rect> absolute(layouts.size());
-    for (std::size_t i = 0; i < layouts.size(); ++i) {
-        layout_nodes.push_back(nodes.find(layouts[i].node.value));
-        while (!ancestors.empty()
-            && layouts[ancestors.back()].node != layouts[i].parent) ancestors.pop_back();
-        if (!ancestors.empty()) parents[i] = ancestors.back();
-        ancestors.push_back(i);
-    }
-    for (std::size_t i = layouts.size(); i-- > 0;) {
-        auto& layout = layouts[i];
-        const auto& node = *layout_nodes[i];
-        if (node.style.display == Display::None) continue;
-        if (!node.children.empty()) {
-            if (scroll_container(node.style)) {
-                const Unit inline_end = node.style.box.direction == Direction::Rtl
-                    ? layout.padding.left : layout.padding.right;
-                inflow[i].width = checked(static_cast<double>(inflow[i].width)
-                    + inline_end, node.id);
-                inflow[i].height = checked(static_cast<double>(inflow[i].height)
-                    + layout.padding.bottom, node.id);
-            }
-            unite(inflow[i], absolute[i].x, absolute[i].y,
-                right(absolute[i], node.id), bottom(absolute[i], node.id), node.id);
-            layout.scrollable_overflow_rect = inflow[i];
-        }
-        const auto parent_index = parents[i];
-        if (parent_index == no_parent) continue;
-        auto& parent = layouts[parent_index];
-        const auto& parent_style = layout_nodes[parent_index]->style;
-        if (parent_style.display == Display::None) continue;
+void compute_scrollable_overflow(Fragment& fragment, const LayoutNode& parent_node,
+                                  const LayoutNodes& nodes) {
+    fragment.overflow_dirty = false;
+    if (!fragment.descendants || parent_node.style.display == Display::None) return;
+    auto& parent = fragment.mutable_root_layout();
+    const auto origin_border = fragment.root.read().overflow_origin_border;
+    Rect inflow{}, absolute{};
+    const auto include = [&](const NodeLayout& layout) {
+        const auto& node = *nodes.find(layout.node.value);
+        if (node.style.display == Display::None) return;
         const bool clipped = scroll_container(node.style)
             || node.style.contain != Contain::None;
         const bool propagate_x = !clipped
@@ -86,25 +56,27 @@ void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
             ? std::max(layout.border_box.height,
                 bottom(layout.scrollable_overflow_rect, node.id))
             : layout.border_box.height;
-        if (child_right <= 0 || child_bottom <= 0) continue;
+        if (child_right <= 0 || child_bottom <= 0) return;
         const Unit child_left = propagate_x
             ? std::min(Unit{0}, layout.scrollable_overflow_rect.x) : Unit{0};
         const Unit child_top = propagate_y
             ? std::min(Unit{0}, layout.scrollable_overflow_rect.y) : Unit{0};
-        Unit location_x = checked(static_cast<double>(layout.border_box.x)
-            - parent.border_box.x, node.id);
-        if (parent_style.box.direction == Direction::Rtl) {
-            location_x = checked(static_cast<double>(parent.overflow_coordinate_width
-                    .value_or(parent.border_box.width))
-                - location_x - layout.border_box.width
-                - parent.overflow_origin_border.right,
-                node.id);
+        Unit location_x = checked(static_cast<double>(layout.border_box.x), node.id);
+        if (parent_node.style.box.direction == Direction::Rtl) {
+            // Mirror the physical right edge at layout precision. Folding
+            // x + width into a double-precision subtraction changes which
+            // side of a half-pixel a percentage-sized item lands on.
+            const Unit physical_right = right(layout.border_box, node.id);
+            const Unit from_right = checked(static_cast<double>(fragment.root.read().overflow_coordinate_width
+                .value_or(parent.border_box.width)) - physical_right, node.id);
+            location_x = checked(static_cast<double>(from_right)
+                - origin_border.right, node.id);
         } else {
             location_x = checked(static_cast<double>(location_x)
-                - parent.overflow_origin_border.left, node.id);
+                - origin_border.left, node.id);
         }
         const Unit location_y = checked(static_cast<double>(layout.border_box.y)
-            - parent.border_box.y - parent.overflow_origin_border.top, node.id);
+            - origin_border.top, node.id);
         const Unit contribution_left = checked(static_cast<double>(location_x)
             + child_left, node.id);
         const Unit contribution_top = checked(static_cast<double>(location_y)
@@ -113,12 +85,28 @@ void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
             + child_right, node.id);
         const Unit contribution_bottom = checked(static_cast<double>(location_y)
             + child_bottom, node.id);
-        if (scroll_container(parent_style)
-            && (contribution_right <= 0 || contribution_bottom <= 0)) continue;
-        Rect& destination = node.style.position == Position::Absolute
-            ? absolute[parent_index] : inflow[parent_index];
+        if (scroll_container(parent_node.style)
+            && (contribution_right <= 0 || contribution_bottom <= 0)) return;
+        Rect& destination = node.style.position == Position::Absolute ? absolute : inflow;
         unite(destination, contribution_left, contribution_top,
             contribution_right, contribution_bottom, parent.node);
+    };
+    // Child roots are local to this container. Ancestor translations affect
+    // publication, not its scrollable extent. Traverse in the same reverse
+    // sibling order as the former bottom-up pass, retaining union rounding.
+    const auto& children = *fragment.descendants;
+    if (children.branched) {
+        for (auto i = children.branches.size(); i-- > 0;) include(children.branches[i].root);
+    } else {
+        for (auto i = children.leaves.size(); i-- > 0;) include(children.leaves[i]);
     }
+    if (scroll_container(parent_node.style)) {
+        const Unit inline_end = parent_node.style.box.direction == Direction::Rtl
+            ? parent.padding.left : parent.padding.right;
+        inflow.width = checked(static_cast<double>(inflow.width) + inline_end, parent.node);
+        inflow.height = checked(static_cast<double>(inflow.height) + parent.padding.bottom, parent.node);
+    }
+    unite(inflow, absolute.x, absolute.y, right(absolute, parent.node), bottom(absolute, parent.node), parent.node);
+    parent.scrollable_overflow_rect = inflow;
 }
 } // namespace axisly::css::detail

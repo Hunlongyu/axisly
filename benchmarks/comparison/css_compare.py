@@ -1,8 +1,9 @@
 """Compare the current CSS LayoutTree, pinned Taffy and Yoga on shared trees.
 
 All timed input frames are first replayed with full geometry validation.
-Build, parse, create, destruction and full geometry dumps are outside timers.
-Each timer includes edit/dirty propagation, layout and three rectangle reads.
+Parsing, API style conversion, destruction and geometry dumps are outside timers.
+Each timer includes layout and three rectangle reads, plus dirty propagation
+for leaf_edit or tree creation and style installation for build.
 """
 import argparse
 import csv
@@ -129,6 +130,15 @@ def cases():
                 row=i + 1 if display == "G" else 0,
                 preferred=[180 + ((panel * 8 + i) % 9) * 40, 20]) for i in range(8)]
         add(f"mixed_text_{count}", nodes, [[880 + i * 13, -1] for i in range(17)])
+    # Different dimensions and decorations exercise the ordinary resolver
+    # when cross-node style sharing has little or no reuse.
+    for count in (100, 1000):
+        children = [node(0, width=20 + i * .125, height=24 + (i % 7) * .5,
+                         padding=(i % 5) * .25, margin=(i % 3) * .25, shrink=0)
+                    for i in range(count)]
+        extent = sum(n["width"] + 2 * n["margin"] for n in children) + 4 * (count - 1) + 16
+        add(f"flex_distinct_styles_{count}", [node(width=-2, height=-2, padding=8, gap=4)] + children,
+            [[extent + 512 + i * 16, 180 + i * 4] for i in range(17)])
     return result
 
 
@@ -208,11 +218,17 @@ def summary(raw, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--native", type=Path, required=True)
+    parser.add_argument("--include-reuse", action="store_true",
+        help="Also measure Axisly with an explicit 64 MiB resource retained across temporary trees")
+    parser.add_argument("--include-retained", action="store_true",
+        help="Also measure Axisly with per-node reads and no flat output or Grid track diagnostics")
     parser.add_argument("--baseline-native", type=Path,
         help="Interleave a saved CSS baseline executable with the current engine in each timing round")
     parser.add_argument("--taffy", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--case", action="append")
+    parser.add_argument("--mode", action="append", choices=("cold", "resize", "same", "leaf_edit", "build"),
+        help="Select scenarios; build additionally times node creation and style installation")
     parser.add_argument("--rounds", type=int, default=2)
     parser.add_argument("--samples", type=int, default=9)
     parser.add_argument("--frames-scale", type=int, default=1,
@@ -232,10 +248,24 @@ def main():
         if unknown:
             parser.error(f"Unknown fixtures {sorted(unknown)}")
         fixtures = [f for f in fixtures if f["name"] in args.case]
+    if args.mode:
+        for f in fixtures:
+            f["modes"] = [mode for mode in dict.fromkeys(args.mode) if mode == "build" or mode in f["modes"]]
+        fixtures = [f for f in fixtures if f["modes"]]
+        if not fixtures:
+            parser.error("Selected cases do not support the requested modes")
     args.output.mkdir(parents=True, exist_ok=True)
     inputs = args.output / "fixtures"
     inputs.mkdir(exist_ok=True)
     tools = dict(axisly_css=args.native.resolve(), taffy=args.taffy.resolve(), yoga=args.native.resolve())
+    if args.include_reuse:
+        tools["axisly_css_reuse"] = args.native.resolve()
+        for f in fixtures:
+            f["engines"].insert(1, "axisly_css_reuse")
+    if args.include_retained:
+        tools["axisly_css_retained"] = args.native.resolve()
+        for f in fixtures:
+            f["engines"].insert(1, "axisly_css_retained")
     if args.baseline_native:
         tools["axisly_before"] = args.baseline_native.resolve()
         for f in fixtures:
@@ -301,22 +331,24 @@ def main():
         raise ValueError("Executable changed during run")
     script = Path(__file__).resolve()
     repo = script.parents[2]
-    source_paths = [script, script.with_name("css_native.cpp"),
+    source_paths = [script, script.with_name("css_native.cpp"), script.with_name("css_axisly_adapter.hpp"),
         script.with_name("css_fixture.hpp"), script.parent / "taffy/src/bin/css.rs",
         script.parent / "taffy/Cargo.toml", script.parent / "taffy/Cargo.lock"]
     meta = dict(platform=platform.platform(), python=sys.version,
         timestamp_utc=datetime.now(timezone.utc).isoformat(), taffy="0.14.0", yoga="3.2.1",
         axisly_api="css::LayoutTree", rounds=rounds, samples=samples, smoke=args.smoke,
         baseline_interleaved=args.baseline_native is not None,
+        explicit_memory_reuse=args.include_reuse,
+        retained_output=args.include_retained,
         cpu_affinity=args.cpu, frames_scale=args.frames_scale,
         record_limits=args.record_limits, resource_limit_groups=len(failures),
         cases=[f["name"] for f in fixtures], source_revision=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
         source_sha256={str(p.relative_to(repo)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths},
         executable_sha256=hashes, fixture_sha256={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs.glob("*.txt")},
         geometry_tolerance="abs 0.01px + rel 1e-6; every node, every timed frame; Taffy geometry reference",
-        timers="in-process steady_clock/Instant; edit/dirty + compute + three root-relative rectangle reads; create/destroy excluded",
+        timers="in-process steady_clock/Instant; edit/dirty + compute + three root-relative rectangle reads; build mode additionally includes node creation and style installation; destruction excluded",
         measurement="synthetic fixed and wrapping metrics; identical arithmetic; no real font/rendering",
-        results="Axisly retains flat root-relative geometry and Grid diagnostics; Taffy/Yoga retain node-local geometry; no full-array export added to either")
+        results="axisly_css retains flat root-relative geometry and Grid diagnostics; optional axisly_css_retained uses per-node reads without flat output or track diagnostics; Taffy/Yoga retain node-local geometry; no full-array export added to either")
     (args.output / "environment.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     (args.output / "samples.json").write_text(json.dumps(raw, indent=2), encoding="utf-8")
     summary(raw, args.output / "summary.csv")

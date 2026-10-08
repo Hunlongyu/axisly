@@ -118,12 +118,12 @@ public:
                  index < (panel + 1) * panel_size; ++index) {
                 ++contexts_[index].revision;
             }
-            if (!full_invalidation) tree_.mark_dirty(panels_[panel]);
+            if (!full_invalidation) tree_.mark_subtree_dirty(panels_[panel]);
         } else if (mode == "resize" || mode == "mixed") {
             available_.width = AvailableSpace::definite(
                 880 + static_cast<Unit>(frame % 17) * 13);
         } else require(mode == "same" || mode == "first", "Unknown CSS benchmark mode");
-        if (full_invalidation && mode != "first") tree_.mark_dirty(root_);
+        if (full_invalidation && mode != "first") tree_.mark_subtree_dirty(root_);
         const auto& result = tree_.compute(root_, available_);
         if (!result.succeeded()) {
             throw std::runtime_error("CSS benchmark layout failed: "

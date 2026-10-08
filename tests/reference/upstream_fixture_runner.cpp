@@ -14,6 +14,7 @@
 namespace {
 using namespace axisly;
 using namespace axisly::css;
+bool rounded_output{};
 
 // Measurement model from Taffy 0.14's tests/common/src/lib.rs at the pinned
 // upstream commit. Ahem glyphs are 10x10, and U+200B marks break opportunities.
@@ -93,11 +94,17 @@ axisly::css::MeasureFunction ahem_measurement(std::string text, bool vertical) {
     };
 }
 
+const axisly::css::LayoutResult& compute_fixture(axisly::css::LayoutTree& tree,
+    axisly::css::NodeId root, axisly::css::AvailableSize available) {
+    return rounded_output ? tree.compute(root, available, axisly::PixelRounding{}) : tree.compute(root, available);
+}
+
 int main(int argc, char** argv) {
     try {
         const auto fixtures = upstream_fixtures();
         std::size_t first = 0, count = fixtures.size();
         for (int argument = 1; argument < argc; ++argument) {
+            if (std::string_view(argv[argument]) == "--rounding") { rounded_output = true; continue; }
             if (argument + 1 >= argc) throw std::invalid_argument("Missing fixture range value");
             const std::string_view key = argv[argument];
             const auto value = index_argument(argv[++argument]);

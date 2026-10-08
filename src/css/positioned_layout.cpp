@@ -166,7 +166,7 @@ std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
                                       Size containing,
                                       Direction containing_direction,
                                       NodeId parent) {
-    if (node.style.position != Position::Relative) return {};
+    if (!node.has_relative_inset) return {};
     const auto& inset = node.style.inset;
     const auto left = inset_value(inset.left, containing.width, node.id);
     const auto right = inset_value(inset.right, containing.width, node.id);
@@ -180,12 +180,12 @@ std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
 }
 
 Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
-                          Size parent_size, const ResolvedBox& parent_box,
+                          Size parent_size, const LayoutBox& parent_box,
                           std::size_t depth,
                           std::optional<Rect> containing_override,
                           std::optional<Unit> static_block_y) {
     const auto& child = get(child_id);
-    const auto border = edges(parent_box.border, parent.id);
+    const auto border = edges(parent_box.border(), parent.id);
     const Rect containing = containing_override.value_or(Rect{
         checked(static_cast<double>(border.left)
             + (parent.style.box.direction == Direction::Rtl ? parent_box.scrollbar.width : 0), parent.id),
@@ -202,13 +202,13 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
     const auto right = inset_value(inset.right, containing_width, child.id);
     const auto top = inset_value(inset.top, containing_height, child.id);
     const auto bottom = inset_value(inset.bottom, containing_height, child.id);
-    ResolvedBox child_box;
+    LayoutBox child_box;
     try { child_box = resolve_layout_box(child, containing_width, containing_height); }
     catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, child.id, error.what());
     }
     const auto margin = edges(child_box.margin, child.id);
-    const auto padding = edges(parent_box.padding, parent.id);
+    const auto padding = edges(parent_box.padding(), parent.id);
     const Size content{
         std::max(Unit{0}, containing_width - padding.left - padding.right),
         std::max(Unit{0}, containing_height - padding.top - padding.bottom)};
@@ -322,7 +322,7 @@ Fragment Engine::absolute(const LayoutNode& parent, NodeId child_id,
                 + static_block_y.value_or(Unit{0}) + margin.top, child.id);
         }
     }
-    fragment.root_layout().margin = {horizontal.start_margin, vertical.start_margin,
+    fragment.mutable_root_layout().margin = {horizontal.start_margin, vertical.start_margin,
         horizontal.end_margin, vertical.end_margin};
     translate(fragment,
         checked(static_cast<double>(containing.x) + placed_horizontal.offset, child.id),

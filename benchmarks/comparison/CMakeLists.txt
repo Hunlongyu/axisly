@@ -30,6 +30,12 @@ set_target_properties(axisly_css_comparison_native PROPERTIES CXX_EXTENSIONS OFF
     INTERPROCEDURAL_OPTIMIZATION FALSE RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 axisly_enable_warnings(axisly_css_comparison_native)
 
+add_executable(axisly_css_batch_native css_batch_native.cpp)
+target_link_libraries(axisly_css_batch_native PRIVATE axisly::axisly)
+set_target_properties(axisly_css_batch_native PROPERTIES CXX_EXTENSIONS OFF
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+axisly_enable_warnings(axisly_css_batch_native)
+
 find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
 find_program(AXISLY_COMPARISON_CARGO cargo REQUIRED)
 find_program(AXISLY_COMPARISON_RUSTC rustc REQUIRED)
@@ -61,4 +67,9 @@ if(AXISLY_BUILD_TESTS)
         --case flex_nested_text_96 --case flex_deep_12 --case block_text_96
         --case grid_grow_20x20 --case mixed_text_96)
     set_tests_properties(axisly.css_comparison.geometry_and_smoke PROPERTIES LABELS comparison TIMEOUT 180)
+    add_test(NAME axisly.css_comparison.build_and_layout COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/css_compare.py" --native "$<TARGET_FILE:axisly_css_comparison_native>"
+        --taffy "${taffy_css_exe}" --output "${CMAKE_CURRENT_BINARY_DIR}/css-build-smoke" --smoke
+        --mode build --case flex_fixed_100 --case mixed_text_96)
+    set_tests_properties(axisly.css_comparison.build_and_layout PROPERTIES LABELS comparison TIMEOUT 120)
 endif()

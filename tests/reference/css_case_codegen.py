@@ -290,7 +290,7 @@ def case_source(case, index):
             lines.append(f"    tree.append_child(node_{node['parent']}, node_{node_index});")
     identified = ", ".join(f"{{{node['id']}, node_{index}}}" for index, node in enumerate(case["nodes"]))
     available = ", ".join(space(value) for value in case["available"])
-    lines.append(f"    reference::write_case(out, {string(case['name'])}, tree.compute(node_0, {{{available}}}), {{{identified}}}, true);")
+    lines.append(f"    reference::write_case(out, {string(case['name'])}, compute_fixture(tree, node_0, {{{available}}}), {{{identified}}}, true);")
     lines.append("}")
     return "\n".join(lines)
 

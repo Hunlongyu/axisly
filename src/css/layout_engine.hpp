@@ -4,6 +4,7 @@
 #include "layout_fragment.hpp"
 #include "layout_cache.hpp"
 #include "node_store.hpp"
+#include "layout_box.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -19,27 +20,94 @@ struct GridContributionInput;
 struct GridAxisContribution;
 struct GridBaselineItem;
 struct Placement;
+struct GridStructure;
+struct GridStructureKey;
 
 
 [[nodiscard]] ResolvedDimensions requested_size(const Constraints& constraints,
-    const ResolvedBox& box);
+    const LayoutBox& box);
 
+struct SourceBinding {
+    std::span<const NodeId> children;
+    void* context{};
+    bool dirty{true};
+    std::uint64_t epoch{};
+};
 struct LayoutNode {
+    template<class StyleSource>
+    LayoutNode(StyleSource&& node_style, MeasureFunction&& node_measure)
+        : owned_style(std::forward<StyleSource>(node_style)), style(owned_style), measure(std::move(node_measure)) {}
+    struct Borrowed {};
+    LayoutNode(Borrowed, const Style& node_style) : style(node_style) {}
     NodeId id;
-    Style style;
+    Style owned_style;
+    const Style& style;
     MeasureFunction measure;
+    std::shared_ptr<void> context;
     std::optional<NodeId> parent;
     std::vector<NodeId> children;
+    SourceBinding* borrowed{};
+    [[nodiscard]] bool is_leaf() const noexcept {
+        return borrowed ? borrowed->children.empty() : children.empty();
+    }
+    [[nodiscard]] std::span<const NodeId> layout_children() const noexcept {
+        return borrowed ? borrowed->children : std::span<const NodeId>(children);
+    }
+    [[nodiscard]] void* measure_context() const noexcept { return borrowed ? borrowed->context : context.get(); }
+    // Intrusive work list for allocation-free invalidation/destruction. It is
+    // used only by guarded tree mutations, never by layout or host callbacks.
+    NodeId next_visit{};
+    FragmentRootPool* roots{};
+    LayoutCache* cache_owner{};
     bool box_depends_on_width{}, box_depends_on_height{};
+    bool margin_depends_on_width{}, vertical_edges_depend_on_width{};
+    bool has_relative_inset{};
+    bool grid_columns_auto_repeat{}, grid_rows_auto_repeat{};
+    mutable std::shared_ptr<const GridStructure> grid_structure;
     struct BoxCache {
         std::optional<Unit> width, height;
-        ResolvedBox box;
+        PooledValue<LayoutBox> box;
+        bool container{};
     };
     mutable std::optional<BoxCache> resolved_box;
     mutable NodeCache cache;
     void reset_style_cache();
 };
-using LayoutNodes = NodeStore<LayoutNode>;
+struct SourceNode : LayoutNode {
+    SourceBinding binding;
+    explicit SourceNode(const Style& source_style) : LayoutNode(Borrowed{}, source_style) {
+        borrowed = &binding;
+    }
+};
+class LayoutNodes : public NodeStore<LayoutNode> {
+    using Owned = NodeStore<LayoutNode>;
+    struct Borrowed {
+        const LayoutSource* source{};
+        LayoutCache* cache{};
+        TreeLimits limits;
+        std::uint64_t epoch{1};
+        std::unordered_map<std::uint64_t, std::unique_ptr<SourceNode>> entries;
+    };
+    std::unique_ptr<Borrowed> borrowed_;
+    [[nodiscard]] const LayoutNode* find_borrowed(std::uint64_t id) const;
+public:
+    using Owned::Owned;
+    [[nodiscard]] bool is_external() const noexcept { return bool(borrowed_); }
+    [[nodiscard]] const LayoutNode* find(std::uint64_t id) const {
+        return borrowed_ ? find_borrowed(id) : Owned::find(id);
+    }
+    [[nodiscard]] LayoutNode* find(std::uint64_t id) {
+        return const_cast<LayoutNode*>(std::as_const(*this).find(id));
+    }
+    template<class Visitor> void for_each(Visitor&& visitor) {
+        if (borrowed_) {
+            for (auto& [id, node] : borrowed_->entries) { (void)id; visitor(*node); }
+        } else Owned::for_each(std::forward<Visitor>(visitor));
+    }
+    void attach(const LayoutSource& source, LayoutCache& cache, TreeLimits limits);
+    void begin_compute();
+    void invalidate_source(std::optional<NodeId> node);
+};
 
 struct BlockContext;
 struct PositionedItemInput;
@@ -51,23 +119,6 @@ struct LeafSizingResult {
     bool has_content{};
 };
 
-class LayoutFailure final : public std::runtime_error {
-public:
-    LayoutFailure(LayoutErrorCode code, NodeId node, const char* message)
-        : std::runtime_error(message), code(code), node(node) {}
-    LayoutErrorCode code;
-    NodeId node;
-};
-
-[[noreturn]] void layout_numeric_overflow(NodeId id);
-[[noreturn]] void unresolved_layout_edge(NodeId id);
-
-[[nodiscard]] inline Unit checked(double value, NodeId id) {
-    if (!std::isfinite(value) || std::abs(value) > std::numeric_limits<Unit>::max()) {
-        layout_numeric_overflow(id);
-    }
-    return static_cast<Unit>(value);
-}
 [[nodiscard]] inline Unit edge(const ResolvedEdge& value, NodeId id) {
     if (value.kind == EdgeKind::Numeric) return value.value;
     if (value.kind == EdgeKind::Auto) return 0;
@@ -77,6 +128,7 @@ public:
     return {edge(values.left, id), edge(values.top, id),
             edge(values.right, id), edge(values.bottom, id)};
 }
+[[nodiscard]] inline Insets edges(const Insets& values, NodeId) noexcept { return values; }
 [[nodiscard]] inline Unit content_axis(Unit border_size, Unit first_padding, Unit last_padding,
                   Unit first_border, Unit last_border) {
     return std::max(Unit{0}, border_size - first_padding - last_padding - first_border - last_border);
@@ -93,36 +145,27 @@ public:
 }
 void update_layout_box_cache(const LayoutNode& node,
     std::optional<Unit> containing_width, std::optional<Unit> containing_height);
-[[nodiscard]] inline ResolvedBox resolve_layout_box(const LayoutNode& node,
+[[nodiscard]] inline const LayoutBox& resolve_layout_box(const LayoutNode& node,
     std::optional<Unit> containing_width, std::optional<Unit> containing_height) {
     const auto width_key = node.box_depends_on_width ? containing_width : std::nullopt;
     const auto height_key = node.box_depends_on_height ? containing_height : std::nullopt;
     if (!node.resolved_box || node.resolved_box->width != width_key
-        || node.resolved_box->height != height_key) {
+        || node.resolved_box->height != height_key
+        || node.resolved_box->container != !node.is_leaf()) {
         update_layout_box_cache(node, containing_width, containing_height);
     }
-    auto resolved = node.resolved_box->box;
-    // Maximum ratio transfer depends on whether the node is a container.
-    if (!node.children.empty()) resolved.maximum = transfer_aspect_ratio(resolved.maximum, resolved);
-    // Ratio bounds use padding/border decoration before scrollbars reserve
-    // content space. The cached box retains this pre-scrollbar state.
-    resolved.scrollbar.width = node.style.overflow_y == Overflow::Scroll
-        ? node.style.scrollbar_width : Unit{0};
-    resolved.scrollbar.height = node.style.overflow_x == Overflow::Scroll
-        ? node.style.scrollbar_width : Unit{0};
-    return resolved;
+    return node.resolved_box->box.read();
 }
-[[nodiscard]] inline Unit content_origin_x(const ResolvedBox& box, Insets border,
+[[nodiscard]] inline Unit content_origin_x(const LayoutBox& box, Insets border,
                       Insets padding, NodeId node) {
     return checked(static_cast<double>(padding.left) + border.left
         + (box.direction == Direction::Rtl ? box.scrollbar.width : 0), node);
 }
-void set_fragment_border_size(Fragment& fragment, Size size, const ResolvedBox& box);
-void publish_item_box(Fragment& fragment, const LayoutNode& node, const ResolvedBox& box);
-[[nodiscard]] NodeLayout make_layout(const LayoutNode& node, Size size,
-    const ResolvedBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
+void set_fragment_border_size(Fragment& fragment, Size size, const LayoutBox& box);
+void publish_item_box(Fragment& fragment, const LayoutNode& node, const LayoutBox& box);
+[[nodiscard]] FragmentRoot make_layout(const LayoutNode& node, Size size,
+    const LayoutBox& resolved, std::optional<Unit> first_baseline = std::nullopt,
     std::optional<Unit> last_baseline = std::nullopt);
-void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
 [[nodiscard]] inline std::optional<Unit> child_baseline(const Fragment& fragment, const Style& style) {
     if (!fragment.root) return std::nullopt;
     const auto baseline = fragment.root_layout().first_baseline;
@@ -132,17 +175,21 @@ void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
     }
     return baseline;
 }
-void compute_scrollable_overflow(std::vector<NodeLayout>& layouts,
+void compute_scrollable_overflow(Fragment& fragment, const LayoutNode& node,
     const LayoutNodes& nodes);
 [[nodiscard]] std::pair<Unit, Unit> relative_offset(const LayoutNode& node,
     Size containing, Direction containing_direction, NodeId parent);
 
-
 class Engine {
-    friend class FlexLayout;
+    template<bool> friend class FlexLayout;
+    template<bool> friend class FlexItemSizer;
 public:
-    Engine(const LayoutNodes& nodes, TreeLimits limits, LayoutCache& cache);
-    [[nodiscard]] LayoutResult compute(NodeId root, AvailableSize available);
+    Engine(const LayoutNodes& nodes, TreeLimits limits, LayoutCache& cache,
+        const MeasureProvider* measure_provider = nullptr, bool collect_grid_tracks = true);
+    [[nodiscard]] LayoutResult compute(NodeId root, AvailableSize available,
+        std::vector<NodeLayout> output, PublicationContext publication,
+        std::optional<PixelRounding> rounding = std::nullopt,
+        Fragment* retained = nullptr, bool publish_nodes = true);
     void commit_caches() { cache_.commit(); }
 
 private:
@@ -153,6 +200,11 @@ private:
     std::size_t layouts_{};
     std::size_t hits_{};
     bool root_hit_{};
+    const MeasureProvider* measure_provider_{};
+    bool collect_grid_tracks_{true};
+    [[nodiscard]] bool has_measure(const LayoutNode& node) const noexcept {
+        return bool(node.measure) || measure_provider_;
+    }
     FragmentDetail detail_{FragmentDetail::Full};
     std::unordered_map<std::uint64_t, bool> float_subtree_;
     [[nodiscard]] const LayoutNode& get(NodeId id) const {
@@ -161,44 +213,58 @@ private:
         return *node;
     }
     [[nodiscard]] bool has_float_subtree(NodeId id, std::size_t depth);
-    [[nodiscard]] Fragment layout(NodeId id, Constraints constraints, std::size_t depth,
+    void translate(Fragment& fragment, Unit x, Unit y, NodeId node);
+    void apply_relative_position(Fragment& fragment, const LayoutNode& node,
+        Size containing, Direction containing_direction, NodeId parent) {
+        if (!node.has_relative_inset) return;
+        const auto [x, y] = relative_offset(node, containing, containing_direction, parent);
+        translate(fragment, x, y, node.id);
+    }
+    [[nodiscard]] Fragment layout(const LayoutNode& node, const Constraints& constraints, std::size_t depth,
                                   BlockContext* block_context = nullptr);
-    [[nodiscard]] Fragment layout_sizing(NodeId id, Constraints constraints,
+    [[nodiscard]] Fragment compute_container(const LayoutNode& node, const Constraints& constraints,
+        LayoutBox box, std::size_t depth, BlockContext* block_context = nullptr);
+    [[nodiscard]] Fragment layout_sizing(const LayoutNode& node, const Constraints& constraints,
                                          std::size_t depth);
-    [[nodiscard]] Size layout_size(NodeId id, Constraints constraints,
+    [[nodiscard]] Size layout_size(const LayoutNode& node, const Constraints& constraints,
                                        std::size_t depth);
-    [[nodiscard]] ResolvedBox query_box(const LayoutNode& node, const Constraints& constraints) const;
+    [[nodiscard]] Fragment layout_container(const LayoutNode& node, const Constraints& constraints,
+        const LayoutBox& box, std::size_t depth, BlockContext* block_context);
+    [[nodiscard]] LayoutBox query_box(const LayoutNode& node, const Constraints& constraints) const;
     [[nodiscard]] Fragment leaf(const LayoutNode& node, const Constraints& constraints,
-                                const ResolvedBox& box);
+                                const LayoutBox& box);
     [[nodiscard]] LeafSizingResult size_leaf(const LayoutNode& node, const Constraints& constraints,
-                                             const ResolvedBox& box, bool include_content);
+                                             const LayoutBox& box, bool include_content);
     [[nodiscard]] std::optional<Unit> intrinsic_container_size(const LayoutNode& node,
-        const Constraints& constraints, const ResolvedBox& box,
+        const Constraints& constraints, const LayoutBox& box,
         std::size_t depth, bool horizontal);
     [[nodiscard]] Fragment block(const LayoutNode& node, const Constraints& constraints,
-                                 const ResolvedBox& box, std::size_t depth,
+                                 const LayoutBox& box, std::size_t depth,
                                  BlockContext* block_context);
     [[nodiscard]] Unit block_content_based_width(const LayoutNode& node,
         AvailableSpace available, ResolvedDimensions percentage_basis, std::size_t depth);
     [[nodiscard]] Fragment flex(const LayoutNode& node, const Constraints& constraints,
-                                const ResolvedBox& box, std::size_t depth);
-    [[nodiscard]] FlexItem prepare_flex_item(const LayoutNode& node,
+                                const LayoutBox& box, std::size_t depth);
+    void prepare_flex_item(FlexItem& item, std::pmr::vector<LayoutBox>& item_boxes, const LayoutNode& node,
         const LayoutNode& child, const Constraints& constraints,
         const FlexItemSizingInput& input, std::size_t depth);
     [[nodiscard]] Fragment grid(const LayoutNode& node, const Constraints& constraints,
-                                const ResolvedBox& box, std::size_t depth);
+                                const LayoutBox& box, std::size_t depth);
+    [[nodiscard]] std::shared_ptr<const GridStructure> resolve_grid_structure(
+        const LayoutNode& node, GridStructureKey key) const;
     [[nodiscard]] GridAxisContribution grid_axis_contribution(NodeId id,
         const GridContributionInput& input, std::size_t depth);
-    [[nodiscard]] std::vector<GridBaselineItem> measure_grid_baselines(const LayoutNode& parent,
-        const std::vector<Placement>& placements, ResolvedDimensions container_inner,
+    [[nodiscard]] std::pmr::vector<GridBaselineItem> measure_grid_baselines(const LayoutNode& parent,
+        std::span<const Placement> placements, ResolvedDimensions container_inner,
         std::size_t depth);
     [[nodiscard]] Fragment hidden(const LayoutNode& node, std::size_t depth);
+    void append_fragment(Fragment& parent, Fragment&& child);
     [[nodiscard]] Fragment absolute(const LayoutNode& parent, NodeId child,
-        Size parent_size, const ResolvedBox& parent_box, std::size_t depth,
+        Size parent_size, const LayoutBox& parent_box, std::size_t depth,
         std::optional<Rect> containing_override = std::nullopt,
         std::optional<Unit> static_block_y = std::nullopt);
     [[nodiscard]] Fragment positioned_item(const LayoutNode& child,
-        const ResolvedBox& box, const PositionedItemInput& input, std::size_t depth);
+        const LayoutBox& box, const PositionedItemInput& input, std::size_t depth);
     [[nodiscard]] Measurement measure(const LayoutNode& node, const MeasureRequest& request);
 };
 

@@ -1,4 +1,4 @@
-#include "css_fixture.hpp"
+#include "css_axisly_adapter.hpp"
 
 #include <axisly/css_tree.hpp>
 #include <yoga/Yoga.h>
@@ -15,104 +15,6 @@ namespace {
 using namespace axisly;
 using namespace axisly::bench::comparison;
 
-class Engine {
-public:
-    virtual ~Engine() = default;
-    virtual void calculate(Size) = 0;
-    virtual void edit(std::size_t) = 0;
-    virtual Rect rect(std::size_t) const = 0;
-    virtual void check_order() const {}
-    std::size_t measurements{};
-    double consume(std::size_t count) const {
-        return fingerprint(rect(0)) + fingerprint(rect(count / 2))
-            + fingerprint(rect(count - 1));
-    }
-};
-css::Length dimension(float v) {
-    return v == -1 ? css::Length::automatic()
-        : v == -2 ? css::Length::percent(1) : css::Length::length(v);
-}
-css::Style style(const Node& n) {
-    css::Style s;
-    s.display = n.display == 'G' ? css::Display::Grid
-        : n.display == 'B' ? css::Display::Block : css::Display::Flex;
-    s.box.size = {dimension(n.width), dimension(n.height)};
-    s.box.min_size = {css::Length::length(0), css::Length::length(0)};
-    s.flex_direction = n.direction == 'R' ? css::FlexDirection::Row : css::FlexDirection::Column;
-    s.flex_wrap = n.wrap ? css::FlexWrap::Wrap : css::FlexWrap::NoWrap;
-    s.flex_basis = dimension(n.basis);
-    s.flex_grow = n.grow;
-    s.flex_shrink = n.shrink;
-    const auto padding = css::Length::length(n.padding), margin = css::Length::length(n.margin);
-    s.box.padding = {padding, padding, padding, padding};
-    s.box.margin = {margin, margin, margin, margin};
-    s.gap = {css::Length::length(n.gap), css::Length::length(n.gap)};
-    s.align_items = {css::ItemPosition::Stretch};
-    s.justify_items = {css::ItemPosition::Stretch};
-    s.align_content = {css::ContentPosition::Start};
-    s.justify_content = {css::ContentPosition::Start};
-    auto tracks = [](const auto& source, auto& target) {
-        for (const auto t : source) {
-            if (t.kind == 'F') target.emplace_back(css::TrackSizing::fixed(t.value));
-            else if (t.kind == 'A') target.emplace_back(css::TrackSizing::automatic());
-            else target.emplace_back(css::TrackSizing::minmax(css::TrackBreadth::length(0),
-                css::TrackBreadth::fraction(t.value)));
-        }
-    };
-    tracks(n.columns, s.grid.template_columns);
-    tracks(n.rows, s.grid.template_rows);
-    if (n.column) s.grid.column.start = css::GridLine::index(static_cast<std::int16_t>(n.column));
-    if (n.row) s.grid.row.start = css::GridLine::index(static_cast<std::int16_t>(n.row));
-    s.grid.column.end = css::GridLine::span(static_cast<std::uint16_t>(n.column_span));
-    s.grid.row.end = css::GridLine::span(static_cast<std::uint16_t>(n.row_span));
-    return s;
-}
-class AxislyCss final : public Engine {
-    const Fixture& fixture_;
-    css::LayoutTree tree_;
-    std::vector<css::NodeId> nodes_;
-    std::vector<std::size_t> revisions_;
-    const css::LayoutResult* output_{};
-public:
-    explicit AxislyCss(const Fixture& f) : fixture_(f), revisions_(f.nodes.size()) {
-        nodes_.reserve(f.nodes.size());
-        for (std::size_t i = 0; i < f.nodes.size(); ++i) {
-            const auto& n = f.nodes[i];
-            css::MeasureFunction callback;
-            if (n.measure) callback = [this, i](const css::MeasureRequest& r) {
-                ++measurements;
-                const auto size = measure(fixture_.nodes[i], revisions_[i],
-                    r.known_content_width, r.known_content_height,
-                    r.available_width.definite_value(),
-                    r.available_width.kind == css::AvailableKind::MinContent);
-                return css::Measurement{.content_size = size};
-            };
-            nodes_.push_back(tree_.create_node(style(n), std::move(callback)));
-            if (n.parent >= 0) tree_.append_child(nodes_[static_cast<std::size_t>(n.parent)], nodes_.back());
-        }
-    }
-    void calculate(Size size) override {
-        measurements = 0;
-        output_ = &tree_.compute(nodes_[0], {css::AvailableSpace::definite(size.width),
-            size.height < 0 ? css::AvailableSpace::max_content()
-                : css::AvailableSpace::definite(size.height)});
-        if (!output_->succeeded()) throw std::runtime_error(
-            (output_->error.code == css::LayoutErrorCode::LimitExceeded ? "LAYOUT_LIMIT: " : "")
-            + output_->error.message + "; measurements=" + std::to_string(output_->measurement_count)
-            + "; layouts=" + std::to_string(output_->layout_count));
-        require(output_->nodes.size() == nodes_.size(), "Incomplete CSS output");
-        require(output_->measurement_count == measurements, "CSS measurement count mismatch");
-    }
-    void edit(std::size_t index) override {
-        ++revisions_[index];
-        tree_.mark_dirty(nodes_[index]);
-    }
-    Rect rect(std::size_t i) const override { return output_->nodes[i].border_box; }
-    void check_order() const override {
-        for (std::size_t i = 0; i < nodes_.size(); ++i)
-            require(output_->nodes[i].node == nodes_[i], "CSS output order differs from fixture");
-    }
-};
 class Yoga final : public Engine {
     struct Context { Yoga* owner{}; std::size_t index{}, revision{}; };
     const Fixture& fixture_;
@@ -208,18 +110,28 @@ void values(const std::vector<double>& data) {
 } // namespace
 int main(int argc, char** argv) {
     try {
-        require(argc == 6, "Usage: css_native axisly_css|yoga fixture [verify_]cold|resize|same|leaf_edit iterations samples");
+        require(argc == 6, "Usage: css_native axisly_css|yoga fixture [verify_]cold|resize|same|leaf_edit|build iterations samples");
         const std::string engine(argv[1]);
         std::string mode(argv[3]);
         const bool verify = mode.starts_with("verify_");
         if (verify) mode.erase(0, 7);
-        require(mode == "cold" || mode == "resize" || mode == "same" || mode == "leaf_edit", "Unknown mode");
-        require(engine == "axisly_css" || engine == "yoga", "Unknown engine");
+        require(mode == "cold" || mode == "resize" || mode == "same" || mode == "leaf_edit" || mode == "build", "Unknown mode");
+        require(engine == "axisly_css" || engine == "axisly_css_reuse" || engine == "axisly_css_retained" || engine == "yoga", "Unknown engine");
+        const bool axisly_engine = engine != "yoga";
+        const auto memory = engine == "axisly_css_reuse" ? std::make_shared<css::LayoutMemory>() : nullptr;
         const auto f = read_fixture(argv[2]);
         const auto iterations = positive(argv[4]), samples = positive(argv[5]);
         require(mode != "leaf_edit" || !f.measured.empty(), "Edit requires measured leaves");
+        // Taffy's fixture reader already produces ready-to-install Styles.
+        // Prepare this API's style values at the same boundary. Construction
+        // timing still includes copying them into each newly created node.
+        std::vector<css::Style> styles;
+        if (axisly_engine) {
+            styles.reserve(f.nodes.size());
+            for (const auto& node : f.nodes) styles.push_back(style(node));
+        }
         auto create = [&]() -> std::unique_ptr<Engine> {
-            if (engine == "axisly_css") return std::make_unique<AxislyCss>(f);
+            if (axisly_engine) return std::make_unique<AxislyCss>(f, styles, memory, engine == "axisly_css_retained");
             return std::make_unique<Yoga>(f);
         };
         auto step = [&](Engine& e, std::size_t frame) {
@@ -229,10 +141,10 @@ int main(int argc, char** argv) {
         std::cout << std::setprecision(12);
         if (verify) {
             auto e = create();
-            if (mode != "cold") e->calculate(f.sizes.back());
+            if (mode != "cold" && mode != "build") e->calculate(f.sizes.back());
             std::cout << "{\"frames\":[";
             for (std::size_t frame = 0; frame < iterations; ++frame) {
-                if (mode == "cold") e = create();
+                if (mode == "cold" || mode == "build") e = create();
                 step(*e, frame);
                 e->check_order();
                 if (frame) std::cout << ',';
@@ -249,27 +161,57 @@ int main(int argc, char** argv) {
         }
         for (const auto size : f.sizes) { auto e = create(); e->calculate(size); }
         std::vector<double> times, checksums, counts;
-        for (std::size_t sample = 0; sample < samples; ++sample) {
-            auto e = create();
-            if (mode != "cold") e->calculate(f.sizes.back());
-            double elapsed{}, checksum{}, measurements{};
-            for (std::size_t frame = 0; frame < iterations; ++frame) {
-                if (mode == "cold") e = create();
-                const auto start = std::chrono::steady_clock::now();
-                step(*e, frame);
-                const auto consumed = e->consume(f.nodes.size());
-                const auto end = std::chrono::steady_clock::now();
-                elapsed += std::chrono::duration<double, std::micro>(end - start).count();
-                checksum += consumed;
-                measurements += static_cast<double>(e->measurements);
+        if (mode == "build") {
+            // Construction belongs inside this timer for every engine. The
+            // previous tree has already been destroyed before the next frame.
+            for (std::size_t sample = 0; sample < samples; ++sample) {
+                double elapsed{}, checksum{}, measurements{};
+                for (std::size_t frame = 0; frame < iterations; ++frame) {
+                    const auto start = std::chrono::steady_clock::now();
+                    auto e = create();
+                    step(*e, frame);
+                    const auto consumed = e->consume(f.nodes.size());
+                    const auto end = std::chrono::steady_clock::now();
+                    elapsed += std::chrono::duration<double, std::micro>(end - start).count();
+                    checksum += consumed;
+                    measurements += static_cast<double>(e->measurements);
+                }
+                times.push_back(elapsed / static_cast<double>(iterations));
+                checksums.push_back(checksum);
+                counts.push_back(measurements / static_cast<double>(iterations));
             }
-            times.push_back(elapsed / static_cast<double>(iterations));
-            checksums.push_back(checksum);
-            counts.push_back(measurements / static_cast<double>(iterations));
+        } else {
+            for (std::size_t sample = 0; sample < samples; ++sample) {
+                auto e = create();
+                if (mode != "cold") e->calculate(f.sizes.back());
+                double elapsed{}, checksum{}, measurements{};
+                for (std::size_t frame = 0; frame < iterations; ++frame) {
+                    if (mode == "cold") e = create();
+                    const auto start = std::chrono::steady_clock::now();
+                    step(*e, frame);
+                    const auto consumed = e->consume(f.nodes.size());
+                    const auto end = std::chrono::steady_clock::now();
+                    elapsed += std::chrono::duration<double, std::micro>(end - start).count();
+                    checksum += consumed;
+                    measurements += static_cast<double>(e->measurements);
+                }
+                times.push_back(elapsed / static_cast<double>(iterations));
+                checksums.push_back(checksum);
+                counts.push_back(measurements / static_cast<double>(iterations));
+            }
         }
         std::cout << "{\"build\":\"" << AXISLY_BENCH_CONFIG
             << "\",\"axisly_version\":\"" << AXISLY_BENCH_VERSION << "\",\"samples_us\":[";
         values(times); std::cout << "],\"checksums\":["; values(checksums);
-        std::cout << "],\"measurements\":["; values(counts); std::cout << "]}\n";
+        std::cout << "],\"measurements\":["; values(counts); std::cout << ']';
+        if (memory) {
+            const auto stats = memory->stats();
+            std::cout << ",\"memory\":{\"cache_limit\":" << memory->cache_limit()
+                << ",\"cached_bytes\":" << stats.cached_bytes << ",\"live_bytes\":" << stats.live_bytes
+                << ",\"peak_live_bytes\":" << stats.peak_live_bytes
+                << ",\"upstream_allocations\":" << stats.upstream_allocations
+                << ",\"reuse_count\":" << stats.reuse_count << '}';
+        }
+        std::cout << "}\n";
     } catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
 }

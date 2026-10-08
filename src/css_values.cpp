@@ -13,6 +13,11 @@ namespace axisly::css {
     throw std::invalid_argument(message);
 }
 
+[[noreturn]] void detail::invalid_definite_space(Unit value) {
+    if (!std::isfinite(value)) invalid_numeric_value("CSS numeric value must be finite");
+    invalid_numeric_value("Definite space must be nonnegative");
+}
+
 [[noreturn]] void detail::numeric_value_overflow(const char* message) {
     throw std::overflow_error(message);
 }

@@ -13,8 +13,8 @@ namespace axisly::css {
 namespace detail {
 [[nodiscard]] inline Unit add_box_extent(Unit first, Unit second) {
     const double sum = static_cast<double>(first) + second;
-    if (!std::isfinite(sum) || sum > std::numeric_limits<Unit>::max()
-        || sum < -std::numeric_limits<Unit>::max()) {
+    if (!(sum >= -std::numeric_limits<Unit>::max()
+        && sum <= std::numeric_limits<Unit>::max())) {
         numeric_value_overflow("CSS box dimension exceeds Unit range");
     }
     return static_cast<Unit>(sum);

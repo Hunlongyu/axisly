@@ -42,7 +42,8 @@ Unit Engine::block_content_based_width(const LayoutNode& node,
     const auto available_width = available.definite_value();
     FloatWidthContribution floats(available);
     double maximum_child_width = 0;
-    for (const auto child_id : node.children) {
+    LayoutBox item_box;
+    for (const auto child_id : node.layout_children()) {
         const auto& child = get(child_id);
         if (child.style.display == Display::None
             || child.style.position == Position::Absolute) continue;
@@ -50,13 +51,10 @@ Unit Engine::block_content_based_width(const LayoutNode& node,
         // Generate dimensions with the container's early known content size.
         // The measurement itself has no containing block; known dimensions
         // carry independently resolved percentage sizes into that query.
-        const auto item = resolve_block_item(child, percentage_basis,
-            available_width.value_or(Unit{0}));
-        const auto& child_box = item.box;
-        BoxStyle margin_style;
-        margin_style.margin = child.style.box.margin;
-        const auto margin = edges(resolve_box(margin_style, available_width,
-            std::nullopt, IndefiniteEdgeBasis::Zero).margin, child_id);
+        const auto& child_box = resolve_block_item_box(child, percentage_basis,
+            available_width.value_or(Unit{0}), item_box);
+        const auto margin = edges(resolve_box_margins(child.style.box.margin,
+            available_width, IndefiniteEdgeBasis::Zero), child_id);
         const Unit horizontal_margin = checked(static_cast<double>(margin.left)
             + margin.right, child_id);
         Constraints child_constraints;
@@ -82,10 +80,10 @@ Unit Engine::block_content_based_width(const LayoutNode& node,
         }
         const auto child_width = child_constraints.known_width.value_or(Unit{0});
         const auto measured_width = child_constraints.known_width ? child_width
-            : layout_size(child_id, child_constraints, depth + 1).width;
+            : layout_size(child, child_constraints, depth + 1).width;
         const Unit outer_width = checked(std::max(0.0,
             static_cast<double>(std::max(measured_width,
-                child_box.horizontal_padding_border().value_or(Unit{0})))
+                child_box.horizontal_padding_border()))
                 + horizontal_margin), child_id);
         if (child.style.float_side != FloatSide::None) {
             floats.add(outer_width, child.style.float_side, child.style.clear);

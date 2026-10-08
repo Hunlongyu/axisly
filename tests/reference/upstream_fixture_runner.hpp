@@ -16,6 +16,8 @@ struct UpstreamFixture {
 };
 
 [[nodiscard]] std::vector<UpstreamFixture> upstream_fixtures();
+[[nodiscard]] const axisly::css::LayoutResult& compute_fixture(axisly::css::LayoutTree& tree,
+    axisly::css::NodeId root, axisly::css::AvailableSize available);
 [[nodiscard]] axisly::css::MeasureFunction ahem_measurement(std::string text,
     bool vertical);
 

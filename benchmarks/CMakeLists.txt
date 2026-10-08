@@ -20,6 +20,11 @@ endforeach()
 target_sources(axisly_bench_allocations PRIVATE allocation_probe.cpp)
 target_compile_definitions(axisly_bench_allocations PRIVATE AXISLY_COUNT_ALLOCATIONS=1)
 
+add_executable(axisly_css_lookup_bench css_lookup.cpp)
+target_link_libraries(axisly_css_lookup_bench PRIVATE axisly::axisly)
+set_target_properties(axisly_css_lookup_bench PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+axisly_enable_warnings(axisly_css_lookup_bench)
+
 add_executable(axisly_cache_allocations cache_allocations.cpp allocation_probe.cpp)
 target_link_libraries(axisly_cache_allocations PRIVATE axisly::axisly)
 set_target_properties(axisly_cache_allocations PROPERTIES CXX_EXTENSIONS OFF RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

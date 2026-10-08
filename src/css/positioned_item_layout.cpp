@@ -24,7 +24,7 @@ std::optional<KeywordSize> resolve_keyword(const Length& value,
 
 struct PositionedSize {
     ResolvedDimensions known, minimum, maximum;
-    ResolvedBox ratio_box;
+    LayoutBox ratio_box;
 
     void apply_ratio() { known = transfer_aspect_ratio(known, ratio_box); }
     void clamp() {
@@ -37,13 +37,13 @@ struct PositionedSize {
     }
 };
 
-PositionedSize resolve_positioned_size(const ResolvedBox& box, bool grid) {
+PositionedSize resolve_positioned_size(const LayoutBox& box, bool grid) {
     auto bounds_box = box;
     bounds_box.scrollbar = {};
     auto ratio_box = bounds_box;
     ratio_box.box_sizing = BoxSizing::BorderBox;
-    const Unit width_floor = bounds_box.horizontal_decoration().value_or(0);
-    const Unit height_floor = bounds_box.vertical_decoration().value_or(0);
+    const Unit width_floor = bounds_box.horizontal_decoration();
+    const Unit height_floor = bounds_box.vertical_decoration();
     auto minimum = grid ? box.specified_minimum : box.minimum;
     minimum.width = std::max(minimum.width.value_or(width_floor), width_floor);
     minimum.height = std::max(minimum.height.value_or(height_floor), height_floor);
@@ -55,7 +55,7 @@ PositionedSize resolve_positioned_size(const ResolvedBox& box, bool grid) {
 } // namespace
 
 Fragment Engine::positioned_item(const LayoutNode& child,
-    const ResolvedBox& box, const PositionedItemInput& input, std::size_t depth) {
+    const LayoutBox& box, const PositionedItemInput& input, std::size_t depth) {
     const bool grid = input.parent_display == Display::Grid;
     const auto margin = edges(box.margin, child.id);
     auto sizing = resolve_positioned_size(box, grid);
@@ -87,7 +87,7 @@ Fragment Engine::positioned_item(const LayoutNode& child,
         // a later Flex content layout has a different containing block.
         query.containing_width = input.area.width;
         query.containing_height = input.area.height;
-        return layout_size(child.id, query, depth + 1);
+        return layout_size(child, query, depth + 1);
     };
     const auto measure_keyword = [&](const KeywordSize& keyword, bool horizontal) {
         if (const auto* exact = std::get_if<Unit>(&keyword)) return *exact;
@@ -140,7 +140,7 @@ Fragment Engine::positioned_item(const LayoutNode& child,
     Size final_size;
     if (sizing.known.width && sizing.known.height) final_size = {*sizing.known.width, *sizing.known.height};
     else {
-        const auto measured = layout_size(child.id, constraints, depth + 1);
+        const auto measured = layout_size(child, constraints, depth + 1);
         final_size = sizing.clamp({sizing.known.width.value_or(measured.width),
             sizing.known.height.value_or(measured.height)});
     }
@@ -148,11 +148,12 @@ Fragment Engine::positioned_item(const LayoutNode& child,
     constraints.known_height = final_size.height;
     constraints.known_width_is_final = true;
     constraints.known_height_is_final = true;
-    auto fragment = layout(child.id, constraints, depth + 1);
+    auto fragment = layout(child, constraints, depth + 1);
     set_fragment_border_size(fragment, final_size, box);
-    auto& layout = fragment.root_layout();
-    layout.padding = edges(box.padding, child.id);
-    layout.border = edges(box.border, child.id);
+    auto& layout = fragment.mutable_root_layout();
+    fragment.overflow_dirty |= layout.padding != box.padding();
+    layout.padding = edges(box.padding(), child.id);
+    layout.border = edges(box.border(), child.id);
     return fragment;
 }
 

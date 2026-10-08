@@ -46,16 +46,34 @@ Unit align_offset(Unit free, ItemAlignment alignment, bool horizontal,
     }
     return 0;
 }
+
+bool needs_content_contributions(const TrackAxis& axis, bool definite_size) {
+    return std::any_of(axis.tracks.begin(), axis.tracks.end(), [&](const TrackState& track) {
+        return !track.collapsed && (track.intrinsic_min || track.intrinsic_max
+            || (!definite_size && track.style.maximum.kind() == TrackBreadthKind::Fraction));
+    });
+}
+
+bool needs_grid_content_fit(const LayoutNode& parent, const LayoutNode& child, bool columns) {
+    if (child.style.display != Display::Grid
+        || (columns ? child.style.box.size.width : child.style.box.size.height).kind() != LengthKind::Auto) {
+        return false;
+    }
+    const auto alignment = columns
+        ? child.style.justify_self.value_or(parent.style.justify_items.value_or(ItemAlignment{}))
+        : child.style.align_self.value_or(parent.style.align_items.value_or(
+            ItemAlignment{child.style.box.aspect_ratio ? ItemPosition::Start : ItemPosition::Stretch}));
+    const auto& margin = child.style.box.margin;
+    return alignment.position != ItemPosition::Stretch
+        || (columns ? margin.left : margin.top).kind() == LengthKind::Auto
+        || (columns ? margin.right : margin.bottom).kind() == LengthKind::Auto;
+}
 } // namespace
 
 Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
-                      const ResolvedBox& box, std::size_t depth) {
+                      const LayoutBox& box, std::size_t depth) {
     const auto decoration_width = box.horizontal_decoration();
     const auto decoration_height = box.vertical_decoration();
-    if (!decoration_width || !decoration_height) {
-        throw LayoutFailure(LayoutErrorCode::UnresolvedPercentage, node.id,
-            "Grid decoration requires a definite containing inline size");
-    }
     const auto requested = requested_size(constraints, box);
     auto border_width = requested.width;
     auto border_height = requested.height;
@@ -78,20 +96,20 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         return result;
     }
     auto inner_width = border_width
-        ? std::optional<Unit>(std::max(Unit{0}, *border_width - *decoration_width)) : std::nullopt;
+        ? std::optional<Unit>(std::max(Unit{0}, *border_width - decoration_width)) : std::nullopt;
     auto inner_height = border_height
-        ? std::optional<Unit>(std::max(Unit{0}, *border_height - *decoration_height)) : std::nullopt;
+        ? std::optional<Unit>(std::max(Unit{0}, *border_height - decoration_height)) : std::nullopt;
     const auto initial_track_width = inner_width ? inner_width
         : box.minimum.width ? std::optional<Unit>(std::max(Unit{0},
-            *box.minimum.width - *decoration_width)) : std::nullopt;
+            *box.minimum.width - decoration_width)) : std::nullopt;
     const auto initial_track_height = inner_height ? inner_height
         : box.minimum.height ? std::optional<Unit>(std::max(Unit{0},
-            *box.minimum.height - *decoration_height)) : std::nullopt;
+            *box.minimum.height - decoration_height)) : std::nullopt;
     const auto maximum_track_width = box.maximum.width
-        ? std::optional<Unit>(std::max(Unit{0}, *box.maximum.width - *decoration_width))
+        ? std::optional<Unit>(std::max(Unit{0}, *box.maximum.width - decoration_width))
         : std::nullopt;
     const auto maximum_track_height = box.maximum.height
-        ? std::optional<Unit>(std::max(Unit{0}, *box.maximum.height - *decoration_height))
+        ? std::optional<Unit>(std::max(Unit{0}, *box.maximum.height - decoration_height))
         : std::nullopt;
     const auto constrained_grid_space = [](AvailableSpace available,
         std::optional<Unit> border_size, std::optional<Unit> minimum,
@@ -107,12 +125,12 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     };
     const AxisSizingSpace column_space{
         constrained_grid_space(constraints.available.width, border_width,
-            box.minimum.width, box.maximum.width, *decoration_width),
+            box.minimum.width, box.maximum.width, decoration_width),
         inner_width, initial_track_width, maximum_track_width,
         node.style.justify_content.value_or(ContentAlignment{})};
     const AxisSizingSpace row_space{
         constrained_grid_space(constraints.available.height, border_height,
-            box.minimum.height, box.maximum.height, *decoration_height),
+            box.minimum.height, box.maximum.height, decoration_height),
         inner_height, initial_track_height, maximum_track_height,
         node.style.align_content.value_or(ContentAlignment{})};
     Unit column_gap = resolved_gap(node.style.gap.width, initial_track_width, node.id);
@@ -126,39 +144,19 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         return value;
     };
     const auto repeat_width = repeat_basis(border_width, box.minimum.width,
-        box.maximum.width, *decoration_width);
+        box.maximum.width, decoration_width);
     const auto repeat_height = repeat_basis(border_height, box.minimum.height,
-        box.maximum.height, *decoration_height);
-    auto columns = expand_grid_template(node.style.grid.template_columns,
-        node.style.grid.column_line_names, repeat_width,
+        box.maximum.height, decoration_height);
+    const auto structure = resolve_grid_structure(node, {repeat_width, repeat_height,
         resolved_gap(node.style.gap.width, repeat_width, node.id),
-        !border_width && !box.maximum.width, node.id);
-    auto rows = expand_grid_template(node.style.grid.template_rows,
-        node.style.grid.row_line_names, repeat_height,
         resolved_gap(node.style.gap.height, repeat_height, node.id),
-        !border_height && !box.maximum.height, node.id);
-    apply_grid_template_areas(node.style.grid, rows, columns);
-    std::vector<Placement> placements(node.children.size());
-    std::vector<AbsoluteGridPlacement> absolute_rows(node.children.size());
-    std::vector<AbsoluteGridPlacement> absolute_columns(node.children.size());
-    for (std::size_t i = 0; i < node.children.size(); ++i) {
-        const auto& child = get(node.children[i]);
-        if (child.style.display == Display::None) { placements[i].hidden = true; continue; }
-        if (child.style.position == Position::Absolute) {
-            placements[i].hidden = true;
-            absolute_rows[i] = resolve_absolute_grid_placement(child.style.grid.row, rows);
-            absolute_columns[i] = resolve_absolute_grid_placement(child.style.grid.column, columns);
-            continue;
-        }
-        placements[i].row = resolve_grid_placement(child.style.grid.row, rows);
-        placements[i].column = resolve_grid_placement(child.style.grid.column, columns);
-        placements[i].row_estimate = estimate_grid_axis(child.style.grid.row,
-            static_cast<std::int32_t>(rows.tracks.size()));
-        placements[i].column_estimate = estimate_grid_axis(child.style.grid.column,
-            static_cast<std::int32_t>(columns.tracks.size()));
-    }
-    const auto extent = place_grid_items(placements, static_cast<std::int32_t>(rows.tracks.size()),
-        static_cast<std::int32_t>(columns.tracks.size()), node.style.grid.auto_flow, node.id);
+        !border_width && !box.maximum.width, !border_height && !box.maximum.height});
+    const auto& columns = structure->columns;
+    const auto& rows = structure->rows;
+    const auto& placements = structure->placements;
+    const auto& absolute_rows = structure->absolute_rows;
+    const auto& absolute_columns = structure->absolute_columns;
+    const auto extent = structure->extent;
     const auto min_row = extent.row_start, max_row = extent.row_end;
     const auto min_column = extent.column_start, max_column = extent.column_end;
     auto track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
@@ -167,16 +165,26 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         min_row, max_row, initial_track_height, row_gap, node.id);
     collapse_auto_fit(track_columns, columns, placements, true);
     collapse_auto_fit(track_rows, rows, placements, false);
+    const bool columns_need_content = needs_content_contributions(track_columns, inner_width.has_value());
+    const bool rows_need_content = needs_content_contributions(track_rows, inner_height.has_value());
+    const std::pmr::vector<ItemContribution> no_contributions(node.cache_owner->memory());
     auto baseline_items = measure_grid_baselines(node, placements, {inner_width, inner_height}, depth);
-    std::vector<ItemContribution> contributions;
-    contributions.reserve(node.children.size());
-    std::vector<std::optional<std::size_t>> contribution_indices(node.children.size());
-    for (std::size_t i = 0; i < node.children.size(); ++i) {
+    std::pmr::vector<ItemContribution> contributions(node.cache_owner->memory());
+    contributions.reserve(node.layout_children().size());
+    std::pmr::vector<std::optional<std::size_t>> contribution_indices(node.layout_children().size(), node.cache_owner->memory());
+    for (std::size_t i = 0; i < node.layout_children().size(); ++i) {
         if (placements[i].hidden) continue;
-        const auto id = node.children[i];
-        const auto axis = grid_axis_contribution(id,
-            {node, placements[i], track_columns, track_rows, {inner_width, inner_height},
-                true, GridCrossSizing::MaximumEstimate, baseline_items[i].shim}, depth);
+        const auto id = node.layout_children()[i];
+        const auto& child = get(id);
+        // Fixed tracks and definite flexible tracks consume no intrinsic
+        // contribution. Nested Grid items still need their content-fit bounds
+        // for final item sizing, independently of the enclosing tracks.
+        GridAxisContribution axis{};
+        if (columns_need_content || needs_grid_content_fit(node, child, true)) {
+            axis = grid_axis_contribution(id,
+                {node, placements[i], track_columns, track_rows, {inner_width, inner_height},
+                    true, GridCrossSizing::MaximumEstimate, baseline_items[i].shim}, depth);
+        }
         const auto scrolls = [](Overflow overflow) {
             return overflow == Overflow::Hidden || overflow == Overflow::Scroll;
         };
@@ -184,9 +192,10 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         contributions.push_back({placements[i], {axis.minimum, 0},
             {axis.min_content, 0}, {axis.max_content, 0},
             {axis.margin_start, 0, axis.margin_end, 0},
-            scrolls(get(id).style.overflow_x), scrolls(get(id).style.overflow_y)});
+            scrolls(child.style.overflow_x), scrolls(child.style.overflow_y)});
     }
-    size_axis(track_columns, contributions, true, column_space, node.id);
+    size_axis(track_columns, columns_need_content ? contributions : no_contributions,
+        true, column_space, node.id);
     Unit measured_width = track_columns.offsets.back();
     ResolvedDimensions provisional_inner{
         inner_width.value_or(track_columns.offsets.back()), inner_height};
@@ -195,9 +204,11 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     // provisional sizes from the previous track pass.
     const auto measure_cross_dependent_contributions = [&](bool rows_axis) {
         bool changed = false;
-        for (std::size_t i = 0; i < node.children.size(); ++i) {
+        for (std::size_t i = 0; i < node.layout_children().size(); ++i) {
             if (!contribution_indices[i]) continue;
-            const auto axis = grid_axis_contribution(node.children[i],
+            if (!(rows_axis ? rows_need_content : columns_need_content)
+                && !needs_grid_content_fit(node, get(node.layout_children()[i]), !rows_axis)) continue;
+            const auto axis = grid_axis_contribution(node.layout_children()[i],
                 {node, placements[i], track_columns, track_rows, provisional_inner,
                     !rows_axis, GridCrossSizing::ResolvedTracks, baseline_items[i].shim}, depth);
             auto& contribution = contributions[*contribution_indices[i]];
@@ -219,13 +230,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         return changed;
     };
     measure_cross_dependent_contributions(true);
-    size_axis(track_rows, contributions, false, row_space, node.id);
+    size_axis(track_rows, rows_need_content ? contributions : no_contributions,
+        false, row_space, node.id);
     Unit measured_height = track_rows.offsets.back();
     provisional_inner.height = inner_height.value_or(track_rows.offsets.back());
     if (detail_ == FragmentDetail::Size) {
         Size measured{
-            border_width.value_or(checked(static_cast<double>(measured_width) + *decoration_width, node.id)),
-            border_height.value_or(checked(static_cast<double>(measured_height) + *decoration_height, node.id))};
+            border_width.value_or(checked(static_cast<double>(measured_width) + decoration_width, node.id)),
+            border_height.value_or(checked(static_cast<double>(measured_height) + decoration_height, node.id))};
         measured = constrain_size(measured, box);
         if (constraints.preserve_known_grid_size) {
             if (constraints.known_width) measured.width = *constraints.known_width;
@@ -272,13 +284,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         && has_cyclic_percentage(track_rows);
     if (intrinsic_width) {
         border_width = constrain_axis(checked(static_cast<double>(measured_width)
-            + *decoration_width, node.id), box.minimum.width, box.maximum.width);
-        inner_width = std::max(Unit{0}, *border_width - *decoration_width);
+            + decoration_width, node.id), box.minimum.width, box.maximum.width);
+        inner_width = std::max(Unit{0}, *border_width - decoration_width);
     }
     if (intrinsic_height) {
         border_height = constrain_axis(checked(static_cast<double>(measured_height)
-            + *decoration_height, node.id), box.minimum.height, box.maximum.height);
-        inner_height = std::max(Unit{0}, *border_height - *decoration_height);
+            + decoration_height, node.id), box.minimum.height, box.maximum.height);
+        inner_height = std::max(Unit{0}, *border_height - decoration_height);
     }
     const Unit final_column_gap = resolved_gap(node.style.gap.width,
         intrinsic_width && column_space.grid_space.kind == AvailableKind::Definite
@@ -353,13 +365,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         if (constraints.known_height) candidate.height = *constraints.known_height;
     }
     if (!constraints.preserve_known_grid_size) {
-        inner_width = std::max(Unit{0}, candidate.width - *decoration_width);
-        inner_height = std::max(Unit{0}, candidate.height - *decoration_height);
+        inner_width = std::max(Unit{0}, candidate.width - decoration_width);
+        inner_height = std::max(Unit{0}, candidate.height - decoration_height);
     }
     const Unit positioning_width = (constraints.preserve_known_grid_size
-        ? *border_width : candidate.width) - *decoration_width;
+        ? *border_width : candidate.width) - decoration_width;
     const Unit positioning_height = (constraints.preserve_known_grid_size
-        ? *border_height : candidate.height) - *decoration_height;
+        ? *border_height : candidate.height) - decoration_height;
     align_tracks(track_columns, positioning_width,
         node.style.justify_content.value_or(ContentAlignment{}), node.id);
     align_tracks(track_rows, positioning_height,
@@ -368,13 +380,13 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     result.size = candidate;
     result.root = make_layout(node, candidate, box);
     if (constraints.preserve_known_grid_size && *border_width != candidate.width) {
-        result.root_layout().overflow_coordinate_width = *border_width;
+        result.root.write().overflow_coordinate_width = *border_width;
     }
-    const auto border = edges(box.border, node.id);
-    const auto padding = edges(box.padding, node.id);
+    const auto border = edges(box.border(), node.id);
+    const auto padding = edges(box.padding(), node.id);
     const Unit content_x = content_origin_x(box, border, padding, node.id);
     const Unit content_y = checked(static_cast<double>(border.top) + padding.top, node.id);
-    if (detail_ == FragmentDetail::Full) {
+    if (detail_ == FragmentDetail::Full && collect_grid_tracks_) {
         GridTracks report;
         report.node = node.id;
         report.column_origin = track_columns.origin;
@@ -387,7 +399,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         report.rows.reserve(track_rows.tracks.size());
         report.column_positions.reserve(track_columns.tracks.size());
         report.row_positions.reserve(track_rows.tracks.size());
-        report.items.reserve(node.children.size());
+        report.items.reserve(node.layout_children().size());
         for (std::size_t i = 0; i < track_columns.tracks.size(); ++i) {
             const auto size = track_columns.tracks[i].size;
             report.columns.push_back(size);
@@ -420,14 +432,14 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         for (std::size_t i = 0; i < placements.size(); ++i) {
             const auto& placed = placements[i];
             if (placed.hidden) continue;
-            report.items.push_back({node.children[i], placed.row_start, placed.row_end,
+            report.items.push_back({node.layout_children()[i], placed.row_start, placed.row_end,
                 placed.column_start, placed.column_end});
         }
-        result.grid_tracks.push_back(std::move(report));
+        result.add_grid_report(std::move(report));
     }
-    std::vector<Fragment> fragments(node.children.size());
-    for (std::size_t i = 0; i < node.children.size(); ++i) {
-        const auto id = node.children[i];
+    std::pmr::vector<Fragment> fragments(node.layout_children().size(), node.cache_owner->memory());
+    for (std::size_t i = 0; i < node.layout_children().size(); ++i) {
+        const auto id = node.layout_children()[i];
         const auto& child = get(id);
         if (child.style.position == Position::Absolute
             && child.style.display != Display::None) {
@@ -521,7 +533,7 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 final.ignore_min_max_height = true;
             }
         }
-        auto child_fragment = layout(id, final, depth + 1);
+        auto child_fragment = layout(child, final, depth + 1);
         finalize_grid_item_fragment(child_fragment, resolved, sizing,
             {final.known_width, final.known_height});
         const Unit horizontal_free = checked(static_cast<double>(cell_width)
@@ -556,22 +568,21 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             + ((auto_top || auto_bottom) ? 0 : align_offset(vertical_free,
                 vertical, false, node.style.box.direction,
                 child.style.box.direction, id)), id);
-        child_fragment.root_layout().margin = {used_left, used_top, used_right, used_bottom};
+        child_fragment.mutable_root_layout().margin = {used_left, used_top, used_right, used_bottom};
         if (node.style.box.direction == Direction::Rtl) {
             x = checked(static_cast<double>(positioning_width) - x - child_fragment.size.width, id);
         }
         translate(child_fragment,
             checked(static_cast<double>(content_x) + x, id),
             checked(static_cast<double>(content_y) + y, id), id);
-        const auto [relative_x, relative_y] = relative_offset(child,
+        apply_relative_position(child_fragment, child,
             Size{cell_width, cell_height}, node.style.box.direction, node.id);
-        translate(child_fragment, relative_x, relative_y, id);
         fragments[i] = std::move(child_fragment);
     }
     std::optional<std::size_t> first_item;
     for (std::size_t source = 0; source < placements.size(); ++source) {
         if (placements[source].hidden
-            || get(node.children[source]).style.position == Position::Absolute) continue;
+            || get(node.layout_children()[source]).style.position == Position::Absolute) continue;
         if (!first_item || std::pair{placements[source].row_start, placements[source].column_start}
             < std::pair{placements[*first_item].row_start, placements[*first_item].column_start}) {
             first_item = source;
@@ -581,24 +592,21 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         std::optional<std::size_t> aligned;
         for (std::size_t i = 0; i < placements.size(); ++i) {
             if (!placements[i].hidden && placements[i].row_start == placements[*first_item].row_start
-                && grid_baseline_participant(node, get(node.children[i]))) {
+                && grid_baseline_participant(node, get(node.layout_children()[i]))) {
                 if (!aligned || placements[i].column_start < placements[*aligned].column_start) aligned = i;
             }
         }
         const auto source = aligned.value_or(*first_item);
         const auto& fragment = fragments[source];
         const Unit baseline = baseline_items[source].ascent.value_or(fragment.size.height);
-        result.root_layout().first_baseline = checked(
+        result.mutable_root_layout().first_baseline = checked(
             static_cast<double>(fragment.root_layout().border_box.y)
                 + baseline, node.id);
     }
     if (detail_ == FragmentDetail::Full) result.reserve_children(fragments.size());
     for (auto& fragment : fragments) {
         if (detail_ == FragmentDetail::Full) {
-            result.append_nodes(std::move(fragment));
-            result.grid_tracks.insert(result.grid_tracks.end(),
-                std::make_move_iterator(fragment.grid_tracks.begin()),
-                std::make_move_iterator(fragment.grid_tracks.end()));
+            append_fragment(result, std::move(fragment));
         }
     }
     return result;

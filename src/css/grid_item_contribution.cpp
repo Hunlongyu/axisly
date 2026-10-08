@@ -67,7 +67,7 @@ GridAxisContribution Engine::grid_axis_contribution(NodeId id,
             input.container_inner.width, input.columns_axis, input.cross_sizing, id),
         definite_grid_area(input.rows, place.row_start, place.row_end,
             input.container_inner.height, !input.columns_axis, input.cross_sizing, id)};
-    ResolvedBox box;
+    LayoutBox box;
     try { box = resolve_layout_box(child, area.width, area.height); }
     catch (const std::invalid_argument& error) {
         throw LayoutFailure(LayoutErrorCode::InvalidStyle, id, error.what());
@@ -90,7 +90,7 @@ GridAxisContribution Engine::grid_axis_contribution(NodeId id,
             (input.columns_axis ? constraints.available.height : constraints.available.width)
                 = AvailableSpace::definite(*cross_space);
         }
-        return layout_size(id, constraints, depth + 1);
+        return layout_size(child, constraints, depth + 1);
     };
     const Size minimum = query(AvailableSpace::min_content());
     const Size maximum = query(AvailableSpace::max_content());
@@ -111,14 +111,14 @@ GridAxisContribution Engine::grid_axis_contribution(NodeId id,
     return {minimum_size, min_content, max_content, start, end};
 }
 
-std::vector<GridBaselineItem> Engine::measure_grid_baselines(const LayoutNode& parent,
-    const std::vector<Placement>& placements, ResolvedDimensions container_inner,
+std::pmr::vector<GridBaselineItem> Engine::measure_grid_baselines(const LayoutNode& parent,
+    std::span<const Placement> placements, ResolvedDimensions container_inner,
     std::size_t depth) {
-    std::vector<GridBaselineItem> result(placements.size());
+    std::pmr::vector<GridBaselineItem> result(placements.size(), parent.cache_owner->memory());
     std::unordered_map<std::int32_t, std::vector<std::size_t>> groups;
     for (std::size_t i = 0; i < placements.size(); ++i) {
         if (placements[i].hidden) continue;
-        const auto& child = get(parent.children[i]);
+        const auto& child = get(parent.layout_children()[i]);
         if (!grid_baseline_participant(parent, child)) continue;
         groups[placements[i].row_start].push_back(i);
     }
@@ -129,12 +129,12 @@ std::vector<GridBaselineItem> Engine::measure_grid_baselines(const LayoutNode& p
         baselines.reserve(indices.size());
         std::optional<Unit> largest;
         for (const auto source : indices) {
-            const auto& child = get(parent.children[source]);
+            const auto& child = get(parent.layout_children()[source]);
             Constraints constraints;
             constraints.containing_width = container_inner.width;
             constraints.containing_height = container_inner.height;
             constraints.available = {AvailableSpace::min_content(), AvailableSpace::min_content()};
-            const auto fragment = layout_sizing(child.id, constraints, depth + 1);
+            const auto fragment = layout_sizing(child, constraints, depth + 1);
             const Unit baseline = checked(static_cast<double>(child_baseline(fragment, child.style)
                 .value_or(fragment.size.height)) + child.style.box.margin.top
                     .resolve_numeric(container_inner.width).value_or(Unit{0}), child.id);

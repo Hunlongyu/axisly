@@ -46,6 +46,13 @@ void values() {
         "Distinct intrinsic queries must remain distinct");
     expect_invalid([] { (void)Length::length(std::numeric_limits<Unit>::quiet_NaN()); });
     expect_invalid([] { (void)AvailableSpace::definite(-1); });
+    for (const auto value : {std::numeric_limits<Unit>::infinity(),
+            -std::numeric_limits<Unit>::infinity(), std::numeric_limits<Unit>::quiet_NaN()}) {
+        expect_invalid([=] { (void)AvailableSpace::definite(value); });
+    }
+    require(AvailableSpace::definite(-0.0F).definite_value() == 0
+        && AvailableSpace::definite(std::numeric_limits<Unit>::max()).definite_value()
+            == std::numeric_limits<Unit>::max(), "Valid definite-space endpoints were rejected");
     expect_invalid([] { (void)Calculation::percent(0.5f).resolve(-1.0f); });
     bool overflow = false;
     try {

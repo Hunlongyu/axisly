@@ -354,14 +354,14 @@ fn run() -> Result<()> {
     let args: Vec<_> = env::args().collect();
     if args.len() != 6 || args[1] != "taffy" {
         return Err(
-            "Usage: css taffy fixture [verify_]cold|resize|same|leaf_edit iterations samples"
+            "Usage: css taffy fixture [verify_]cold|resize|same|leaf_edit|build iterations samples"
                 .into(),
         );
     }
     let f = read(&args[2])?;
     let verify = args[3].starts_with("verify_");
     let mode = args[3].strip_prefix("verify_").unwrap_or(&args[3]);
-    if !["cold", "resize", "same", "leaf_edit"].contains(&mode) {
+    if !["cold", "resize", "same", "leaf_edit", "build"].contains(&mode) {
         return Err("Unknown mode".into());
     }
     if mode == "leaf_edit" && f.measured.is_empty() {
@@ -371,12 +371,12 @@ fn run() -> Result<()> {
     let samples = positive(&args[5])?;
     if verify {
         let mut engine = Engine::new(&f);
-        if mode != "cold" {
+        if mode != "cold" && mode != "build" {
             engine.calculate(*f.sizes.last().unwrap());
         }
         let mut frames = Vec::with_capacity(iterations);
         for i in 0..iterations {
-            if mode == "cold" {
+            if mode == "cold" || mode == "build" {
                 engine = Engine::new(&f);
             }
             engine.step(mode, i);
@@ -396,28 +396,48 @@ fn run() -> Result<()> {
     let mut times = Vec::new();
     let mut checksums = Vec::new();
     let mut counts = Vec::new();
-    for _ in 0..samples {
-        let mut engine = Engine::new(&f);
-        if mode != "cold" {
-            engine.calculate(*f.sizes.last().unwrap());
-        }
-        let mut elapsed = 0.0;
-        let mut checksum = 0.0;
-        let mut measurements = 0;
-        for i in 0..iterations {
-            if mode == "cold" {
-                engine = Engine::new(&f);
+    if mode == "build" {
+        for _ in 0..samples {
+            let mut elapsed = 0.0;
+            let mut checksum = 0.0;
+            let mut measurements = 0;
+            for i in 0..iterations {
+                let start = Instant::now();
+                let mut engine = Engine::new(&f);
+                engine.step(mode, i);
+                let consumed = engine.consume();
+                elapsed += start.elapsed().as_secs_f64() * 1e6;
+                checksum += consumed;
+                measurements += engine.measurements;
             }
-            let start = Instant::now();
-            engine.step(mode, i);
-            let consumed = engine.consume();
-            elapsed += start.elapsed().as_secs_f64() * 1e6;
-            checksum += consumed;
-            measurements += engine.measurements;
+            times.push(elapsed / iterations as f64);
+            checksums.push(checksum);
+            counts.push(measurements as f64 / iterations as f64);
         }
-        times.push(elapsed / iterations as f64);
-        checksums.push(checksum);
-        counts.push(measurements as f64 / iterations as f64);
+    } else {
+        for _ in 0..samples {
+            let mut engine = Engine::new(&f);
+            if mode != "cold" {
+                engine.calculate(*f.sizes.last().unwrap());
+            }
+            let mut elapsed = 0.0;
+            let mut checksum = 0.0;
+            let mut measurements = 0;
+            for i in 0..iterations {
+                if mode == "cold" {
+                    engine = Engine::new(&f);
+                }
+                let start = Instant::now();
+                engine.step(mode, i);
+                let consumed = engine.consume();
+                elapsed += start.elapsed().as_secs_f64() * 1e6;
+                checksum += consumed;
+                measurements += engine.measurements;
+            }
+            times.push(elapsed / iterations as f64);
+            checksums.push(checksum);
+            counts.push(measurements as f64 / iterations as f64);
+        }
     }
     println!("{{\"build\":\"Release\",\"samples_us\":{times:?},\"checksums\":{checksums:?},\"measurements\":{counts:?}}}");
     Ok(())

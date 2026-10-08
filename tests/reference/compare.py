@@ -1,4 +1,4 @@
-"""Optional, standard-library-only differential driver. See docs/16-reference-validation.md."""
+"""Optional, standard-library-only differential driver. See docs/testing.md."""
 from __future__ import annotations
 
 import argparse

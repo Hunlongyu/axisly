@@ -11,7 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = Path(__file__).with_name("fixtures") / "tree.json"
-MATRIX = ROOT / "docs" / "30-taffy-014-capability-matrix.md"
+MATRIX = ROOT / "docs" / "css-compatibility.md"
 TAFFY = None
 
 

@@ -163,7 +163,7 @@ private:
         // This host's finite, available-space measurement policy (not CSS intrinsic
         // sizing): probe minimum width at zero space, but minimum height at the SAME
         // width as the preferred pass. A narrow wrapping probe must not inflate the
-        // parent's height. See docs/15-nested-grid-integration.md for limitations.
+        // parent's height. See docs/native-grid.md for limitations.
         const auto height_floor = available.height == 0
             ? preferred : solve(child, {available.width, 0}).size;
         const auto width_floor = available.width == 0

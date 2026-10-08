@@ -1,0 +1,88 @@
+# 三方 CSS 布局基准
+
+`css_compare.py` 比较本库的 `css::LayoutTree`、Taffy 0.14.0 与 Yoga 3.2.1。
+程序中的 `axisly_css` 是本库的引擎标识。这里的测试与旧版
+`compare.py` 的平面 `compute_grid` 测试分开。
+
+## 相同输入与测量
+
+- 三方读取同一份 fixture，使用相同节点、样式、17 帧尺寸序列和内容更新。
+- 使用同一套合成文本度量公式，没有 DirectWrite、字体加载、绘制或窗口。
+- Yoga 参加共同的 Flex 场景；Block、Grid 和混合场景比较本库与 Taffy。
+- 关闭像素取整。计时前逐帧、逐节点对照 Taffy 的位置和尺寸，阈值为
+  `0.01px + 1e-6 × max(abs(a), abs(b))`，计时中继续检查结果消费值。
+- 默认 `axisly_css` 生成完整根相对几何和 Grid 诊断；Taffy、Yoga 保留节点局部几何。
+  计时不额外要求对方导出全数组。这些公开 API 的固有成本包含在结果中。
+- `--include-retained` 增加 `axisly_css_retained`：关闭全数组和 Grid 诊断，
+  使用 `layout(node)` 读取同样三个根相对矩形。它与默认输出分别列示，几何校验一致。
+
+本库另有 `axisly_css_retained_bench` 的 DirectWrite 宿主测试；其结果不能
+与这里的合成度量三方表混合。
+
+## 计时模式
+
+| 模式 | 计时内容 |
+| --- | --- |
+| `cold` | 已建好的新树首次布局，加首／中／末三个矩形读取 |
+| `resize` | 复用树，循环变化容器尺寸，再布局和读取 |
+| `same` | 输入不变，重复布局和读取 |
+| `leaf_edit` | 修改一个测量叶的内容、标脏，再布局和读取 |
+| `build` | 新建树、安装样式和测量回调、首次布局、读取 |
+
+所有模式都排除 fixture 解析、API 样式值转换、进程启动、结果序列化和树销毁。
+本库与 Taffy 都在计时外准备 Style，build 内复制到节点；Yoga 使用公开
+setter 安装对应属性。创建节点和安装样式的 API 成本仍然包含在 build 内。
+`cold` 表示未计算过的布局树，并不表示清空 CPU 缓存。
+`build` 专门用于检查初始化成本，默认不运行，需显式传入 `--mode build`。
+无参数时保持原来的四种模式；`--mode` 可重复指定。
+
+## 运行
+
+在已初始化 MSVC 环境的 PowerShell 中：
+
+```powershell
+./scripts/build-msvc.ps1 -Preset comparison-release
+python benchmarks/comparison/css_compare.py --native build/comparison-release/axisly_css_comparison_native.exe --taffy build/comparison-release/benchmarks/comparison/cargo/x86_64-pc-windows-msvc/release/css.exe --output build/css-comparison --cpu 4 --rounds 2 --samples 9 --frames-scale 3
+python benchmarks/comparison/css_compare.py --native build/comparison-release/axisly_css_comparison_native.exe --taffy build/comparison-release/benchmarks/comparison/cargo/x86_64-pc-windows-msvc/release/css.exe --output build/css-build-comparison --cpu 4 --rounds 2 --samples 9 --frames-scale 3 --mode build
+```
+
+CPU 编号需在本机有效。性能计时应在构建、测试和其他基准全部结束后串行运行。
+`--case` 可重复选择场景；`--baseline-native` 可以交替计时保存的旧版程序。
+旧版程序必须支持所选模式：早期程序没有 `build` 模式。
+
+### Windows Clang 对照
+
+安装 LLVM 后，可使用相同 MSVC SDK／运行库，以 clang-cl 构建本库和 Yoga：
+
+```powershell
+./scripts/build-msvc.ps1 -Preset comparison-clang
+python benchmarks/comparison/css_compare.py --native build/comparison-clang/axisly_css_comparison_native.exe --taffy build/comparison-clang/benchmarks/comparison/cargo/x86_64-pc-windows-msvc/release/css.exe --output build/css-comparison-clang --cpu 2 --rounds 3 --samples 9 --frames-scale 3 --mode cold --mode resize --mode leaf_edit --mode build --mode same
+```
+
+工具链从 PATH 或 `%ProgramFiles%/LLVM/bin` 发现 clang-cl 和 lld-link；不含基准的
+库构建使用 `release-clang`。两种编译器使用独立构建目录。默认 Release 优化、
+浮点语义与 Taffy 配置保持原有设置，不启用 fast-math 或链接时优化。
+比较代码前后变化时，`--baseline-native` 应选用同一编译器构建的旧版本。
+编译器切换带来的变化应另列，不能记成算法本身的加速。
+
+结果目录保存输入、全帧几何检查、逐批耗时、中位数、P95、测量次数以及
+源码／二进制哈希。低于 1 μs 的结果接近调用与计时器开销，不据此比较
+几十纳秒的差异。分配探针会扰动耗时，其时间不能代替普通程序的计时。
+
+## 结果管理
+
+结果保存在 `--output` 指定的独立目录，建议使用 `build/` 下的路径。
+报告直接使用 `summary.csv` 的 `median_us`（单位 µs），同时检查逐批样本和不利结果。
+比较历史版本时保留旧二进制、对应源码和编译设置；不同输入、测量函数或计时边界的结果不能混为一组。
+
+## 独立布局与分配基准
+
+```powershell
+./scripts/build-msvc.ps1 -Preset benchmark-release
+./build/benchmark-release/axisly_bench.exe --output build/benchmark-release/timing.csv
+./build/benchmark-release/axisly_bench_allocations.exe --output build/benchmark-release/allocations.csv
+```
+
+其他平台使用相应 CMake 预设和不带 `.exe` 后缀的程序。
+计时与分配统计分别运行；Debug、Sanitizer 和分配探针的时间不作为普通 Release 性能结论。
+构建选项见 [构建指南](../../docs/building.md)，正确性验证见 [测试指南](../../docs/testing.md)。

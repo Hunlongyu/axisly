@@ -43,6 +43,7 @@ private:
 void LayoutNode::reset_style_cache() {
     resolved_box.reset();
     grid_structure.reset();
+    grid_container = style.display == Display::Grid;
     const auto has_auto_repeat = [](const std::vector<TemplateTrack>& tracks) {
         return std::any_of(tracks.begin(), tracks.end(), [](const TemplateTrack& component) {
             const auto* repeat = std::get_if<GridRepeat>(&component);
@@ -176,9 +177,8 @@ bool Engine::has_float_subtree(NodeId id, std::size_t depth) {
         throw LayoutFailure(LayoutErrorCode::LimitExceeded, id,
             "CSS layout depth exceeded");
     }
-    if (const auto cached = float_subtree_.find(id.value);
-        cached != float_subtree_.end()) return cached->second;
     const auto& node = get(id);
+    if (node.float_subtree_depth == depth) return node.float_subtree;
     bool has_float = node.style.display != Display::None
         && node.style.float_side != FloatSide::None;
     if (node.style.display != Display::None) {
@@ -189,7 +189,8 @@ bool Engine::has_float_subtree(NodeId id, std::size_t depth) {
             }
         }
     }
-    float_subtree_.emplace(id.value, has_float);
+    node.float_subtree = has_float;
+    node.float_subtree_depth = depth;
     return has_float;
 }
 
@@ -209,7 +210,7 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available,
         cache_.reserve_hint(root_node.layout_children().size() + 1);
         if (root_node.style.display == Display::Block
             || root_node.style.display == Display::FlowRoot) {
-            const auto root_box = resolve_layout_box(root_node,
+            const auto& root_box = resolve_layout_box(root_node,
                 constraints.containing_width, constraints.containing_height);
             const auto margin = edges(root_box.margin, root);
             const auto padding = edges(root_box.padding(), root);
@@ -280,7 +281,7 @@ LayoutResult Engine::compute(NodeId root, AvailableSize available,
             // the report publisher to copy otherwise uniquely owned vectors.
         }
         if (publish_nodes && rounding) {
-            result.nodes = fragment.rounded_nodes(std::move(result.nodes), *rounding);
+            result.nodes = fragment.rounded_nodes(std::move(result.nodes), *rounding, publication);
             if (!result.nodes.empty()) {
                 result.size = {result.nodes.front().border_box.width, result.nodes.front().border_box.height};
             }
@@ -632,12 +633,18 @@ Fragment Engine::hidden(const LayoutNode& node, std::size_t depth) {
     fragment.root = node.roots->create(LayoutGeometry{NodeLayout{node.id, node.parent}});
     if (detail_ == FragmentDetail::Full) fragment.reserve_children(node.layout_children().size());
     for (const auto child : node.layout_children()) {
-        auto nested = hidden(get(child), depth + 1);
         if (detail_ == FragmentDetail::Full) {
-            fragment.append_nodes(std::move(nested));
-        }
+            fragment.append_nodes(hidden(get(child), depth + 1));
+        } else validate_hidden_subtree(get(child), depth + 1);
     }
     return fragment;
+}
+
+void Engine::validate_hidden_subtree(const LayoutNode& node, std::size_t depth) {
+    if (depth > limits_.maximum_depth) {
+        throw LayoutFailure(LayoutErrorCode::LimitExceeded, node.id, "CSS layout depth exceeded");
+    }
+    for (const auto child : node.layout_children()) validate_hidden_subtree(get(child), depth + 1);
 }
 
 } // namespace axisly::css::detail

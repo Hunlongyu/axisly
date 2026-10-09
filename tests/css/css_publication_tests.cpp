@@ -1,6 +1,7 @@
 #include <axisly/css_tree.hpp>
 #include <array>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 namespace {
@@ -37,16 +38,92 @@ struct Fixture {
     MeasureFunction callback(std::size_t i) {
         return [this, i](const MeasureRequest&) { return Measurement{.content_size = {widths[i], 10.125F}}; };
     }
-    const LayoutResult& compute() { return tree.compute(root, {AvailableSpace::definite(600), AvailableSpace::definite(300)}); }
+    const LayoutResult& compute(LayoutOptions options = {}) {
+        return tree.compute(root, {AvailableSpace::definite(600), AvailableSpace::definite(300)}, options);
+    }
     void edit(std::size_t i) { widths[i] += .25F; tree.mark_dirty(leaves[i]); }
 };
 void compare(const LayoutResult& result, const LayoutResult& expected) {
     require(result.succeeded() && expected.succeeded() && result.nodes.size() == expected.nodes.size(), "Incomplete publication");
     for (std::size_t i = 0; i < result.nodes.size(); ++i) {
         const auto& a = result.nodes[i]; const auto& b = expected.nodes[i];
-        require(a.border_box == b.border_box && a.content_box == b.content_box
-            && a.scrollable_overflow_rect == b.scrollable_overflow_rect && a.first_baseline == b.first_baseline,
+        auto normalized = a;
+        normalized.node = b.node; normalized.parent = b.parent;
+        require(normalized == b,
             "Incremental publication differs from a fresh full calculation");
+    }
+}
+
+void rounded_publication() {
+    for (const bool full : {true, false}) {
+        Fixture incremental, reference;
+        LayoutOptions options;
+        options.publish_nodes = full;
+        options.rounding = PixelRounding{1.25F, 0.2F, -0.3F};
+        incremental.compute(options); reference.compute(options);
+        bool reused = false;
+        for (std::size_t frame = 0; frame < 30; ++frame) {
+            incremental.edit(frame % 12); reference.edit(frame % 12);
+            if (frame == 4 || frame == 8) {
+                incremental.outer.box.size.width = reference.outer.box.size.width = Length::length(
+                    frame == 4 ? 501.125F : 400.5F);
+                incremental.tree.set_style(incremental.root, incremental.outer);
+                reference.tree.set_style(reference.root, reference.outer);
+            }
+            if (frame == 10) options.rounding = PixelRounding{2, -0.5F, 0.5F};
+            if (frame == 12) options.rounding.reset();
+            if (frame == 14) options.rounding = PixelRounding{1.25F, 0.2F, -0.3F};
+            if (frame == 17 || frame == 20) {
+                const auto update = [&](Fixture& f) {
+                    const auto panel = *f.tree.parent(f.leaves[12]);
+                    auto style = f.tree.style(panel);
+                    style.display = frame == 17 ? Display::None : Display::Flex;
+                    style.inset.left = Length::length(-1.5F);
+                    f.tree.set_style(panel, style);
+                };
+                update(incremental); update(reference);
+            }
+            if (frame == 24) {
+                incremental.tree.append_child(*incremental.tree.parent(incremental.leaves[0]), incremental.leaves[23]);
+                reference.tree.append_child(*reference.tree.parent(reference.leaves[0]), reference.leaves[23]);
+            }
+            reference.tree.mark_subtree_dirty(reference.root);
+            const auto& a = incremental.compute(options);
+            const auto& b = reference.compute(options);
+            require(a.succeeded() && b.succeeded() && a.size == b.size, "Rounded publication failed");
+            reused |= a.published_nodes_reused >= 12;
+            if (full) compare(a, b);
+            else require(a.nodes.empty() && b.nodes.empty(), "Rounded validation materialized nodes");
+            for (std::size_t i = 0; i < incremental.leaves.size(); ++i) {
+                for (const auto space : {CoordinateSpace::Root, CoordinateSpace::Parent}) {
+                    auto actual = *incremental.tree.layout(incremental.leaves[i], space);
+                    const auto expected = *reference.tree.layout(reference.leaves[i], space);
+                    actual.node = expected.node; actual.parent = expected.parent;
+                    require(actual == expected, "Rounded subtree reuse changed a field or coordinate space");
+                }
+            }
+        }
+        if (full) require(reused, "Rounded unchanged subtree was never reused");
+        // Failure after an earlier subtree was processed must not authorize
+        // reuse of a partially published buffer or poison validation hints.
+        const auto previous = incremental.tree.layout(incremental.leaves[0]);
+        incremental.tree.set_measure(incremental.leaves[22], [](const MeasureRequest&) -> Measurement {
+            throw std::runtime_error("rounded host failure");
+        });
+        bool thrown = false;
+        try { incremental.compute(options); } catch (const std::runtime_error&) { thrown = true; }
+        require(thrown && incremental.tree.layout(incremental.leaves[0]) == previous,
+            "Rounded host failure changed the previous snapshot");
+        incremental.tree.set_measure(incremental.leaves[22], incremental.callback(22));
+        incremental.compute(options);
+        options.rounding = PixelRounding{std::numeric_limits<Unit>::max()};
+        require(incremental.compute(options).error.code == LayoutErrorCode::NumericOverflow,
+            "Rounded validation cache skipped changed-scale overflow");
+        options.rounding = PixelRounding{1.25F, 0.2F, -0.3F};
+        const auto& recovered = incremental.compute(options);
+        require(recovered.succeeded(), "Rounded publication failed to recover");
+        reference.tree.mark_subtree_dirty(reference.root);
+        if (full) compare(recovered, reference.compute(options));
     }
 }
 void publication() {
@@ -131,6 +208,6 @@ void ordered_translations() {
 }
 }
 int main() {
-    try { publication(); ordered_translations(); return 0; }
+    try { publication(); rounded_publication(); ordered_translations(); return 0; }
     catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
 }

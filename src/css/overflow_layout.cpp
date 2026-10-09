@@ -98,7 +98,8 @@ void compute_scrollable_overflow(Fragment& fragment, const LayoutNode& parent_no
     if (children.branched) {
         for (auto i = children.branches.size(); i-- > 0;) include(children.branches[i].root);
     } else {
-        for (auto i = children.leaves.size(); i-- > 0;) include(children.leaves[i]);
+        const auto leaves = children.leaf_nodes();
+        for (auto i = leaves.size(); i-- > 0;) include(leaves[i]);
     }
     if (scroll_container(parent_node.style)) {
         const Unit inline_end = parent_node.style.box.direction == Direction::Rtl

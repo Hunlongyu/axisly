@@ -62,6 +62,10 @@ struct LayoutTree::Impl {
     std::uint64_t published_epoch{}, next_epoch{};
     std::uint64_t published_revision{}, indexed_revision{};
     std::vector<std::size_t> published_index;
+    // Host identities are arbitrary and sparse. A contiguous sorted index
+    // avoids one allocation per identity and keeps its capacity across frames.
+    std::vector<std::pair<std::uint64_t, std::size_t>> published_source_index;
+    [[nodiscard]] const NodeLayout* find_source_layout(NodeId node);
 
     explicit Impl(TreeLimits requested, std::shared_ptr<LayoutMemory> resource)
         : limits(requested), memory(std::move(resource)),
@@ -121,6 +125,7 @@ struct LayoutTree::Impl {
     void erase_cache(NodeId id, Change change = Change::Structure) {
         auto& node = get(id);
         cache.invalidate(node.cache);
+        node.float_subtree_depth = 0;
         if (change == Change::Structure) node.grid_structure.reset();
     }
     void invalidate_path(std::optional<NodeId> start, Change change = Change::Structure) {
@@ -176,6 +181,27 @@ struct LayoutTree::Impl {
             unrounded ? std::nullopt : published_options.rounding, space);
     }
 };
+
+const NodeLayout* LayoutTree::Impl::find_source_layout(NodeId node) {
+    const auto& layouts = published.nodes;
+    if (layouts.empty()) return nullptr;
+    auto& index = published_source_index;
+    const auto lookup = [&]() -> const NodeLayout* {
+        const auto found = std::lower_bound(index.begin(), index.end(), node.value,
+            [](const auto& entry, std::uint64_t id) { return entry.first < id; });
+        if (found == index.end() || found->first != node.value || found->second >= layouts.size()) return nullptr;
+        const auto& layout = layouts[found->second];
+        return layout.node == node ? &layout : nullptr;
+    };
+    // Unchanged output order needs no index maintenance on publication.
+    if (const auto* found = lookup()) return found;
+    if (indexed_revision == published_revision) return nullptr;
+    index.resize(layouts.size()); // Allocation failure leaves the revision unchanged.
+    for (std::size_t i = 0; i < layouts.size(); ++i) index[i] = {layouts[i].node.value, i};
+    std::sort(index.begin(), index.end());
+    indexed_revision = published_revision;
+    return lookup();
+}
 
 LayoutTree::LayoutTree(TreeLimits limits, std::shared_ptr<LayoutMemory> memory)
     : impl_(std::make_unique<Impl>(limits, std::move(memory))) {}
@@ -267,6 +293,7 @@ void LayoutTree::append_child(NodeId parent, NodeId child) {
 void LayoutTree::set_children(NodeId parent, std::span<const NodeId> children) {
     impl_->mutable_guard();
     auto& destination = impl_->get(parent);
+    if (std::equal(children.begin(), children.end(), destination.children.begin(), destination.children.end())) return;
     // Copy first: the caller may pass our own children() span. All allocations,
     // duplicate checks and cycle checks precede the nonthrowing commit phase.
     std::vector<NodeId> next(children.begin(), children.end());
@@ -275,29 +302,39 @@ void LayoutTree::set_children(NodeId parent, std::span<const NodeId> children) {
     if (std::adjacent_find(unique.begin(), unique.end()) != unique.end()) {
         throw std::invalid_argument("Duplicate CSS child");
     }
-    for (const auto child : next) {
-        impl_->get(child);
-        for (auto ancestor = std::optional<NodeId>{parent}; ancestor;
-             ancestor = impl_->get(*ancestor).parent) {
-            if (*ancestor == child) throw std::invalid_argument("CSS tree cycle");
+    for (const auto child : next) impl_->get(child);
+    for (auto ancestor = std::optional<NodeId>{parent}; ancestor; ancestor = impl_->get(*ancestor).parent) {
+        if (std::binary_search(unique.begin(), unique.end(), *ancestor,
+            [](NodeId a, NodeId b) { return a.value < b.value; })) {
+            throw std::invalid_argument("CSS tree cycle");
         }
     }
-    if (next == destination.children) return;
+    // Duplicate/cycle validation is complete; reuse its already allocated
+    // buffer to group old parents without adding another allocation.
+    auto& old_parents = unique;
+    old_parents.clear();
     for (const auto child : next) {
-        impl_->invalidate_path(impl_->get(child).parent);
+        const auto old = impl_->get(child).parent;
+        if (old && old != parent) old_parents.push_back(*old);
+    }
+    std::sort(old_parents.begin(), old_parents.end(), [](NodeId a, NodeId b) { return a.value < b.value; });
+    old_parents.erase(std::unique(old_parents.begin(), old_parents.end()), old_parents.end());
+    for (const auto old : old_parents) impl_->invalidate_path(old);
+    for (const auto child : next) {
         impl_->invalidate_subtree(child);
     }
     for (const auto child : destination.children) {
         impl_->invalidate_subtree(child);
         impl_->get(child).parent.reset();
     }
-    for (const auto child : next) {
-        auto& item = impl_->get(child);
-        if (item.parent) {
-            auto& old = impl_->get(*item.parent).children;
-            old.erase(std::remove(old.begin(), old.end(), child), old.end());
-        }
-        item.parent = parent;
+    // Parent links identify migrated children during the nonthrowing commit.
+    // Each old parent's vector and ancestor path are processed only once.
+    for (const auto child : next) impl_->get(child).parent = parent;
+    for (const auto old_parent : old_parents) {
+        auto& old = impl_->get(old_parent).children;
+        old.erase(std::remove_if(old.begin(), old.end(), [&](NodeId child) {
+            return impl_->get(child).parent == parent;
+        }), old.end());
     }
     destination.children = std::move(next);
     impl_->invalidate_path(parent);
@@ -395,11 +432,11 @@ const NodeLayout* LayoutTree::find_layout(NodeId node) const {
         auto candidate = detail::FragmentSnapshot(impl_->published_fragment).restore(impl_->cache.root_pool());
         detail::PublicationContext publication;
         auto nodes = impl_->published_options.rounding
-            ? candidate.rounded_nodes({}, *impl_->published_options.rounding)
+            ? candidate.rounded_nodes({}, *impl_->published_options.rounding, publication)
             : std::move(candidate).take_nodes({}, publication);
         impl_->published.nodes = std::move(nodes);
     }
-    if (impl_->nodes.is_external()) return impl_->published.find(node);
+    if (impl_->nodes.is_external()) return impl_->find_source_layout(node);
     const auto& layouts = impl_->published.nodes;
     const auto slot = detail::LayoutNodes::slot_index(node.value);
     const auto lookup = [&]() -> const NodeLayout* {
@@ -470,11 +507,12 @@ const LayoutResult& LayoutTree::compute_impl(NodeId root, AvailableSize availabl
     }
     impl_->published_key.reset();
     if (options.measure_provider != impl_->cache_options.measure_provider
-        || options.measurement_revision != impl_->cache_options.measurement_revision
-        || options.collect_grid_tracks != impl_->cache_options.collect_grid_tracks) {
+        || options.measurement_revision != impl_->cache_options.measurement_revision) {
         impl_->nodes.for_each([&](auto& node) { impl_->cache.invalidate(node.cache); });
-        impl_->cache_options = options;
+    } else if (options.collect_grid_tracks != impl_->cache_options.collect_grid_tracks) {
+        impl_->nodes.invalidate_grid_reports(impl_->cache);
     }
+    impl_->cache_options = options;
     struct Guard {
         bool& computing;
         explicit Guard(bool& value) : computing(value) { computing = true; }
@@ -500,8 +538,8 @@ const LayoutResult& LayoutTree::compute_impl(NodeId root, AvailableSize availabl
     impl_->published_fragment = impl_->published.succeeded() ? std::move(fragment) : detail::Fragment{};
     impl_->published_options = options;
     impl_->published_revision = epoch;
-    // Rounded output must never be reused by the logical-coordinate publisher.
-    impl_->published_epoch = impl_->published.succeeded() && !options.rounding && options.publish_nodes ? epoch : 0;
+    // Per-subtree hints distinguish rounded output from logical coordinates.
+    impl_->published_epoch = impl_->published.succeeded() && options.publish_nodes ? epoch : 0;
     if (impl_->published.succeeded()) impl_->published_key = key;
     return impl_->published;
 }

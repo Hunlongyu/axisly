@@ -97,6 +97,26 @@ python benchmarks/comparison/css_compare.py --native build/comparison-clang/axis
 
 ## 独立布局与分配基准
 
+查询、Block、取整和 Flex 基线热点使用 `axisly_css_hotpaths_bench`，分配统计使用
+`axisly_css_hotpaths_allocations`。`--queries 0` 读取全部节点，其余值指定查询次数。
+两者支持 `--case lookup_source|lookup_owned|block|rounded|rounded_sparse|baseline`
+和 `--mode cold|same|edit|resize`。优化前后使用相同的基准源码构建并保存程序：
+
+还支持 `hidden`、`tracks_mixed`、`tracks_flex`、`tracks_source`、`batch_move`、
+`deep_reorder`。`tracks_*` 每次交替报告开关，不修改样式；
+`batch_move` 与 `deep_reorder` 单独计时拓扑 API，`same` 为原列表重复提交，
+其余模式为批量移动或深层重排，不包含布局时间。
+
+```powershell
+python benchmarks/hotpaths_compare.py --before build/before.exe --after build/benchmark-release/axisly_css_hotpaths_bench.exe --output build/hotpaths-comparison --cpu 4
+```
+
+该驱动串行交替运行两版程序，记录校验和、逐批时间、源码/程序哈希和探索性区间。
+小规模短批次若出现回退或不确定结果，用较大的 `--iterations` 复核；
+分配程序独立运行，其时间不用于速度结论。场景限制及实测见
+[热点优化验证](../hotpath-optimization.md)。
+剩余建议的实现与对照见 [后续优化验证](../hotpath-remaining-optimization.md)。
+
 ```powershell
 ./scripts/build-msvc.ps1 -Preset benchmark-release
 ./build/benchmark-release/axisly_css_retained_bench.exe --output build/benchmark-release/timing.csv

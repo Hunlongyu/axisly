@@ -160,6 +160,67 @@ void balanced_measurement_budget() {
     require(negative_result.succeeded() && negative_result.find(negative_root)->border_box.width == 100,
         "A zero scaled shrink weight must retain its base in intrinsic flex fraction sizing");
 }
+void selected_baseline_geometry() {
+    for (const auto direction : {FlexDirection::Row, FlexDirection::RowReverse,
+            FlexDirection::Column, FlexDirection::ColumnReverse}) {
+        for (const auto wrap : {FlexWrap::NoWrap, FlexWrap::Wrap, FlexWrap::WrapReverse}) {
+            for (const auto alignment : {ItemPosition::Start, ItemPosition::Baseline, ItemPosition::Stretch}) {
+                for (const auto writing : {Direction::Ltr, Direction::Rtl}) {
+                    LayoutTree tree;
+                    Style outer;
+                    outer.box.size = {Length::length(800), Length::length(500)};
+                    outer.align_items = ItemAlignment{ItemPosition::Baseline};
+                    const auto root = tree.create_node(outer);
+                    Style anchor_style;
+                    anchor_style.box.size = {Length::length(10), Length::length(220)};
+                    const auto anchor = tree.create_node(anchor_style, [](const MeasureRequest&) {
+                        return Measurement{{10, 220}, 200.0F, 200.0F, {}};
+                    });
+                    tree.append_child(root, anchor);
+                    Style inner;
+                    inner.box.size = {Length::length(180), Length::length(140)};
+                    inner.box.direction = writing;
+                    inner.flex_direction = direction;
+                    inner.flex_wrap = wrap;
+                    inner.justify_content = ContentAlignment{ContentPosition::SpaceBetween};
+                    inner.align_content = ContentAlignment{ContentPosition::Stretch};
+                    inner.align_items = ItemAlignment{alignment};
+                    inner.gap = {Length::length(2.25F), Length::length(3.5F)};
+                    const auto nested = tree.create_node(inner);
+                    tree.append_child(root, nested);
+                    NodeId edited;
+                    for (std::size_t i = 0; i < 12; ++i) {
+                        Style item;
+                        const Unit height = 18 + static_cast<Unit>(i % 5) * 2;
+                        item.box.size.width = Length::length(50 + static_cast<Unit>(i % 3) * 3);
+                        if (i % 3) item.box.size.height = Length::length(height);
+                        item.flex_shrink = 0;
+                        item.inset.top = Length::length(-0.5F);
+                        if (i % 4 == 0) item.box.margin.top = Length::automatic();
+                        if (i % 5 == 0) item.box.margin.left = Length::automatic();
+                        const auto leaf = tree.create_node(item, [height](const MeasureRequest& r) {
+                            return Measurement{{r.known_content_width.value_or(50.0F),
+                                r.known_content_height.value_or(height)}, 7.0F, 7.0F, {}};
+                        });
+                        tree.append_child(nested, leaf);
+                        if (i == 5) edited = leaf;
+                    }
+                    for (int frame = 0; frame < 2; ++frame) {
+                        if (frame) tree.mark_dirty(edited);
+                        const auto& result = tree.compute(root, available);
+                        require(result.succeeded(), "Selected baseline layout failed");
+                        const auto& a = *result.find(anchor);
+                        const auto& b = *result.find(nested);
+                        require(a.first_baseline && b.first_baseline
+                            && std::abs(a.border_box.y + *a.first_baseline
+                                - b.border_box.y - *b.first_baseline) < 0.001F,
+                            "Baseline query disagrees with the selected item's final geometry");
+                    }
+                }
+            }
+        }
+    }
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -169,6 +230,7 @@ int main(int argc, char** argv) {
         if (name == "item_size_stages") item_size_stages();
         else if (name == "baseline_auto_margins") baseline_auto_margins();
         else if (name == "balanced_measurement_budget") balanced_measurement_budget();
+        else if (name == "selected_baseline_geometry") selected_baseline_geometry();
         else throw std::runtime_error("Unknown test case");
         return 0;
     } catch (const std::exception& error) {

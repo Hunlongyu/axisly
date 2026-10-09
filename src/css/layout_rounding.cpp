@@ -1,6 +1,9 @@
 #include "layout_fragment.hpp"
 
 #include <cmath>
+#include <array>
+#include <bit>
+#include <cassert>
 
 namespace axisly::css::detail {
 namespace {
@@ -75,10 +78,11 @@ NodeLayout round_node_layout(const NodeLayout& raw, LayoutPosition logical_paren
 }
 
 namespace {
-template<class Output>
+template<bool Publish, class Output>
 void append(Output& output, const NodeLayout& raw,
             const FragmentChildren* children, LayoutPosition logical_parent,
-            LayoutPosition pixel_parent, PixelRounding options, bool root) {
+            LayoutPosition pixel_parent, PixelRounding options, bool root,
+            PublicationContext& publication) {
     const auto rounded = round_node_layout(raw, logical_parent, pixel_parent, options, root);
     output.push_back(rounded);
 
@@ -90,28 +94,65 @@ void append(Output& output, const NodeLayout& raw,
         checked(static_cast<double>(logical_parent.x) + raw.border_box.x, raw.node),
         checked(static_cast<double>(logical_parent.y) + raw.border_box.y, raw.node)};
     const LayoutPosition published{rounded.border_box.x, rounded.border_box.y};
+    const auto bits = [](Unit value) { return std::bit_cast<std::uint32_t>(value); };
+    const std::array key{std::pair{bits(logical.x), bits(logical.y)},
+        std::pair{bits(published.x), bits(published.y)},
+        std::pair{bits(options.scale), bits(options.origin_x)},
+        std::pair{bits(options.origin_y), std::uint32_t{0}}};
+    auto& hint = children->publication;
+    const bool eligible = children->node_count >= 8;
+    std::size_t start = 0;
+    if constexpr (Publish) start = output.size();
+    const bool matches = eligible && hint.kind == FragmentChildren::Publication::Kind::Rounded
+        && std::equal(key.begin(), key.end(), hint.translations.begin(), hint.translations.end());
+    if (matches) {
+        if constexpr (!Publish) {
+            // This exact immutable subtree and coordinate context previously
+            // completed all numeric checks, even if a later sibling failed.
+            return;
+        } else if (hint.epoch && hint.epoch == publication.previous_epoch) {
+            assert(hint.offset <= publication.previous.size()
+                && children->node_count <= publication.previous.size() - hint.offset);
+            const auto range = publication.previous.subspan(hint.offset, children->node_count);
+            output.insert(output.end(), range.begin(), range.end());
+            publication.reused_nodes += children->node_count;
+            hint.epoch = publication.next_epoch;
+            hint.offset = start;
+            return;
+        }
+    }
     if (children->branched) {
         for (const auto& child : children->branches) {
-            append(output, child.root, child.descendants.get(), logical, published, options, false);
+            append<Publish>(output, child.root, child.descendants.get(), logical, published, options, false, publication);
         }
     } else {
-        for (const auto& child : children->leaves) {
-            append(output, child, nullptr, logical, published, options, false);
+        for (const auto& child : children->leaf_nodes()) {
+            append<Publish>(output, child, nullptr, logical, published, options, false, publication);
         }
+    }
+    if (eligible) {
+        // Publish a validation hint only after the entire subtree succeeded.
+        // A failed output epoch cannot supply a range to a later publication.
+        hint.kind = FragmentChildren::Publication::Kind::None;
+        hint.translations.assign(key.begin(), key.end());
+        hint.offset = start;
+        hint.epoch = Publish ? publication.next_epoch : 0;
+        hint.kind = FragmentChildren::Publication::Kind::Rounded;
     }
 }
 } // namespace
 
 void Fragment::validate_rounding(PixelRounding rounding) const {
     struct Sink { void push_back(const NodeLayout&) {} } output;
-    if (root) append(output, root_layout(), descendants.get(), {}, {}, rounding, true);
+    PublicationContext publication;
+    if (root) append<false>(output, root_layout(), descendants.get(), {}, {}, rounding, true, publication);
 }
 
 std::vector<NodeLayout> Fragment::rounded_nodes(std::vector<NodeLayout> output,
-                                               PixelRounding rounding) const {
+                                               PixelRounding rounding, PublicationContext& publication) const {
     output.clear();
     output.reserve(node_count());
-    if (root) append(output, root_layout(), descendants.get(), {}, {}, rounding, true);
+    if (root) append<true>(output, root_layout(), descendants.get(), {}, {}, rounding, true, publication);
     return output;
 }
 } // namespace axisly::css::detail

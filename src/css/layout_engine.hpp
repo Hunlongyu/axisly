@@ -63,7 +63,15 @@ struct LayoutNode {
     bool box_depends_on_width{}, box_depends_on_height{};
     bool margin_depends_on_width{}, vertical_edges_depend_on_width{};
     bool has_relative_inset{};
-    bool grid_columns_auto_repeat{}, grid_rows_auto_repeat{};
+    bool grid_columns_auto_repeat : 1 {};
+    bool grid_rows_auto_repeat : 1 {};
+    // Cached classification can be read without touching borrowed Style storage.
+    bool grid_container : 1 {};
+    bool grid_reports_invalidated : 1 {};
+    mutable bool float_subtree{};
+    // Zero means invalid. Depth is part of the key because a different layout
+    // root must still validate the traversal against maximum_depth.
+    mutable std::size_t float_subtree_depth{};
     mutable std::shared_ptr<GridStructureCache> grid_structure;
     struct BoxCache {
         std::optional<Unit> width, height;
@@ -108,6 +116,7 @@ public:
     void attach(const LayoutSource& source, LayoutCache& cache, TreeLimits limits);
     void begin_compute();
     void invalidate_source(std::optional<NodeId> node);
+    void invalidate_grid_reports(LayoutCache& cache);
 };
 
 struct BlockContext;
@@ -207,7 +216,6 @@ private:
         return bool(node.measure) || measure_provider_;
     }
     FragmentDetail detail_{FragmentDetail::Full};
-    std::unordered_map<std::uint64_t, bool> float_subtree_;
     [[nodiscard]] const LayoutNode& get(NodeId id) const {
         const auto* node = nodes_.find(id.value);
         if (!node) throw LayoutFailure(LayoutErrorCode::InvalidRoot, id, "CSS node is absent");
@@ -259,6 +267,7 @@ private:
         std::span<const Placement> placements, ResolvedDimensions container_inner,
         std::size_t depth, GridWorkspace& workspace);
     [[nodiscard]] Fragment hidden(const LayoutNode& node, std::size_t depth);
+    void validate_hidden_subtree(const LayoutNode& node, std::size_t depth);
     void append_fragment(Fragment& parent, Fragment&& child);
     [[nodiscard]] Fragment absolute(const LayoutNode& parent, NodeId child,
         Size parent_size, const LayoutBox& parent_box, std::size_t depth,

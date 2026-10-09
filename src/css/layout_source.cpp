@@ -17,6 +17,25 @@ void LayoutNodes::begin_compute() {
     }
 }
 
+void LayoutNodes::invalidate_grid_reports(LayoutCache& cache) {
+    for_each([](auto& node) { node.grid_reports_invalidated = false; });
+    for_each([&](auto& grid) {
+        if (!grid.grid_container) return;
+        auto* node = static_cast<LayoutNode*>(&grid);
+        while (node && !node->grid_reports_invalidated) {
+            node->grid_reports_invalidated = true;
+            cache.invalidate(node->cache);
+            if (!node->parent) break;
+            // This pass precedes begin_compute(). Never call the host or read
+            // borrowed Style storage here; only visit already-bound ancestors.
+            if (borrowed_) {
+                const auto found = borrowed_->entries.find(node->parent->value);
+                node = found == borrowed_->entries.end() ? nullptr : found->second.get();
+            } else node = Owned::find(node->parent->value);
+        }
+    });
+}
+
 const LayoutNode* LayoutNodes::find_borrowed(std::uint64_t id) const {
     if (!id) return nullptr;
     auto& state = *borrowed_;
@@ -67,6 +86,7 @@ void LayoutNodes::invalidate_source(std::optional<NodeId> node) {
             if (++depth > state.limits.maximum_nodes) throw std::invalid_argument("CSS source parent cycle");
             if (const auto found = state.entries.find(node->value); found != state.entries.end()) {
                 state.cache->invalidate(found->second->cache);
+                found->second->float_subtree_depth = 0;
                 // mark_dirty names the edited node. Ancestors need layout
                 // invalidation, not style validation or template compilation.
                 if (depth == 1) found->second->binding.dirty = true;

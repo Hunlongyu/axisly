@@ -319,6 +319,7 @@ private:
     Unit main_gap{}, cross_gap{}, main_size{};
     double used_cross{};
     ResolvedDimensions child_layout_basis;
+    std::optional<std::size_t> baseline_item;
     WorkspacePool<FlexWorkspace>::Lease workspace;
     std::pmr::vector<Fragment>& fragments;
     std::pmr::vector<FlexItem>& items;
@@ -332,6 +333,7 @@ private:
     void measure_lines();
     void resolve_cross_size();
     void layout_items();
+    [[nodiscard]] std::optional<std::size_t> select_baseline_item() const;
     [[nodiscard]] Fragment finish();
     [[nodiscard]] Fragment size_result() const;
 };
@@ -344,6 +346,7 @@ Fragment FlexLayout<IsRow>::run() {
     measure_lines();
     resolve_cross_size();
     if (engine.detail_ == FragmentDetail::Size) return size_result();
+    baseline_item = select_baseline_item();
     layout_items();
     return finish();
 }
@@ -734,6 +737,18 @@ void FlexLayout<IsRow>::layout_items() {
         double main_cursor = distribution.offset;
         for (const auto index : line.items) {
             auto& item = items[index];
+            const Unit main_start_margin = (main_reverse ? item.margin.main_end : item.margin.main_start)
+                + (item.auto_main_start ? auto_share : 0);
+            const Unit main_end_margin = (main_reverse ? item.margin.main_start : item.margin.main_end)
+                + (item.auto_main_end ? auto_share : 0);
+            // Line measurement already resolved every item's main size and
+            // the line's baseline group. Only the selected item contributes
+            // final geometry to this container's own baseline query.
+            if (engine.detail_ == FragmentDetail::Baseline && baseline_item != index) {
+                main_cursor += main_start_margin + item.target + main_end_margin + main_gap
+                    + distribution.extra_gap;
+                continue;
+            }
             auto& fragment = fragments[item.source_index];
             const auto& child_style = item.node->style;
             const auto alignment = item.alignment;
@@ -815,10 +830,6 @@ void FlexLayout<IsRow>::layout_items() {
                     }
                 }
             }
-            const Unit main_start_margin = (main_reverse ? item.margin.main_end : item.margin.main_start)
-                + (item.auto_main_start ? auto_share : 0);
-            const Unit main_end_margin = (main_reverse ? item.margin.main_start : item.margin.main_end)
-                + (item.auto_main_end ? auto_share : 0);
             auto& resolved_margin = fragment.mutable_root_layout().margin;
             set_axis_margin(resolved_margin, row, true, true, main_reverse,
                 main_start_margin);
@@ -851,50 +862,50 @@ void FlexLayout<IsRow>::layout_items() {
 }
 
 template<bool IsRow>
+std::optional<std::size_t> FlexLayout<IsRow>::select_baseline_item() const {
+    if (lines.empty()) return std::nullopt;
+    const auto& first_line = wrap_reverse ? lines.back() : lines.front();
+    if (first_line.items.empty()) return std::nullopt;
+    if (row) {
+        for (const auto index : first_line.items) {
+            const auto& item = items[index];
+            if (item.alignment.position == ItemPosition::Baseline
+                && !item.auto_cross_start && !item.auto_cross_end) return index;
+        }
+    } else if (node.style.flex_direction == FlexDirection::ColumnReverse) {
+        return first_line.items.back();
+    }
+    return first_line.items.front();
+}
+
+template<bool IsRow>
 Fragment FlexLayout<IsRow>::finish() {
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);
     Fragment result;
     result.size = candidate;
     result.root = make_layout(node, candidate, box);
-    if (!lines.empty()) {
-        const auto& first_line = wrap_reverse ? lines.back() : lines.front();
-        if (!first_line.items.empty()) {
-            std::size_t selected = first_line.items.front();
-            if (row) {
-                for (const auto index : first_line.items) {
-                    const auto& item = items[index];
-                    const auto alignment = item.alignment;
-                    if (alignment.position == ItemPosition::Baseline
-                        && !item.auto_cross_start && !item.auto_cross_end) {
-                        selected = index;
-                        break;
-                    }
-                }
-            } else if (node.style.flex_direction == FlexDirection::ColumnReverse) {
-                selected = first_line.items.back();
-            }
-            const auto& item = items[selected];
-            const auto& child_style = item.node->style;
-            const auto& fragment = fragments[item.source_index];
-            const Unit baseline = child_baseline(fragment, child_style)
-                .value_or(fragment.size.height);
-            result.mutable_root_layout().first_baseline = checked(
-                static_cast<double>(fragment.root_layout().border_box.y)
-                    + baseline, node.id);
-        }
+    if (baseline_item) {
+        const auto& item = items[*baseline_item];
+        const auto& child_style = item.node->style;
+        const auto& fragment = fragments[item.source_index];
+        const Unit baseline = child_baseline(fragment, child_style)
+            .value_or(fragment.size.height);
+        result.mutable_root_layout().first_baseline = checked(
+            static_cast<double>(fragment.root_layout().border_box.y)
+                + baseline, node.id);
     }
-    if (engine.detail_ == FragmentDetail::Full) result.reserve_children(fragments.size());
+    if (engine.detail_ != FragmentDetail::Full) return result;
+    result.reserve_children(fragments.size());
     for (std::size_t source = 0; source < fragments.size(); ++source) {
         const auto id = node.layout_children()[source];
-        if (engine.get(id).style.position == Position::Absolute
-            && engine.get(id).style.display != Display::None) {
+        const auto& child = engine.get(id);
+        if (child.style.position == Position::Absolute
+            && child.style.display != Display::None) {
             fragments[source] = engine.absolute(node, id, candidate, box, depth);
         }
         auto& fragment = fragments[source];
-        if (engine.detail_ == FragmentDetail::Full) {
-            engine.append_fragment(result, std::move(fragment));
-        }
+        engine.append_fragment(result, std::move(fragment));
     }
     return result;
 }

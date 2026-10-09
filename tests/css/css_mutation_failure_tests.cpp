@@ -1,4 +1,5 @@
 #include <axisly/css_tree.hpp>
+#include <axisly/css_source.hpp>
 
 #include <array>
 #include <cstdlib>
@@ -117,6 +118,37 @@ template<class Operation> void exhaust(const char* name, Operation operation, bo
     throw std::runtime_error("Allocation probe did not reach successful operation");
 }
 
+void source_index_failure() {
+    struct Source final : LayoutSource {
+        std::array<Style, 4> styles;
+        std::vector<NodeId> children{{2}, {3}};
+        Source() {
+            for (auto& style : styles) {
+                style.display = Display::Block;
+                style.box.size = {Length::length(20), Length::length(10)};
+            }
+        }
+        std::optional<LayoutNodeView> node(NodeId id) const override {
+            if (id.value < 1 || id.value > styles.size()) return std::nullopt;
+            return LayoutNodeView{styles[id.value - 1], id.value == 1 ? std::span<const NodeId>{children}
+                : std::span<const NodeId>{}, id.value == 1 ? std::nullopt : std::optional<NodeId>{{1}}};
+        }
+    } source;
+    LayoutSession session(source);
+    for (const auto queried : {NodeId{3}, NodeId{4}}) {
+        if (queried.value == 4) { source.children.push_back(queried); session.invalidate(); }
+        const auto& publication = session.compute({1}, {});
+        const auto snapshot = publication.nodes;
+        injection::operation = "source index";
+        injection::remaining = 0;
+        bool failed = false;
+        try { (void)session.layout(queried); } catch (const std::bad_alloc&) { failed = true; }
+        injection::remaining = injection::disabled;
+        require(failed && publication.nodes == snapshot, "Index allocation failure damaged the snapshot");
+        for (const auto& node : snapshot) require(session.layout(node.node) == node, "Source index did not recover");
+    }
+}
+
 Style named_style() {
     Style style;
     style.display = Display::Grid;
@@ -141,6 +173,7 @@ void equal_style_does_not_allocate() {
     tree.set_style(root, tree.style(root));
     tree.set_style(root, equal);
     tree.set_style(root, std::move(equal));
+    tree.set_children(root, tree.children(root));
     injection::remaining = injection::disabled;
     require(equal == tree.style(root), "Equal rvalue style was unnecessarily consumed");
     const auto& after = tree.compute(root, {});
@@ -214,12 +247,14 @@ int main() {
     std::cout << std::unitbuf;
     try {
         equal_style_does_not_allocate();
+        source_index_failure();
         exhaust("detach", [](Fixture& f) { f.tree.detach(f.branch); }, false);
         exhaust("invalidate", [](Fixture& f) { f.tree.mark_subtree_dirty(f.root); }, false);
         exhaust("remove subtree", [](Fixture& f) { f.tree.remove_subtree(f.branch); }, false);
         exhaust("remove node", [](Fixture& f) { f.tree.remove_node(f.branch); }, false);
         exhaust("insert", [](Fixture& f) { f.tree.insert_child(f.outside, 0, f.branch); }, true);
         exhaust("set children", [](Fixture& f) { f.tree.set_children(f.root, std::array{f.leaf, f.sibling}); }, true);
+        exhaust("batch reparent", [](Fixture& f) { f.tree.set_children(f.outside, std::array{f.leaf, f.branch, f.sibling}); }, true);
         exhaust("replace", [](Fixture& f) { (void)f.tree.replace_child(f.root, 0, f.leaf); }, true);
 #if !defined(_ITERATOR_DEBUG_LEVEL) || _ITERATOR_DEBUG_LEVEL == 0
         style_allocation_failures();

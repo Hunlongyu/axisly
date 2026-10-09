@@ -18,7 +18,7 @@ struct Cell {
     Style style;
     std::optional<NodeId> parent;
     std::vector<NodeId> children;
-    std::shared_ptr<Unit> width{std::make_shared<Unit>(20)};
+    std::shared_ptr<Unit> width{std::make_shared<Unit>(20.0F)};
 };
 struct Source final : LayoutSource {
     std::vector<Cell> cells{capacity};
@@ -213,6 +213,11 @@ void stateful(std::uint32_t seed) {
             options.measure_provider = &borrowed_provider;
             const auto& borrowed = session.compute(host_ids[root_index], available, options);
             compare(borrowed, expected, host_ids, fresh_ids);
+            for (const auto id : host_ids) {
+                const auto* value = borrowed.find(id);
+                require(session.layout(id) == (value ? std::optional<NodeLayout>{*value} : std::nullopt),
+                    "Indexed source query differs from the published snapshot");
+            }
             const auto reads = source.reads;
             require(session.compute(host_ids[root_index], available, options).cache_hit && source.reads == reads,
                 "Unchanged source unnecessarily reread host nodes");
@@ -243,9 +248,56 @@ void stateful(std::uint32_t seed) {
     source.fail = false;
     require(session.compute(root, {}).succeeded(), "Source exception prevented recovery");
 }
+void publication_and_float_cache() {
+    Source source;
+    for (std::size_t i = 0; i < capacity; ++i) {
+        auto& cell = source.cells[i];
+        cell.id = {(static_cast<std::uint64_t>(capacity - i) << 32) | (i + 1)};
+        cell.active = true;
+        cell.style.display = Display::Block;
+        cell.style.box.size.width = Length::length(100);
+        if (i >= 2) cell.style.box.size.height = Length::length(10);
+        if (i) source.append(source.cells[i < 2 ? 0 : 1].id, cell.id);
+    }
+    LayoutSession session(source);
+    const auto root = source.cells[0].id, nested = source.cells[1].id, leaf = source.cells[2].id;
+    const auto verify = [&] {
+        const auto cached = session.compute(root, {});
+        require(cached.succeeded(), "Borrowed block layout failed");
+        for (const auto& node : cached.nodes) require(session.layout(node.node) == node, "Sparse host ID lookup failed");
+        require(!session.layout({0}) && !session.layout({~std::uint64_t{0}}), "Invalid host ID accepted");
+        session.invalidate();
+        require(session.compute(root, {}).nodes == cached.nodes, "Borrowed float cache survived an invalidating edit");
+    };
+    verify();
+    for (const auto value : {FloatSide::Left, FloatSide::None, FloatSide::Right}) {
+        source.cells[2].style.float_side = value;
+        session.mark_dirty(leaf);
+        verify();
+    }
+    for (const auto value : {Display::None, Display::Block}) {
+        source.cells[1].style.display = value;
+        session.mark_dirty(nested);
+        verify();
+    }
+    const auto old = session.layout(leaf);
+    source.detach(leaf);
+    source.cells[2].active = false;
+    session.invalidate();
+    require(session.layout(leaf) == old, "Source removal changed the old publication");
+    verify();
+    require(!session.layout(leaf), "Source index retained a removed node");
+    source.cells[2].id.value += std::uint64_t{1} << 40;
+    source.cells[2].active = true;
+    source.append(nested, source.cells[2].id);
+    session.invalidate();
+    verify();
+    require(!session.layout(leaf) && session.layout(source.cells[2].id).has_value(), "Reused host ID aliased old geometry");
+    require(session.compute(nested, {}).succeeded() && !session.layout(root), "Partial root query returned an outside node");
+}
 }
 int main(int argc, char** argv) {
     const auto seed = argc > 1 ? static_cast<std::uint32_t>(std::stoul(argv[1])) : 1234567U;
-    try { stateful(seed); return 0; }
+    try { stateful(seed); publication_and_float_cache(); return 0; }
     catch (const std::exception& error) { std::cerr << "Seed " << seed << ": " << error.what() << '\n'; return 1; }
 }

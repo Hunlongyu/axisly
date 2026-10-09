@@ -60,6 +60,7 @@ void Fragment::reserve_children(std::size_t count) {
     else if (descendants.use_count() != 1) descendants = std::make_shared<FragmentChildren>(*descendants);
     descendants->reserve_hint = std::max(descendants->reserve_hint, count);
     descendants->publication.epoch = 0;
+    descendants->publication.kind = FragmentChildren::Publication::Kind::None;
 }
 
 void Fragment::append_nodes(Fragment&& child) {
@@ -68,10 +69,11 @@ void Fragment::append_nodes(Fragment&& child) {
     const auto count = child.node_count();
     auto& children = *descendants;
     children.publication.epoch = 0;
+    children.publication.kind = FragmentChildren::Publication::Kind::None;
     children.lookup_index.reset();
     if (!children.branched && child.descendants) {
-        children.branches.reserve(std::max(children.reserve_hint, children.leaves.size() + 1));
-        for (auto& leaf : children.leaves) children.branches.push_back({std::move(leaf), {}, {}});
+        children.branches.reserve(std::max(children.reserve_hint, children.leaf_nodes().size() + 1));
+        for (const auto& leaf : children.leaf_nodes()) children.branches.push_back({leaf, {}, {}});
         std::vector<NodeLayout>{}.swap(children.leaves);
         children.branched = true;
     }
@@ -83,6 +85,7 @@ void Fragment::append_nodes(Fragment&& child) {
             // Leave room for the root when this buffer is uniquely owned.
             children.leaves.reserve(children.reserve_hint < children.leaves.max_size()
                 ? children.reserve_hint + 1 : children.reserve_hint);
+            children.leaves.emplace_back();
         }
         children.leaves.push_back(child.root_layout());
     }
@@ -90,9 +93,9 @@ void Fragment::append_nodes(Fragment&& child) {
 }
 
 std::optional<std::size_t> FragmentChildren::find_child(NodeId node) const {
-    const auto count = branched ? branches.size() : leaves.size();
+    const auto count = branched ? branches.size() : leaf_nodes().size();
     const auto identity = [&](std::size_t index) {
-        return branched ? branches[index].root.node.value : leaves[index].node.value;
+        return branched ? branches[index].root.node.value : leaf_nodes()[index].node.value;
     };
     if (count < 16) {
         for (std::size_t i = 0; i < count; ++i) if (identity(i) == node.value) return i;
@@ -178,7 +181,7 @@ bool find_path(const NodeLayout& node, const FragmentChildren* children,
                 if (find_path(child.root, child.descendants.get(), target, path)) return true;
             }
         } else {
-            for (const auto& child : children->leaves) {
+            for (const auto& child : children->leaf_nodes()) {
                 if (child.node == target) { path.push_back(target); return true; }
             }
         }
@@ -217,7 +220,7 @@ std::optional<NodeLayout> lookup_path(const NodeLayout& raw, const FragmentChild
         return lookup_path(child.root, child.descendants.get(), child.translation.get(),
             transforms, path.subspan(1), logical, pixel, rounding, false, space);
     }
-    return lookup_path(children->leaves[*index], nullptr, nullptr, transforms, path.subspan(1),
+    return lookup_path(children->leaf_nodes()[*index], nullptr, nullptr, transforms, path.subspan(1),
         logical, pixel, rounding, false, space);
 }
 
@@ -227,7 +230,8 @@ void append_branches(Output& output, const FragmentChildren& children,
     auto& published = children.publication;
     const auto start = output.size();
     const bool eligible = children.node_count >= 8 && path && publication.next_epoch;
-    if (eligible && published.epoch && published.epoch == publication.previous_epoch
+    if (eligible && published.kind == FragmentChildren::Publication::Kind::Logical
+        && published.epoch && published.epoch == publication.previous_epoch
         && matches_path(published, path)) {
         assert(published.offset <= publication.previous.size()
             && children.node_count <= publication.previous.size() - published.offset);
@@ -242,6 +246,7 @@ void append_branches(Output& output, const FragmentChildren& children,
         // Updating this hint before a later failure is safe: a failed attempt
         // never publishes its epoch, so its offsets can never be reused.
         published.epoch = 0;
+        published.kind = FragmentChildren::Publication::Kind::Logical;
         published.translations.clear();
         visit_path(path, [&](auto translation) { published.translations.push_back(translation); });
         published.offset = start;
@@ -249,9 +254,10 @@ void append_branches(Output& output, const FragmentChildren& children,
     }
     if (!children.branched) {
         if (!path) {
-            output.insert(output.end(), children.leaves.begin(), children.leaves.end());
+            const auto leaves = children.leaf_nodes();
+            output.insert(output.end(), leaves.begin(), leaves.end());
         } else {
-            for (auto layout : children.leaves) {
+            for (auto layout : children.leaf_nodes()) {
                 for (auto* transform = path; transform; transform = transform->outer) {
                     apply_translation(layout, transform->translation);
                 }
@@ -285,7 +291,7 @@ void validate_translations(const FragmentChildren& children, const TransformPath
             }
         }
     } else if (path) {
-        for (const auto& leaf : children.leaves) validate(leaf);
+        for (const auto& leaf : children.leaf_nodes()) validate(leaf);
     }
 }
 } // namespace
@@ -310,9 +316,10 @@ std::optional<NodeLayout> Fragment::lookup(NodeId node, std::span<const NodeId> 
 
 std::vector<NodeLayout> Fragment::take_nodes(std::vector<NodeLayout> output,
                                            PublicationContext& publication) && {
-    if (descendants && !descendants->branched && !translation && descendants.use_count() == 1) {
+    if (root && descendants && !descendants->leaves.empty()
+        && !descendants->branched && !translation && descendants.use_count() == 1) {
         auto result = std::move(descendants->leaves);
-        if (root) result.insert(result.begin(), root_layout());
+        result.front() = root_layout();
         return result;
     }
     output.clear();

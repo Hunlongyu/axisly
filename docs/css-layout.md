@@ -147,6 +147,7 @@ auto bounds = session.layout(host_child, css::CoordinateSpace::Parent);
 - 修改样式或内容后调用 `session.mark_dirty(node)`；修改拓扑、删除节点或复用 ID 后调用 `session.invalidate()`。
 - `invalidate()` 丢弃节点绑定和缓存，上一份已发布几何仍可读取，直到下一次计算。
 - 会话可通过 `LayoutOptions` 使用共享测量、取整、按需结果和诊断开关。
+- 完整发布后的根坐标值查询使用惰性的宿主 ID 排序索引，避免逐节点读取时反复扫描全数组。
 - 同一会话需要串行访问；回调不能重入或使该会话失效。
 
 宿主已有布局管理器时，应让它与 Axisly 分别管理不同的控件范围，避免多方重复设置同一控件的矩形。

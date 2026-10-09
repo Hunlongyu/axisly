@@ -83,8 +83,11 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     // A content-sized Block determines its outer width before cyclic percentage
     // edges can be used. Taffy then resolves those edges against that width for
     // child layout while retaining the original reported box edges.
-    const LayoutBox flow_box = constraints.containing_width ? box
-        : resolve_layout_box(node, outer_width, constraints.containing_height);
+    std::optional<LayoutBox> cyclic_flow_box;
+    if (!constraints.containing_width) {
+        cyclic_flow_box = resolve_layout_box(node, outer_width, constraints.containing_height);
+    }
+    const LayoutBox& flow_box = cyclic_flow_box ? *cyclic_flow_box : box;
     const auto flow_decoration_width = flow_box.horizontal_decoration();
     const auto flow_decoration_height = flow_box.vertical_decoration();
     const Unit positioning_width = outer_width - flow_decoration_width;
@@ -159,9 +162,8 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
         }
         return x;
     };
-    const bool block_flow_parent = node.parent
-        && (get(*node.parent).style.display == Display::Block
-            || get(*node.parent).style.display == Display::FlowRoot);
+    const auto parent_display = node.parent ? get(*node.parent).style.display : Display::None;
+    const bool block_flow_parent = parent_display == Display::Block || parent_display == Display::FlowRoot;
     const bool independent = node.style.display != Display::Block
         || node.style.position == Position::Absolute
         || node.style.item_is_table || node.style.box.replaced
@@ -393,8 +395,9 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     }
     for (std::size_t source = 0; source < node.layout_children().size(); ++source) {
         const auto id = node.layout_children()[source];
-        if (get(id).style.position == Position::Absolute
-            && get(id).style.display != Display::None) {
+        const auto& child = get(id);
+        if (child.style.position == Position::Absolute
+            && child.style.display != Display::None) {
             fragments[source] = absolute(node, id, candidate, flow_box, depth,
                 std::nullopt, static_block_y[source]);
         }

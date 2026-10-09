@@ -86,7 +86,7 @@ struct Fragment : FragmentState {
     [[nodiscard]] std::vector<NodeLayout> take_nodes(std::vector<NodeLayout> output,
         PublicationContext& publication) &&;
     [[nodiscard]] std::vector<NodeLayout> rounded_nodes(std::vector<NodeLayout> output,
-        PixelRounding rounding) const;
+        PixelRounding rounding, PublicationContext& publication) const;
     [[nodiscard]] std::optional<NodeLayout> lookup(NodeId node,
         std::span<const NodeId> path, std::optional<PixelRounding> rounding,
         CoordinateSpace space = CoordinateSpace::Root) const;
@@ -117,9 +117,12 @@ struct FragmentChildren {
     FragmentChildren(const FragmentChildren& other)
         : leaves(other.leaves), branches(other.branches), node_count(other.node_count),
           reserve_hint(other.reserve_hint), branched(other.branched) {}
-    // Leaf-only children remain contiguous, allowing a large flat root to
-    // publish its existing buffer. Mixed subtrees retain shared branches.
+    // Slot zero is reserved for the publishing root. Child traversal always
+    // uses leaf_nodes(), so the root can later be filled without shifting leaves.
     std::vector<NodeLayout> leaves;
+    [[nodiscard]] std::span<const NodeLayout> leaf_nodes() const noexcept {
+        return leaves.empty() ? std::span<const NodeLayout>{} : std::span<const NodeLayout>(leaves).subspan(1);
+    }
     std::vector<FragmentBranch> branches;
     std::size_t node_count{};
     std::size_t reserve_hint{};
@@ -133,9 +136,13 @@ struct FragmentChildren {
     // snapshot identity and every translation must match before range reuse.
     // A copied or modified child collection always drops this hint.
     struct Publication {
+        enum class Kind { None, Logical, Rounded };
         std::uint64_t epoch{};
         std::size_t offset{};
+        // Logical publication stores the ordered transform path. Rounded
+        // publication uses four pairs for parent coordinates and snap options.
         std::vector<std::pair<std::uint32_t, std::uint32_t>> translations;
+        Kind kind{Kind::None};
     };
     mutable Publication publication;
 };

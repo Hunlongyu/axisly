@@ -895,7 +895,7 @@ void container_scrollbar_ratio_bounds() {
     // or loses children. Style and percentage bases stay unchanged here.
     LayoutTree tree;
     Style style;
-    style.box.aspect_ratio = 2;
+    style.box.aspect_ratio = 2.0F;
     style.box.max_size.width = Length::length(100);
     const auto root = tree.create_node(style, [](const MeasureRequest&) {
         return Measurement{{140, 90}};
@@ -980,23 +980,25 @@ void container_scrollbar_ratio_bounds() {
 }
 
 void cached_subtree_depth_limit() {
-    LayoutTree tree(TreeLimits{.maximum_depth = 3});
-    Style style;
-    style.display = Display::Flex;
-    style.flex_direction = FlexDirection::Column;
-    style.box.size = {Length::length(100), Length::length(100)};
-    style.box.min_size = {Length::length(0), Length::length(0)};
-    std::array<NodeId, 4> nodes;
-    for (std::size_t i = 0; i < nodes.size(); ++i) {
-        nodes[i] = tree.create_node(style);
-        if (i) tree.append_child(nodes[i - 1], nodes[i]);
+    for (const auto display : {Display::Flex, Display::Block, Display::None}) {
+        LayoutTree tree(TreeLimits{.maximum_depth = 3});
+        Style style;
+        style.display = display;
+        style.flex_direction = FlexDirection::Column;
+        style.box.size = {Length::length(100), Length::length(100)};
+        style.box.min_size = {Length::length(0), Length::length(0)};
+        std::array<NodeId, 4> nodes;
+        for (std::size_t i = 0; i < nodes.size(); ++i) {
+            nodes[i] = tree.create_node(style);
+            if (i) tree.append_child(nodes[i - 1], nodes[i]);
+        }
+        const AvailableSize available{AvailableSpace::definite(100), AvailableSpace::definite(100)};
+        require(tree.compute(nodes[1], available).succeeded(), "A subtree within the depth limit must compute");
+        require(tree.compute(nodes[0], available).error.code == LayoutErrorCode::LimitExceeded,
+            "A cached subtree must not bypass the depth limit when computed from a higher root");
+        require(tree.compute(nodes[1], available).succeeded(),
+            "A rejected deeper query must preserve valid shallower cached results");
     }
-    const AvailableSize available{AvailableSpace::definite(100), AvailableSpace::definite(100)};
-    require(tree.compute(nodes[1], available).succeeded(), "A subtree within the depth limit must compute");
-    require(tree.compute(nodes[0], available).error.code == LayoutErrorCode::LimitExceeded,
-        "A cached subtree must not bypass the depth limit when computed from a higher root");
-    require(tree.compute(nodes[1], available).succeeded(),
-        "A rejected deeper query must preserve valid shallower cached results");
 }
 
 void deep_flex_query_budget() {

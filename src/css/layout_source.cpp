@@ -67,7 +67,12 @@ void LayoutNodes::invalidate_source(std::optional<NodeId> node) {
             if (++depth > state.limits.maximum_nodes) throw std::invalid_argument("CSS source parent cycle");
             if (const auto found = state.entries.find(node->value); found != state.entries.end()) {
                 state.cache->invalidate(found->second->cache);
-                found->second->binding.dirty = true;
+                // mark_dirty names the edited node. Ancestors need layout
+                // invalidation, not style validation or template compilation.
+                if (depth == 1) found->second->binding.dirty = true;
+                // Borrowed styles have no old value to compare: conservatively
+                // invalidate the edited node's and direct parent's placement.
+                if (depth <= 2) found->second->grid_structure.reset();
                 found->second->binding.epoch = 0;
             }
             const auto view = state.source->node(*node);

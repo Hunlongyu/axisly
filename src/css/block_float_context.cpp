@@ -9,26 +9,22 @@ Unit FloatContext::clear_bottom(ClearSide clear) const noexcept {
 }
 
 std::optional<Unit> FloatContext::clear_threshold(ClearSide clear) const noexcept {
-    std::optional<Unit> bottom;
-    for (const auto& region : regions_) {
-        if (clear == ClearSide::Both
-            || (clear == ClearSide::Left && region.side == FloatSide::Left)
-            || (clear == ClearSide::Right && region.side == FloatSide::Right)) {
-            bottom = std::max(bottom.value_or(region.bottom), region.bottom);
-        }
+    switch (clear) {
+    case ClearSide::Left: return left_bottom_;
+    case ClearSide::Right: return right_bottom_;
+    case ClearSide::Both: return both_bottom_;
+    default: return std::nullopt;
     }
-    return bottom;
 }
 
 Unit FloatContext::maximum_bottom() const noexcept {
-    Unit bottom = 0;
-    for (const auto& region : regions_) bottom = std::max(bottom, region.bottom);
-    return bottom;
+    return maximum_bottom_;
 }
 
-std::vector<FloatContext::Interval> FloatContext::free_intervals(
+std::span<const FloatContext::Interval> FloatContext::free_intervals(
     Unit top, Unit bottom, FloatBounds bounds) const {
-    std::vector<Interval> occupied;
+    auto& occupied = occupied_;
+    occupied.clear();
     occupied.reserve(regions_.size());
     for (const auto& region : regions_) {
         if (!region.occupies(top, bottom)) continue;
@@ -40,7 +36,8 @@ std::vector<FloatContext::Interval> FloatContext::free_intervals(
         [](const Interval& first, const Interval& second) {
             return first.left < second.left;
         });
-    std::vector<Interval> free;
+    auto& free = free_;
+    free.clear();
     Unit cursor = bounds.left;
     for (const auto& interval : occupied) {
         if (interval.left > cursor) free.push_back({cursor, interval.left});
@@ -65,8 +62,7 @@ std::optional<Unit> FloatContext::next_occupied_bottom(Unit top, Unit bottom) co
 std::pair<Unit, Unit> FloatContext::place_float(FloatSide side, ClearSide clear,
     Unit outer_width, Unit outer_height, Unit initial_y,
     FloatBounds bounds, NodeId node) const {
-    Unit y = initial_y;
-    for (const auto& region : regions_) y = std::max(y, region.top);
+    Unit y = std::max(initial_y, maximum_top_.value_or(initial_y));
     if (clear != ClearSide::None && !regions_.empty()) {
         y = std::max(y, maximum_bottom());
     }
@@ -147,10 +143,7 @@ void FloatContext::add(FloatSide side, Unit left, Unit top,
     Unit outer_width, Unit outer_height, NodeId node) {
     const Unit bottom = checked(static_cast<double>(top) + outer_height, node);
     Unit occupied_bottom = bottom;
-    Unit prior_occupied_bottom = 0;
-    for (const auto& region : regions_) {
-        prior_occupied_bottom = std::max(prior_occupied_bottom, region.occupied_bottom);
-    }
+    const Unit prior_occupied_bottom = maximum_occupied_bottom_;
     // Taffy 0.14 updates existing vertical segments when a float begins inside
     // them. The extension below the last segment is represented by the box's
     // actual bottom but does not occupy an additional segment.
@@ -160,6 +153,13 @@ void FloatContext::add(FloatSide side, Unit left, Unit top,
     regions_.push_back({side, left,
         checked(static_cast<double>(left) + outer_width, node), top,
         bottom, occupied_bottom});
+    // Commit summaries only after all validation/allocation above succeeds.
+    both_bottom_ = std::max(both_bottom_.value_or(bottom), bottom);
+    if (side == FloatSide::Left) left_bottom_ = std::max(left_bottom_.value_or(bottom), bottom);
+    if (side == FloatSide::Right) right_bottom_ = std::max(right_bottom_.value_or(bottom), bottom);
+    maximum_top_ = std::max(maximum_top_.value_or(top), top);
+    maximum_bottom_ = std::max(maximum_bottom_, bottom);
+    maximum_occupied_bottom_ = std::max(maximum_occupied_bottom_, occupied_bottom);
 }
 
 } // namespace axisly::css::detail

@@ -1,7 +1,9 @@
 #include "grid_internal.hpp"
+#include "grid_metrics.hpp"
 
 #include <algorithm>
 #include <cstdlib>
+#include <unordered_map>
 #include <utility>
 
 namespace axisly::css::detail {
@@ -174,18 +176,66 @@ struct OccupiedArea {
 
 class GridOccupancy {
 public:
+    GridOccupancy(std::size_t count, std::pmr::memory_resource* memory)
+        : indexed_(count >= 64), row_memory_(memory), rows_(&row_memory_),
+          large_(&row_memory_), areas_(memory) {
+        areas_.reserve(count);
+    }
     void add(std::int32_t primary, std::int32_t primary_span,
              std::int32_t secondary, std::int32_t secondary_span, bool auto_placed) {
         areas_.push_back({primary, primary + primary_span,
             secondary, secondary + secondary_span, auto_placed});
+        if (!indexed_) return;
+        // Very tall rectangles stay compact. Large queries use the rectangle
+        // list too, bounding index duplication and sparse-coordinate work.
+        if (secondary_span > indexed_span_limit) {
+            large_.push_back(areas_.back());
+            return;
+        }
+        for (auto row = secondary; row < secondary + secondary_span; ++row) {
+            auto& occupied = rows_.try_emplace(row, &row_memory_).first->second;
+            if (auto_placed) occupied.last_auto = std::max(
+                occupied.last_auto.value_or(primary + primary_span - 1), primary + primary_span - 1);
+            Interval merged{primary, primary + primary_span};
+            auto first = std::lower_bound(occupied.intervals.begin(), occupied.intervals.end(), primary,
+                [](const Interval& interval, std::int32_t start) { return interval.end < start; });
+            auto last = first;
+            while (last != occupied.intervals.end() && last->start <= merged.end) {
+                merged.start = std::min(merged.start, last->start);
+                merged.end = std::max(merged.end, last->end);
+                ++last;
+            }
+            if (first == last) occupied.intervals.insert(first, merged);
+            else {
+                *first = merged;
+                occupied.intervals.erase(first + 1, last);
+            }
+        }
     }
 
     [[nodiscard]] std::optional<std::int32_t> collision_jump(
         std::int32_t primary, std::int32_t primary_span,
         std::int32_t secondary, std::int32_t secondary_span,
         bool along_primary) const {
+        AXISLY_GRID_COUNT(placement_probes, 1);
         std::optional<std::int32_t> next;
-        for (const auto& area : areas_) {
+        const bool indexed_query = indexed_ && secondary_span <= indexed_span_limit;
+        if (indexed_query) {
+            for (auto row = secondary; row < secondary + secondary_span; ++row) {
+                const auto found = rows_.find(row);
+                if (found == rows_.end()) continue;
+                const auto& intervals = found->second.intervals;
+                auto interval = std::lower_bound(intervals.begin(), intervals.end(), primary,
+                    [](const Interval& value, std::int32_t start) { return value.end <= start; });
+                for (; interval != intervals.end() && interval->start < primary + primary_span; ++interval) {
+                    AXISLY_GRID_COUNT(occupied_visits, 1);
+                    const auto end = along_primary ? interval->end : row + 1;
+                    next = std::max(next.value_or(end), end);
+                }
+            }
+        }
+        for (const auto& area : indexed_query ? large_ : areas_) {
+            AXISLY_GRID_COUNT(occupied_visits, 1);
             if (primary >= area.primary_end || primary + primary_span <= area.primary_start
                 || secondary >= area.secondary_end
                 || secondary + secondary_span <= area.secondary_start) continue;
@@ -198,7 +248,12 @@ public:
     [[nodiscard]] std::optional<std::int32_t> last_auto_on_secondary(
         std::int32_t secondary) const {
         std::optional<std::int32_t> last;
-        for (const auto& area : areas_) {
+        if (indexed_) {
+            const auto found = rows_.find(secondary);
+            if (found != rows_.end()) last = found->second.last_auto;
+        }
+        for (const auto& area : indexed_ ? large_ : areas_) {
+            AXISLY_GRID_COUNT(occupied_visits, 1);
             if (!area.auto_placed || secondary < area.secondary_start
                 || secondary >= area.secondary_end) continue;
             last = std::max(last.value_or(area.primary_end - 1), area.primary_end - 1);
@@ -207,13 +262,24 @@ public:
     }
 
 private:
-    std::vector<OccupiedArea> areas_;
+    struct Interval { std::int32_t start, end; };
+    struct Row {
+        explicit Row(std::pmr::memory_resource* memory) : intervals(memory) {}
+        std::pmr::vector<Interval> intervals;
+        std::optional<std::int32_t> last_auto;
+    };
+    static constexpr std::int32_t indexed_span_limit = 64;
+    bool indexed_{};
+    std::pmr::monotonic_buffer_resource row_memory_;
+    std::pmr::unordered_map<std::int32_t, Row> rows_;
+    std::pmr::vector<OccupiedArea> large_, areas_;
 };
 
 } // namespace
 
 GridExtent place_grid_items(std::span<Placement> placements, std::int32_t explicit_rows,
-                 std::int32_t explicit_columns, GridAutoFlow flow, NodeId id) {
+                 std::int32_t explicit_columns, GridAutoFlow flow, NodeId id,
+                 std::pmr::memory_resource* memory) {
     const bool by_row = flow == GridAutoFlow::Row || flow == GridAutoFlow::RowDense;
     const bool dense = flow == GridAutoFlow::RowDense || flow == GridAutoFlow::ColumnDense;
     const auto primary = [by_row](const Placement& item) -> const AxisPlacement& {
@@ -242,7 +308,10 @@ GridExtent place_grid_items(std::span<Placement> placements, std::int32_t explic
     auto& primary_end = by_row ? extent.column_end : extent.row_end;
     auto& secondary_start = by_row ? extent.row_start : extent.column_start;
     auto& secondary_end = by_row ? extent.row_end : extent.column_end;
-    GridOccupancy occupied;
+    const bool automatic = std::any_of(placements.begin(), placements.end(), [](const Placement& item) {
+        return !item.hidden && (!item.row.start || !item.column.start);
+    });
+    GridOccupancy occupied(automatic ? placements.size() : 0, memory);
     const auto record = [&](Placement& item, std::int32_t p, std::int32_t s,
                             bool auto_placed) {
         const auto clamp_range = [](std::int32_t start, std::int32_t span) {
@@ -265,7 +334,7 @@ GridExtent place_grid_items(std::span<Placement> placements, std::int32_t explic
             item.column_start = s_start;
             item.column_end = s_end;
         }
-        occupied.add(p_start, p_end - p_start, s_start, s_end - s_start, auto_placed);
+        if (automatic) occupied.add(p_start, p_end - p_start, s_start, s_end - s_start, auto_placed);
         primary_start = std::min(primary_start, p_start);
         primary_end = std::max(primary_end, p_end);
         secondary_start = std::min(secondary_start, s_start);

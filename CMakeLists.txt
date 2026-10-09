@@ -31,6 +31,7 @@ option(AXISLY_BUILD_PLAYGROUND "Build the optional SDL3 visual playground" OFF)
 option(AXISLY_BUILD_GEEYOOU_SHOWCASE "Build the optional Windows GeeyoouUI showcase (downloads pinned sources)" OFF)
 option(AXISLY_FETCH_SDL3 "Download pinned SDL3 sources for the playground" OFF)
 option(AXISLY_BUILD_BENCHMARKS "Build developer-only layout timing and allocation benchmarks" OFF)
+option(AXISLY_ENABLE_GRID_METRICS "Count Grid work in development builds (not for timing)" OFF)
 option(AXISLY_BUILD_COMPARISON_BENCHMARKS "Build opt-in Taffy/Yoga benchmarks (downloads Yoga; requires Cargo/Python)" OFF)
 if(AXISLY_BUILD_COMPARISON_BENCHMARKS AND NOT AXISLY_BUILD_BENCHMARKS)
     message(FATAL_ERROR "AXISLY_BUILD_COMPARISON_BENCHMARKS requires AXISLY_BUILD_BENCHMARKS=ON")
@@ -75,6 +76,9 @@ add_library(axisly STATIC
     src/css_values.cpp
 )
 add_library(axisly::axisly ALIAS axisly)
+if(AXISLY_ENABLE_GRID_METRICS)
+    target_compile_definitions(axisly PRIVATE AXISLY_ENABLE_GRID_METRICS=1)
+endif()
 set_target_properties(axisly PROPERTIES
     EXPORT_NAME axisly
     CXX_EXTENSIONS OFF

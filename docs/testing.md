@@ -93,6 +93,11 @@ macOS ARM64 的构建、测试与安装后消费者验证。工作流配置不�
   Release／RelWithDebInfo ASan 执行；Debug 保留正常创建契约及其余七项修改操作的故障注入。
 - `axisly.css.source.stateful_*` 使用四个固定随机种子，每组连续修改 400 次，
   检查持久树与宿主树接入，对包括分离节点在内的每个根逐步对照重新建树的几何、Grid 诊断和拓扑。
+- `axisly.css.grid.optimization_contract` 检查定向缓存失效、auto-repeat 双槽替换、
+  嵌套工作区复用和测量异常后的恢复；启用 `AXISLY_ENABLE_GRID_METRICS` 时还验证重建次数。
+- `axisly.css.grid.placement_index` 对四种自动放置方向执行 1,600 组固定种子差分，
+  将行区间索引与线性扫描比较，覆盖负坐标、重叠、隐藏项和大跨度回退。
+- `axisly.css.memory.contract` 同时检查 Flex、Grid 和浮动 Block 工作区的资源归还。
 
 Clang 可在独立目录配置 `-DAXISLY_ENABLE_COVERAGE=ON`，然后运行：
 

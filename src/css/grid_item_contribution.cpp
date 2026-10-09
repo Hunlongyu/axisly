@@ -1,8 +1,8 @@
 #include "grid_item_contribution.hpp"
 #include "grid_item_sizing.hpp"
+#include "grid_workspace.hpp"
 
 #include <algorithm>
-#include <unordered_map>
 
 namespace axisly::css::detail {
 namespace {
@@ -111,21 +111,30 @@ GridAxisContribution Engine::grid_axis_contribution(NodeId id,
     return {minimum_size, min_content, max_content, start, end};
 }
 
-std::pmr::vector<GridBaselineItem> Engine::measure_grid_baselines(const LayoutNode& parent,
+void Engine::measure_grid_baselines(const LayoutNode& parent,
     std::span<const Placement> placements, ResolvedDimensions container_inner,
-    std::size_t depth) {
-    std::pmr::vector<GridBaselineItem> result(placements.size(), parent.cache_owner->memory());
-    std::unordered_map<std::int32_t, std::vector<std::size_t>> groups;
+    std::size_t depth, GridWorkspace& workspace) {
+    auto& result = workspace.baseline_items;
+    result.resize(placements.size());
+    auto& order = workspace.baseline_order;
     for (std::size_t i = 0; i < placements.size(); ++i) {
         if (placements[i].hidden) continue;
         const auto& child = get(parent.layout_children()[i]);
         if (!grid_baseline_participant(parent, child)) continue;
-        groups[placements[i].row_start].push_back(i);
+        order.push_back(i);
     }
-    for (const auto& [row, indices] : groups) {
-        (void)row;
+    std::sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+        if (placements[a].row_start != placements[b].row_start) return placements[a].row_start < placements[b].row_start;
+        return a < b;
+    });
+    for (std::size_t first = 0; first < order.size();) {
+        auto last = first + 1;
+        while (last < order.size() && placements[order[last]].row_start == placements[order[first]].row_start) ++last;
+        const auto indices = std::span<const std::size_t>(order).subspan(first, last - first);
+        first = last;
         if (indices.size() <= 1) continue;
-        std::vector<Unit> baselines;
+        auto& baselines = workspace.baselines;
+        baselines.clear();
         baselines.reserve(indices.size());
         std::optional<Unit> largest;
         for (const auto source : indices) {
@@ -145,6 +154,5 @@ std::pmr::vector<GridBaselineItem> Engine::measure_grid_baselines(const LayoutNo
             result[indices[i]] = {checked(static_cast<double>(*largest) - baselines[i], parent.id), baselines[i]};
         }
     }
-    return result;
 }
 } // namespace axisly::css::detail

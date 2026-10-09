@@ -41,13 +41,21 @@ void tree_reuse() {
     using namespace axisly::css;
     auto memory = std::make_shared<LayoutMemory>();
     NodeId stale;
-    for (int round = 0; round < 3; ++round) {
+    for (int round = 0; round < 9; ++round) {
         LayoutTree tree({}, memory);
-        Style root_style; root_style.display = Display::Flex;
+        Style root_style;
+        root_style.display = std::array{Display::Flex, Display::Grid, Display::Block}[round % 3];
+        if (root_style.display == Display::Grid) {
+            root_style.grid.template_columns = {GridRepeat{RepeatKind::AutoFit, 1, {TrackSizing::fixed(40)}, {}}};
+        }
         const auto root = tree.create_node(root_style);
         require(!tree.contains(stale), "Resource reuse revived a stale node identity");
         Style leaf; leaf.box.size = {Length::length(20), Length::length(10)};
+        if (root_style.display == Display::Block) leaf.float_side = FloatSide::Left;
         for (int i = 0; i < 300; ++i) tree.append_child(root, tree.create_node(leaf));
+        // Exercise both repeat-cache slots and retained Grid/float scratch space.
+        require(tree.compute(root, {AvailableSpace::definite(800), AvailableSpace::max_content()}).succeeded(),
+            "Workspace warmup failed");
         const auto& result = tree.compute(root, {AvailableSpace::definite(1000), AvailableSpace::max_content()});
         require(result.succeeded() && result.nodes.size() == 301, "Reused tree geometry incomplete");
         stale = root;

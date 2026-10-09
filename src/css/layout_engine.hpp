@@ -21,6 +21,7 @@ struct GridAxisContribution;
 struct GridBaselineItem;
 struct Placement;
 struct GridStructure;
+struct GridStructureCache;
 struct GridStructureKey;
 
 
@@ -63,7 +64,7 @@ struct LayoutNode {
     bool margin_depends_on_width{}, vertical_edges_depend_on_width{};
     bool has_relative_inset{};
     bool grid_columns_auto_repeat{}, grid_rows_auto_repeat{};
-    mutable std::shared_ptr<const GridStructure> grid_structure;
+    mutable std::shared_ptr<GridStructureCache> grid_structure;
     struct BoxCache {
         std::optional<Unit> width, height;
         PooledValue<LayoutBox> box;
@@ -254,9 +255,9 @@ private:
         const LayoutNode& node, GridStructureKey key) const;
     [[nodiscard]] GridAxisContribution grid_axis_contribution(NodeId id,
         const GridContributionInput& input, std::size_t depth);
-    [[nodiscard]] std::pmr::vector<GridBaselineItem> measure_grid_baselines(const LayoutNode& parent,
+    void measure_grid_baselines(const LayoutNode& parent,
         std::span<const Placement> placements, ResolvedDimensions container_inner,
-        std::size_t depth);
+        std::size_t depth, GridWorkspace& workspace);
     [[nodiscard]] Fragment hidden(const LayoutNode& node, std::size_t depth);
     void append_fragment(Fragment& parent, Fragment&& child);
     [[nodiscard]] Fragment absolute(const LayoutNode& parent, NodeId child,

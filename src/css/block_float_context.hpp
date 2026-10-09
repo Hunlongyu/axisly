@@ -47,7 +47,13 @@ struct BlockContext {
 
 class FloatContext {
 public:
-    FloatContext() = default;
+    explicit FloatContext(std::pmr::memory_resource* memory = std::pmr::get_default_resource())
+        : regions_(memory), occupied_(memory), free_(memory) {}
+    void clear() noexcept {
+        regions_.clear(); occupied_.clear(); free_.clear();
+        left_bottom_.reset(); right_bottom_.reset(); both_bottom_.reset(); maximum_top_.reset();
+        maximum_bottom_ = maximum_occupied_bottom_ = 0;
+    }
 
     [[nodiscard]] bool empty() const noexcept { return regions_.empty(); }
     [[nodiscard]] Unit clear_bottom(ClearSide clear) const noexcept;
@@ -77,11 +83,14 @@ private:
         Unit left{}, right{};
     };
 
-    [[nodiscard]] std::vector<Interval> free_intervals(
+    [[nodiscard]] std::span<const Interval> free_intervals(
         Unit top, Unit bottom, FloatBounds bounds) const;
     [[nodiscard]] std::optional<Unit> next_occupied_bottom(Unit top, Unit bottom) const;
 
-    std::vector<Region> regions_;
+    std::pmr::vector<Region> regions_;
+    mutable std::pmr::vector<Interval> occupied_, free_;
+    std::optional<Unit> left_bottom_, right_bottom_, both_bottom_, maximum_top_;
+    Unit maximum_bottom_{}, maximum_occupied_bottom_{};
 };
 
 } // namespace axisly::css::detail

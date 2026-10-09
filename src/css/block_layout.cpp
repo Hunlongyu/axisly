@@ -111,7 +111,7 @@ Fragment Engine::block(const LayoutNode& node, const Constraints& constraints,
     auto& static_block_y = workspace.get().static_block_y;
     fragments.resize(node.layout_children().size());
     static_block_y.resize(node.layout_children().size());
-    FloatContext owned_floats;
+    auto& owned_floats = workspace.get().floats;
     BlockContext root_context{owned_floats, 0, 0};
     BlockContext& context = block_context ? *block_context : root_context;
     FloatContext& floats = context.floats;

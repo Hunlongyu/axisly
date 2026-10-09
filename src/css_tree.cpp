@@ -103,10 +103,15 @@ struct LayoutTree::Impl {
         // Copying an lvalue may fail halfway through its Grid containers. Stage
         // it first so the old style and all caches remain coherent on failure.
         Style replacement(std::forward<StyleSource>(style));
+        const bool placement_changed = item.style.display != replacement.display
+            || item.style.position != replacement.position
+            || item.style.grid.row != replacement.grid.row
+            || item.style.grid.column != replacement.grid.column;
         static_assert(std::is_nothrow_move_assignable_v<Style>);
         item.owned_style = std::move(replacement);
         item.reset_style_cache();
-        invalidate_path(id);
+        if (placement_changed && item.parent) get(*item.parent).grid_structure.reset();
+        invalidate_path(id, Change::Content);
     }
     const detail::LayoutNode& get(NodeId id) const {
         const auto* node = nodes.find(id.value);
@@ -120,7 +125,12 @@ struct LayoutTree::Impl {
     }
     void invalidate_path(std::optional<NodeId> start, Change change = Change::Structure) {
         published_key.reset();
-        for (auto id = start; id; id = get(*id).parent) erase_cache(*id, change);
+        for (auto id = start; id; id = get(*id).parent) {
+            erase_cache(*id, change);
+            // Topology changes affect this container's placement, while its
+            // ancestors only need new sizes. Auto-repeat inputs remain keyed.
+            change = Change::Content;
+        }
     }
     template<class Visitor>
     void visit_subtree(NodeId root, Visitor&& visitor) {

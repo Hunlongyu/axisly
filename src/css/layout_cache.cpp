@@ -1,6 +1,7 @@
 #include "layout_cache.hpp"
 #include "layout_engine.hpp"
 #include "flex_workspace.hpp"
+#include "grid_workspace.hpp"
 #include "block_workspace.hpp"
 #include "layout_box.hpp"
 
@@ -114,6 +115,11 @@ PooledValue<LayoutBox> LayoutCache::resolve_box(const BoxStyle& style,
 WorkspacePool<FlexWorkspace>& CacheTransaction::flex_workspace() {
     if (!resident_.flex_workspace_) resident_.flex_workspace_ = std::make_unique<WorkspacePool<FlexWorkspace>>(resident_.memory());
     return *resident_.flex_workspace_;
+}
+
+WorkspacePool<GridWorkspace>& CacheTransaction::grid_workspace() {
+    if (!resident_.grid_workspace_) resident_.grid_workspace_ = std::make_unique<WorkspacePool<GridWorkspace>>(resident_.memory());
+    return *resident_.grid_workspace_;
 }
 
 WorkspacePool<BlockWorkspace>& CacheTransaction::block_workspace() {

@@ -24,6 +24,10 @@
 次数及申请字节数。运行 `--smoke` 只检查接口与缓存行为。此微基准不包含布局计算，
 不能将其中的加速比当作首次布局或完整页面加速比。
 
+Grid 热路径的同版本优化前后对照使用 `axisly_css_grid_bench`、
+`axisly_css_grid_allocations` 和独立计数构建；场景、重放方法与实测记录见
+[Grid 优化验证](../grid-optimization.md)。它不参与三方引擎排名。
+
 ## 计时模式
 
 | 模式 | 计时内容 |

@@ -54,12 +54,15 @@ struct TrackState {
 };
 
 struct TrackAxis {
+    explicit TrackAxis(std::pmr::memory_resource* memory) : tracks(memory), offsets(memory), gutter_after(memory) {}
     NodeId owner;
     std::int32_t origin{};
-    std::vector<TrackState> tracks;
-    std::vector<Unit> offsets;
-    std::vector<Unit> gutter_after;
+    std::pmr::vector<TrackState> tracks;
+    std::pmr::vector<Unit> offsets;
+    std::pmr::vector<Unit> gutter_after;
     Unit gap{};
+
+    void clear() noexcept { tracks.clear(); offsets.clear(); gutter_after.clear(); }
 
     [[nodiscard]] Unit line(std::int32_t index) const {
         return offsets.at(static_cast<std::size_t>(index - origin));
@@ -101,12 +104,20 @@ struct GridStructureKey {
 // each layout query, so intrinsic and final passes can share this structure.
 struct GridStructure {
     explicit GridStructure(std::pmr::memory_resource* memory)
-        : placements(memory), absolute_rows(memory), absolute_columns(memory) {}
+        : placements(memory), absolute_rows(memory), absolute_columns(memory),
+          collapsed_rows(memory), collapsed_columns(memory) {}
     GridStructureKey key;
     ExpandedTemplate columns, rows;
     std::pmr::vector<Placement> placements;
     std::pmr::vector<AbsoluteGridPlacement> absolute_rows, absolute_columns;
+    std::pmr::vector<std::uint8_t> collapsed_rows, collapsed_columns;
     GridExtent extent;
+};
+
+// Allocated only for Grid containers; other nodes retain one pointer. Queries
+// hold immutable structures independently of replacement in these two slots.
+struct GridStructureCache {
+    std::shared_ptr<const GridStructure> recent, previous;
 };
 
 [[nodiscard]] ExpandedTemplate expand_grid_template(
@@ -129,14 +140,14 @@ void apply_grid_template_areas(const GridStyle& style,
     std::int32_t explicit_count);
 [[nodiscard]] GridExtent place_grid_items(std::span<Placement> placements,
     std::int32_t explicit_rows, std::int32_t explicit_columns,
-    GridAutoFlow flow, NodeId id);
+    GridAutoFlow flow, NodeId id,
+    std::pmr::memory_resource* memory = std::pmr::get_default_resource());
 
-[[nodiscard]] TrackAxis make_axis(const std::vector<TrackSizing>& explicit_tracks,
+void make_axis(TrackAxis& axis, const std::vector<TrackSizing>& explicit_tracks,
     const std::vector<TrackSizing>& auto_tracks, std::int32_t minimum_line,
     std::int32_t maximum_line, std::optional<Unit> available, Unit gap, NodeId id);
 [[nodiscard]] bool has_cyclic_percentage(const TrackAxis& axis);
-void collapse_auto_fit(TrackAxis& axis, const ExpandedTemplate& definition,
-    std::span<const Placement> placements, bool columns);
+void collapse_auto_fit(TrackAxis& axis, std::span<const std::uint8_t> collapsed);
 [[nodiscard]] Unit grid_item_minimum(const LayoutNode& child, const LayoutBox& box,
     const Placement& placement, const TrackAxis& axis, Unit min_content, bool columns);
 struct AxisSizingSpace {
@@ -146,8 +157,9 @@ struct AxisSizingSpace {
     std::optional<Unit> maximum;
     ContentAlignment alignment;
 };
+struct GridSizingWorkspace;
 void size_axis(TrackAxis& axis, std::span<const ItemContribution> items,
-    bool columns, const AxisSizingSpace& space, NodeId id);
+    bool columns, const AxisSizingSpace& space, NodeId id, GridSizingWorkspace& workspace);
 void align_tracks(TrackAxis& axis, Unit available, ContentAlignment alignment, NodeId id);
 
 } // namespace axisly::css::detail

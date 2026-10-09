@@ -1,6 +1,7 @@
 #include "grid_internal.hpp"
 #include "grid_item_sizing.hpp"
 #include "grid_item_contribution.hpp"
+#include "grid_workspace.hpp"
 #include "item_alignment.hpp"
 
 #include <algorithm>
@@ -159,19 +160,24 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     const auto extent = structure->extent;
     const auto min_row = extent.row_start, max_row = extent.row_end;
     const auto min_column = extent.column_start, max_column = extent.column_end;
-    auto track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+    WorkspacePool<GridWorkspace>::Lease lease(cache_.grid_workspace());
+    auto& workspace = lease.get();
+    auto& track_columns = workspace.columns;
+    auto& track_rows = workspace.rows;
+    make_axis(track_columns, columns.tracks, node.style.grid.auto_columns,
         min_column, max_column, initial_track_width, column_gap, node.id);
-    auto track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+    make_axis(track_rows, rows.tracks, node.style.grid.auto_rows,
         min_row, max_row, initial_track_height, row_gap, node.id);
-    collapse_auto_fit(track_columns, columns, placements, true);
-    collapse_auto_fit(track_rows, rows, placements, false);
+    collapse_auto_fit(track_columns, structure->collapsed_columns);
+    collapse_auto_fit(track_rows, structure->collapsed_rows);
     const bool columns_need_content = needs_content_contributions(track_columns, inner_width.has_value());
     const bool rows_need_content = needs_content_contributions(track_rows, inner_height.has_value());
-    const std::pmr::vector<ItemContribution> no_contributions(node.cache_owner->memory());
-    auto baseline_items = measure_grid_baselines(node, placements, {inner_width, inner_height}, depth);
-    std::pmr::vector<ItemContribution> contributions(node.cache_owner->memory());
+    measure_grid_baselines(node, placements, {inner_width, inner_height}, depth, workspace);
+    const auto& baseline_items = workspace.baseline_items;
+    auto& contributions = workspace.contributions;
     contributions.reserve(node.layout_children().size());
-    std::pmr::vector<std::optional<std::size_t>> contribution_indices(node.layout_children().size(), node.cache_owner->memory());
+    auto& contribution_indices = workspace.contribution_indices;
+    contribution_indices.resize(node.layout_children().size());
     for (std::size_t i = 0; i < node.layout_children().size(); ++i) {
         if (placements[i].hidden) continue;
         const auto id = node.layout_children()[i];
@@ -194,8 +200,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
             {axis.margin_start, 0, axis.margin_end, 0},
             scrolls(child.style.overflow_x), scrolls(child.style.overflow_y)});
     }
-    size_axis(track_columns, columns_need_content ? contributions : no_contributions,
-        true, column_space, node.id);
+    size_axis(track_columns, columns_need_content ? std::span<const ItemContribution>(contributions) : std::span<const ItemContribution>{},
+        true, column_space, node.id, workspace.sizing);
     Unit measured_width = track_columns.offsets.back();
     ResolvedDimensions provisional_inner{
         inner_width.value_or(track_columns.offsets.back()), inner_height};
@@ -230,8 +236,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         return changed;
     };
     measure_cross_dependent_contributions(true);
-    size_axis(track_rows, rows_need_content ? contributions : no_contributions,
-        false, row_space, node.id);
+    size_axis(track_rows, rows_need_content ? std::span<const ItemContribution>(contributions) : std::span<const ItemContribution>{},
+        false, row_space, node.id, workspace.sizing);
     Unit measured_height = track_rows.offsets.back();
     provisional_inner.height = inner_height.value_or(track_rows.offsets.back());
     if (detail_ == FragmentDetail::Size) {
@@ -256,20 +262,20 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         // Reflow can reduce an intrinsic contribution. Reinitialize the
         // affected axis so an earlier estimate does not become a permanent
         // lower bound. The selected container size remains independent.
-        track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+        make_axis(track_columns, columns.tracks, node.style.grid.auto_columns,
             min_column, max_column, initial_track_width, column_gap, node.id);
-        collapse_auto_fit(track_columns, columns, placements, true);
+        collapse_auto_fit(track_columns, structure->collapsed_columns);
         auto reflow_column_space = column_space;
         reflow_column_space.inner_size = provisional_inner.width;
-        size_axis(track_columns, contributions, true, reflow_column_space, node.id);
+        size_axis(track_columns, contributions, true, reflow_column_space, node.id, workspace.sizing);
         if (!has_cyclic_percentage(track_columns)) measured_width = track_columns.offsets.back();
         if (measure_cross_dependent_contributions(true)) {
-            track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+            make_axis(track_rows, rows.tracks, node.style.grid.auto_rows,
                 min_row, max_row, initial_track_height, row_gap, node.id);
-            collapse_auto_fit(track_rows, rows, placements, false);
+            collapse_auto_fit(track_rows, structure->collapsed_rows);
             auto reflow_row_space = row_space;
             reflow_row_space.inner_size = provisional_inner.height;
-            size_axis(track_rows, contributions, false, reflow_row_space, node.id);
+            size_axis(track_rows, contributions, false, reflow_row_space, node.id, workspace.sizing);
             if (!has_cyclic_percentage(track_rows)) measured_height = track_rows.offsets.back();
         }
     }
@@ -304,10 +310,10 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
     const bool changed_row_gap = final_row_gap != row_gap;
     column_gap = final_column_gap;
     row_gap = final_row_gap;
-    const auto update_gap = [&](TrackAxis& axis, const ExpandedTemplate& definition,
-                                bool column_axis, Unit resolved) {
+    const auto update_gap = [&](TrackAxis& axis, std::span<const std::uint8_t> collapsed,
+                                Unit resolved) {
         axis.gap = resolved;
-        collapse_auto_fit(axis, definition, placements, column_axis);
+        collapse_auto_fit(axis, collapsed);
         axis.offsets.assign(axis.tracks.size() + 1, 0);
         for (std::size_t index = 0; index < axis.tracks.size(); ++index) {
             axis.offsets[index + 1] = checked(static_cast<double>(axis.offsets[index])
@@ -322,24 +328,24 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 [](const TrackState& track) { return !track.collapsed; }) > 1);
     if (rerun_columns) {
         const Unit sizing_width = measured_width;
-        track_columns = make_axis(columns.tracks, node.style.grid.auto_columns,
+        make_axis(track_columns, columns.tracks, node.style.grid.auto_columns,
             min_column, max_column, sizing_width, column_gap, node.id);
-        collapse_auto_fit(track_columns, columns, placements, true);
+        collapse_auto_fit(track_columns, structure->collapsed_columns);
         provisional_inner.width = sizing_width;
         measure_cross_dependent_contributions(false);
         auto rerun_space = column_space;
         rerun_space.inner_size = sizing_width;
-        size_axis(track_columns, contributions, true, rerun_space, node.id);
+        size_axis(track_columns, contributions, true, rerun_space, node.id, workspace.sizing);
     } else if (changed_column_gap) {
-        update_gap(track_columns, columns, true, column_gap);
+        update_gap(track_columns, structure->collapsed_columns, column_gap);
     }
     if (intrinsic_height && cyclic_rows && rerun_columns) {
-        track_rows = make_axis(rows.tracks, node.style.grid.auto_rows,
+        make_axis(track_rows, rows.tracks, node.style.grid.auto_rows,
             min_row, max_row, measured_height, row_gap, node.id);
-        collapse_auto_fit(track_rows, rows, placements, false);
+        collapse_auto_fit(track_rows, structure->collapsed_rows);
         auto rerun_space = row_space;
         rerun_space.inner_size = measured_height;
-        size_axis(track_rows, contributions, false, rerun_space, node.id);
+        size_axis(track_rows, contributions, false, rerun_space, node.id, workspace.sizing);
     } else if (intrinsic_height && cyclic_rows) {
         const auto percentage_value = [height = *inner_height](const TrackBreadth& breadth)
             -> std::optional<Unit> {
@@ -352,9 +358,9 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
                 percentage_value(track.style.minimum),
                 percentage_value(track.style.maximum));
         }
-        update_gap(track_rows, rows, false, row_gap);
+        update_gap(track_rows, structure->collapsed_rows, row_gap);
     } else if (changed_row_gap) {
-        update_gap(track_rows, rows, false, row_gap);
+        update_gap(track_rows, structure->collapsed_rows, row_gap);
     }
     Size candidate{*border_width, *border_height};
     candidate = constrain_size(candidate, box);
@@ -437,7 +443,8 @@ Fragment Engine::grid(const LayoutNode& node, const Constraints& constraints,
         }
         result.add_grid_report(std::move(report));
     }
-    std::pmr::vector<Fragment> fragments(node.layout_children().size(), node.cache_owner->memory());
+    auto& fragments = workspace.fragments;
+    fragments.resize(node.layout_children().size());
     for (std::size_t i = 0; i < node.layout_children().size(); ++i) {
         const auto id = node.layout_children()[i];
         const auto& child = get(id);

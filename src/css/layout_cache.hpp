@@ -160,6 +160,7 @@ struct CacheJournal {
 };
 template<class Workspace> class WorkspacePool;
 struct FlexWorkspace;
+struct GridWorkspace;
 struct BlockWorkspace;
 struct BoxResolutionCache;
 class LayoutBox;
@@ -180,6 +181,7 @@ private:
     // Working roots borrow this pool for the lifetime of a computation.
     FragmentRootPool roots_;
     std::unique_ptr<WorkspacePool<FlexWorkspace>> flex_workspace_;
+    std::unique_ptr<WorkspacePool<GridWorkspace>> grid_workspace_;
     std::unique_ptr<WorkspacePool<BlockWorkspace>> block_workspace_;
     std::unique_ptr<BoxResolutionCache> boxes_;
     TreeLimits limits_;
@@ -225,6 +227,7 @@ public:
     void stage(NodeCache& node, const MeasureRequest& request, const Measurement& measurement);
     void commit() noexcept;
     [[nodiscard]] WorkspacePool<FlexWorkspace>& flex_workspace();
+    [[nodiscard]] WorkspacePool<GridWorkspace>& grid_workspace();
     [[nodiscard]] WorkspacePool<BlockWorkspace>& block_workspace();
     [[nodiscard]] FragmentTranslationPool& translation_pool() noexcept { return resident_.translations_; }
 private:

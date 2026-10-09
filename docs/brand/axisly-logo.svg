@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="160" viewBox="0 0 460 160" role="img" aria-label="Axisly 圆拱 A 横版组合" color="#1b2330">
+  <title>Axisly — 圆拱 A · 青绿标准版 · 横版组合</title>
+  <desc>连续圆拱与独立横梁构成字母 A。透明背景，全部为矢量路径，无字体或图片依赖。</desc>
+<g transform="translate(16 16)"><path fill="#087f73" d="M18 110V59C18 32 34 16 64 16C94 16 110 32 110 59V110H86V59C86 45 78 39 64 39C50 39 42 45 42 59V110Z"/>
+      <rect fill="#78ccb3" x="50" y="73" width="28" height="21" rx="4"/></g>
+<g transform="translate(184 28) scale(1.04)"><g fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M40 28V64M40 46C40 20 7 20 7 46C7 72 40 72 40 46"/>
+          <path d="M61 28L87 64M87 28L61 64"/>
+          <path d="M108 29V64"/>
+          <path d="M151 32C145 23 126 24 126 36C126 49 153 41 153 55C153 68 132 70 124 61"/>
+          <path d="M174 11V54Q174 64 184 64"/>
+          <path d="M202 28L217 61M234 28L215 78Q210 89 200 85"/>
+        </g>
+        <circle cx="108" cy="13" r="4.5" fill="currentColor"/></g>
+</svg>

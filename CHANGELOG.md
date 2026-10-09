@@ -42,6 +42,13 @@ BREAKING CHANGE：删除 `css::LayoutTree::remove` 重复入口，原调用直�
 
 - `mark_dirty(node)` 仅失效当前节点和祖先；依赖旧有后代失效行为的调用改用
   `mark_subtree_dirty(node)`。逐叶内容变化继续使用 `mark_dirty`。
-- `NodeLayout` 的内部溢出计算字段不再公开；宿主读取 `scrollable_overflow_rect`。
+- `NodeLayout` 的 `overflow_origin_border` 和 `overflow_coordinate_width` 已移入私有算法状态；
+  宿主使用公开的 `border` 和 `scrollable_overflow_rect`。
 - `compute` 第三个参数显式写 `PixelRounding{...}` 或 `LayoutOptions{...}`，避免裸 `{}` 的重载歧义。
 - `Length`／`Style` 对象布局曾调整；不得混用旧头文件和新库，升级后完整重编译。
+
+## 旧名称迁移
+
+旧的私有开发名称为 `gridly`。头文件、命名空间、CMake 包／目标和构建选项前缀
+分别改为 `axisly/`、`axisly::`、`axisly`／`axisly::axisly` 和 `AXISLY_`。
+旧名称没有保留公开别名，已有宿主需要更新引用并重新构建。

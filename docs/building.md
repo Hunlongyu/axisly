@@ -71,6 +71,4 @@ PGO 流程见[执行资源](css-execution-resources.md#可选-clang-pgo)。
 
 ## 旧名称迁移
 
-旧的私有开发名称为 `gridly`。头文件、命名空间、CMake 包／目标和构建选项前缀
-分别改为 `axisly/`、`axisly::`、`axisly`／`axisly::axisly` 和 `AXISLY_`。
-旧名称没有保留公开别名，已有宿主需要更新引用并重新构建。
+旧项目名、头文件、CMake 目标和构建选项的迁移统一见[变更记录](../CHANGELOG.md#旧名称迁移)。

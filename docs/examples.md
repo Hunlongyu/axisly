@@ -13,7 +13,7 @@
 
 程序位于相应构建目录，Windows 文件名带 `.exe`。Windows 双击启动并独占控制台时，
 输出保留到按回车关闭；已有终端或重定向运行时直接退出。
-CSS 混合树的最小例子见 [README](../README.md#快速开始)。
+CSS 混合树的最小例子见 [中文 README](../README.zh-CN.md#快速开始)。
 
 ## SDL3 Playground
 

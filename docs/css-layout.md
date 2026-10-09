@@ -1,7 +1,7 @@
 # CSS 布局指南
 
 `axisly::css::LayoutTree` 保存节点、样式、父子关系和缓存。每次计算指定一个根和可用空间，
-默认同步返回完整布局结果，也可保留布局并按节点读取。快速示例见 [README](../README.md#快速开始)，接口定义见
+默认同步返回完整布局结果，也可保留布局并按节点读取。快速示例见 [中文 README](../README.zh-CN.md#快速开始)，接口定义见
 [`css_tree.hpp`](../include/axisly/css_tree.hpp)。
 
 ## 创建和更新布局树
@@ -203,10 +203,5 @@ auto bounds = session.layout(host_child, css::CoordinateSpace::Parent);
 
 ## 接口迁移
 
-此前在容器上调用 `mark_dirty` 会连同全部后代失效。依赖此行为的调用应改为
-`mark_subtree_dirty`；单节点内容变化继续使用 `mark_dirty`。
-`NodeLayout` 中原有的 `overflow_origin_border` 和 `overflow_coordinate_width`
-已移入私有算法状态；宿主应使用公开的 `border` 和 `scrollable_overflow_rect`。
-默认不取整、根相对坐标保持原有约定。`remove` 已删除，原调用改为
-`remove_subtree`，递归删除行为不变。
-`compute` 的第三个参数应明确使用 `PixelRounding{...}` 或 `LayoutOptions{...}`，避免裸 `{}` 的重载歧义。
+历史接口调整及替代写法统一维护在[变更记录](../CHANGELOG.md)，包括节点失效、
+删除、溢出字段和 `compute` 参数迁移。

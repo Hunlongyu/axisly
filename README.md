@@ -1,46 +1,97 @@
-# Axisly
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/axisly-logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/brand/axisly-logo.svg">
+    <img src="docs/brand/axisly-logo.svg" alt="Axisly" width="360">
+  </picture>
+</p>
 
-面向原生 UI 的 C++20 布局库。输入布局树、样式和内容尺寸，输出控件的位置与大小。
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-Axisly 提供 Block、Flexbox 和 Grid 布局，核心仅依赖 C++ 标准库。
-窗口、控件、文字测量和绘制由宿主负责，可接入现有 UI 框架或自绘界面。
+<p align="center">
+  <strong>A C++20 layout library for native UI</strong><br>
+  Block · Flexbox · Grid
+</p>
 
-## 功能
+<p align="center">
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.2.0%20dev-087F73?style=flat&amp;labelColor=263B3A" alt="Development version 0.2.0"></a>
+  <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/C%2B%2B-20-087F73?style=flat&amp;labelColor=263B3A" alt="C++20"></a>
+  <a href="docs/building.md"><img src="https://img.shields.io/badge/CMake-3.25%2B-087F73?style=flat&amp;labelColor=263B3A" alt="CMake 3.25 or newer"></a>
+  <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/core-STL%20only-087F73?style=flat&amp;labelColor=263B3A" alt="Core uses only the C++ standard library"></a>
+  <a href="https://github.com/Hunlongyu/axisly/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/CI-workflow-607D78?style=flat&amp;labelColor=263B3A" alt="View CI workflow"></a>
+</p>
 
-- **混合布局**：Block／FlowRoot、Flexbox、CSS Grid 可以在同一棵树中嵌套。
-- **尺寸与排版**：固定尺寸、百分比、min/max-content、类型化 calc、盒模型、纵横比、基线和双向对齐。
-- **Flexbox**：伸缩、换行、反向排列、间隙和均衡换行。
-- **Grid**：显式与隐式轨道、自动放置、跨格、具名线、模板区域、minmax 与自动重复。
-- **位置与溢出**：相对／绝对定位、浮动与 clear、滚动范围和滚动条空间预留。
-- **持续更新**：保留布局树、脏标记、测量与布局缓存、按节点读取结果，以及可选设备像素取整。
-- **宿主接入**：可直接借用宿主的样式和树结构，共用测量器；支持父相对坐标及按需输出。
-- **执行资源**：可选内存复用，以及多棵独立布局树的批量计算。
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="docs/css-layout.md">Layout guide</a> ·
+  <a href="#examples">Examples</a> ·
+  <a href="benchmarks/comparison/README.md">Benchmarks</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-## 接入项目
+---
 
-需要支持 **C++20** 的编译器和 **CMake 3.25+**。库以静态库形式构建，默认不下载第三方依赖。
+Axisly turns **layout trees, styles, and content measurements** into **widget positions and sizes**.
+Your host provides windows, widgets, text measurement, and rendering. Axisly computes the geometry
+for an existing UI framework or a custom interface.
 
-将源码放入项目，例如 `third_party/axisly`：
+## Core features
+
+- **Framework independent**: the core uses only the C++ standard library and ships as a static library. A normal build downloads no third-party dependencies.
+- **Composable layouts**: nest Block, Flexbox, and Grid in one tree with shared sizing, measurement, and alignment rules.
+- **Incremental updates**: retain the tree and reuse unchanged results through dirty tracking and measurement and layout caches.
+- **Flexible integration**: let Axisly manage the tree or adapt an existing host tree, with per-node queries, reusable memory, and batch computation of independent trees.
+
+## Layout capabilities
+
+| Layout | Capabilities |
+| --- | --- |
+| **Block / FlowRoot** | Block flow, floats and clear, independent formatting contexts |
+| **Flexbox** | Rows and columns, grow and shrink, wrapping, reverse directions, baseline alignment, and balanced wrapping |
+| **Grid** | Explicit and implicit tracks, auto-placement, spans, named lines, template areas, minmax, and automatic repetition |
+
+All three layouts share fixed and percentage sizes, min/max-content sizing, typed calc values,
+box-model and aspect-ratio constraints, relative and absolute positioning, bidirectional alignment,
+scroll extents, reserved scrollbar space, and optional device-pixel rounding.
+See the [layout guide](docs/css-layout.md) and [compatibility matrix](docs/css-compatibility.md)
+for individual fields and behavior limits.
+
+## Quick start
+
+Requires a **C++20** compiler and **CMake 3.25+**.
+
+### 1. Add Axisly to your CMake project
+
+Place the source in your project, for example at `third_party/axisly`, and link the exported target:
 
 ```cmake
 add_subdirectory(third_party/axisly)
 target_link_libraries(your_app PRIVATE axisly::axisly)
 ```
 
-作为子项目引入时，测试和示例默认关闭。也可以安装后使用 CMake 包：
+Tests and examples are disabled by default when Axisly is included as a subproject.
+
+<details>
+<summary>Use an installed CMake package</summary>
+
+Add the installation prefix to `CMAKE_PREFIX_PATH` and link the same target:
 
 ```cmake
 find_package(axisly CONFIG REQUIRED)
 target_link_libraries(your_app PRIVATE axisly::axisly)
 ```
 
-安装步骤、编译选项和各平台命令见 [构建指南](docs/building.md)。
+See the [build guide](docs/building.md#安装与消费) for installation steps.
 
-## 快速开始
+</details>
 
-`Style::display` 默认是 `Flex`，默认主轴为横向；需要块布局时显式设置 `Display::Block`。
+### 2. Describe and compute a layout
 
-下面创建一行两个可伸展的元素，容器宽 320，元素间距为 8：
+`Style::display` defaults to `Flex` with a horizontal main axis. Set `Display::Block` explicitly for block layout.
+
+This example creates two flexible items in a row, in a container of width 320 with a gap of 8:
 
 ```cpp
 #include <axisly/css_tree.hpp>
@@ -75,50 +126,76 @@ int main() {
 }
 ```
 
-输出为 `0 0 156 24` 和 `164 0 156 24`。将这些相对布局根的矩形应用到宿主控件即可。
+Each output line contains `x y width height`:
 
-文字、图片等内容通过 `create_node(style, measure)` 提供测量回调。
-内容变化后调用 `mark_dirty(node)`；样式变化通过 `set_style(node, style)` 自动失效。
-计算结果由树持有，后续计算会更新它；需要跨帧保留时复制结果。
+```text
+0 0 156 24
+164 0 156 24
+```
 
-完整测量约定、错误处理与宿主接入见 [CSS 布局指南](docs/css-layout.md)。
+### 3. Apply the result to your UI
 
-## 选择接入方式
+- Apply each returned rectangle to its widget. Coordinates in the example are relative to the layout root.
+- Supply a measurement callback through `create_node(style, measure)` for text, images, and other content.
+- Call `mark_dirty(node)` after content changes. `set_style(node, style)` automatically invalidates affected cached results.
 
-| 接口 | 适用场景 | 特点 |
+The tree owns the result, and subsequent computations update it. Copy results that need to survive across frames.
+
+See the [CSS layout guide](docs/css-layout.md) for measurement contracts, error handling, and host integration.
+
+## Choose an integration
+
+| Approach | When to use it | API |
 | --- | --- | --- |
-| `axisly::css::LayoutTree` | 由库持有布局树 | 管理节点、样式、缓存与增量失效 |
-| `axisly::css::LayoutSource`／`LayoutSession` | 宿主已有控件树 | 借用宿主样式和拓扑，共用同一套布局算法 |
+| **Axisly owns the layout tree** | Let the library manage nodes, styles, caches, and incremental invalidation | [`LayoutTree`](include/axisly/css_tree.hpp) |
+| **Adapt an existing host tree** | Connect an existing widget tree and style system to the layout engine | [`LayoutSource` / `LayoutSession`](include/axisly/css_source.hpp) |
 
-两种接入方式使用同一套 CSS Block／Flexbox／Grid 语义。Grid 统一使用 `Style::grid`、
-`TrackSizing` 和 `GridLine`；嵌套 Grid 直接作为同一布局树中的子节点。
-这个分层方向与 Taffy 的内置树／自定义树接入一致；本库的宿主树会话还负责维护算法缓存，
-并非逐项复制 Taffy 的低层 trait API。
-公共头文件可以分别包含，也可以使用总入口 `<axisly/axisly.hpp>`。
+Both approaches share the same CSS Block, Flexbox, and Grid semantics. Grid uses `Style::grid`,
+`TrackSizing`, and `GridLine`; nested grids are ordinary child nodes in the same tree.
+Layout-tree and style APIs live in `axisly::css`. Include individual headers as needed,
+or use the umbrella header `<axisly/axisly.hpp>`.
 
-## 范围与兼容性
+## Examples
 
-CSS 布局以 **Taffy 0.14.0** 为版本兼容参照，使用固定用例、组合测试和上游语料做差分验证。
-已知的 Taffy 与浏览器规范差异单独记录在 [兼容性说明](docs/css-compatibility.md) 中。
+| Example | What it demonstrates | Entry point |
+| --- | --- | --- |
+| **Console example** | Tracks, measurement, spans, alignment, nesting, caching, and rounding | [Source](examples/css_grid.cpp) |
+| **SDL3 Playground** | Resize the canvas and inspect grid lines, item borders, and final rectangles | [Run guide](docs/examples.md#sdl3-playground) |
+| **GeeyoouUI Showcase** | Windows host integration across 19 pages, including forms, tables, and themes | [Run guide](docs/examples.md#geeyoouui-showcasewindows) |
 
-库接收类型化 C++ 样式，不包含 CSS 字符串解析、选择器、级联、DOM、文字塑形或绘制。
-完整浏览器排版中的内联格式化、Table 布局、垂直书写与分页等也不属于当前实现范围。
-滚动范围是布局输出，滚动交互和裁剪由宿主实现。
+Graphical examples are optional development targets; their UI and rendering dependencies stay outside the core library.
+Follow the [host integration steps](docs/examples.md#接入自己的-ui) to connect measurement, invalidation,
+and rectangle application in another framework.
 
-当前版本为 `0.2.0`，处于开发阶段，暂不承诺跨版本二进制兼容。
-开发期源码接口也可能调整；升级时重新编译所有使用方，并核对 [变更与迁移记录](CHANGELOG.md)。
+## Scope and compatibility
 
-## 文档与示例
+CSS layout uses **Taffy 0.14.0** as its versioned compatibility reference, with differential checks
+against fixed cases, property combinations, and the upstream corpus.
+Known differences between Taffy and browser specifications are documented in the
+[compatibility guide](docs/css-compatibility.md).
 
-| 文档 | 内容 |
+The library accepts typed C++ styles. CSS string parsing, selectors, the cascade, DOM, text shaping,
+and rendering are outside its scope, as are browser features such as inline formatting,
+table layout, vertical writing, and pagination. Scroll extents are layout output;
+the host implements scrolling and clipping.
+
+> The current development version is **0.2.0**. Source and binary compatibility across versions is not guaranteed.
+> Rebuild all consumers when upgrading and review the [changelog and migration notes](CHANGELOG.md).
+
+## Documentation
+
+Detailed guides and the changelog are currently available in Simplified Chinese.
+
+| Guide | Contents |
 | --- | --- |
-| [构建指南](docs/building.md) | 编译、安装、CMake 选项 |
-| [CSS 布局指南](docs/css-layout.md) | 样式、测量、更新和结果生命周期 |
-| [执行资源](docs/css-execution-resources.md) | 内存复用、批量执行、取整与 PGO |
-| [兼容性说明](docs/css-compatibility.md) | 布局字段映射和规范边界 |
-| [示例](docs/examples.md) | 控制台、SDL3 和 GeeyoouUI |
-| [测试指南](docs/testing.md) | 契约测试、上游重放与 Sanitizer |
-| [性能基准](benchmarks/comparison/README.md) | 同输入的 Axisly／Taffy／Yoga 对比方法 |
+| [Build guide](docs/building.md) | Compilation, installation, and CMake options |
+| [CSS layout guide](docs/css-layout.md) | Styles, measurement, updates, and result lifetime |
+| [Execution resources](docs/css-execution-resources.md) | Memory reuse, batch execution, rounding, and PGO |
+| [Compatibility matrix](docs/css-compatibility.md) | Layout field mapping and scope |
+| [Specification differences](docs/css-conformance.md) | Independent specification cases, browser replays, and known differences |
+| [Examples](docs/examples.md) | Console, SDL3, and GeeyoouUI examples |
+| [Testing](docs/testing.md) | Contract tests, upstream replay, and sanitizers |
+| [Benchmarks](benchmarks/comparison/README.md) | Comparing Axisly, Taffy, and Yoga with identical input |
 
-核心源码位于 [src](src/)，公共接口位于 [include/axisly](include/axisly/)。
-参考实现、基准工具与图形示例均为可选开发依赖。
+Core implementation lives in [src](src/) and public interfaces in [include/axisly](include/axisly/).
+Reference implementations, benchmark tools, and graphical examples are optional development dependencies.

@@ -105,10 +105,10 @@ void run_nested_case(std::size_t axis, std::size_t parent_display,
     outer_style.align_items = {ItemPosition::Start};
     outer_style.justify_items = {ItemPosition::Start};
     if (parent_display == 2) {
-        (axis == 0 ? outer_style.grid.template_columns : outer_style.grid.template_rows)
-            = {TrackSizing::fixed(120)};
-        (axis == 0 ? outer_style.grid.template_rows : outer_style.grid.template_columns)
-            = {TrackSizing::automatic()};
+        auto& main_tracks = axis == 0 ? outer_style.grid.template_columns : outer_style.grid.template_rows;
+        auto& cross_tracks = axis == 0 ? outer_style.grid.template_rows : outer_style.grid.template_columns;
+        main_tracks = {TrackSizing::fixed(120)};
+        cross_tracks = {TrackSizing::automatic()};
     }
     const auto outer = tree.create_node(outer_style);
     Style inner_style;
@@ -138,10 +138,10 @@ void run_nested_case(std::size_t axis, std::size_t parent_display,
     inner_style.align_items = {ItemPosition::Start};
     inner_style.justify_items = {ItemPosition::Start};
     if (child_display == 2) {
-        (axis == 0 ? inner_style.grid.template_columns : inner_style.grid.template_rows)
-            = {TrackSizing::automatic(), TrackSizing::automatic()};
-        (axis == 0 ? inner_style.grid.template_rows : inner_style.grid.template_columns)
-            = {TrackSizing::automatic()};
+        auto& main_tracks = axis == 0 ? inner_style.grid.template_columns : inner_style.grid.template_rows;
+        auto& cross_tracks = axis == 0 ? inner_style.grid.template_rows : inner_style.grid.template_columns;
+        main_tracks = {TrackSizing::automatic(), TrackSizing::automatic()};
+        cross_tracks = {TrackSizing::automatic()};
     }
     const auto inner = tree.create_node(inner_style);
     tree.append_child(outer, inner);
@@ -184,10 +184,10 @@ void run_deep_case(std::size_t axis, std::size_t outer_display,
         style.flex_shrink = 0;
         if (axis == 1) style.flex_direction = FlexDirection::Column;
         if (style.display == Display::Grid) {
-            (axis == 0 ? style.grid.template_columns : style.grid.template_rows)
-                = {TrackSizing::automatic(), TrackSizing::automatic()};
-            (axis == 0 ? style.grid.template_rows : style.grid.template_columns)
-                = {TrackSizing::automatic()};
+            auto& main_tracks = axis == 0 ? style.grid.template_columns : style.grid.template_rows;
+            auto& cross_tracks = axis == 0 ? style.grid.template_rows : style.grid.template_columns;
+            main_tracks = {TrackSizing::automatic(), TrackSizing::automatic()};
+            cross_tracks = {TrackSizing::automatic()};
         }
     };
     Style outer_style;
@@ -198,18 +198,18 @@ void run_deep_case(std::size_t axis, std::size_t outer_display,
     outer_style.justify_items = {ItemPosition::Start};
     if (axis == 1) outer_style.flex_direction = FlexDirection::Column;
     if (outer_display == 2) {
-        (axis == 0 ? outer_style.grid.template_columns : outer_style.grid.template_rows)
-            = {TrackSizing::fixed(120)};
-        (axis == 0 ? outer_style.grid.template_rows : outer_style.grid.template_columns)
-            = {TrackSizing::automatic()};
+        auto& main_tracks = axis == 0 ? outer_style.grid.template_columns : outer_style.grid.template_rows;
+        auto& cross_tracks = axis == 0 ? outer_style.grid.template_rows : outer_style.grid.template_columns;
+        main_tracks = {TrackSizing::fixed(120)};
+        cross_tracks = {TrackSizing::automatic()};
     }
     const auto outer = tree.create_node(outer_style);
     Style middle_style;
     middle_style.display = displays[middle_display];
     set_intrinsic(middle_style, middle_dimension, 60);
     if (middle_display == 2) {
-        (axis == 0 ? middle_style.grid.template_columns : middle_style.grid.template_rows)
-            = {TrackSizing::automatic()};
+        auto& main_tracks = axis == 0 ? middle_style.grid.template_columns : middle_style.grid.template_rows;
+        main_tracks = {TrackSizing::automatic()};
     }
     const auto middle = tree.create_node(middle_style);
     tree.append_child(outer, middle);

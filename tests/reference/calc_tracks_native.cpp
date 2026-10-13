@@ -43,7 +43,8 @@ void run(int variant, int space, bool definite, bool rows, int repeat, bool rtl,
     if (repeat == 0) for (const auto& value : sizing) axis.push_back(value);
     else axis.push_back(GridRepeat{repeat == 1 ? RepeatKind::Count
         : repeat == 2 ? RepeatKind::AutoFill : RepeatKind::AutoFit, 2, sizing, {}});
-    (rows ? style.grid.template_columns : style.grid.template_rows) = {TrackSizing::fixed(60)};
+    auto& cross_axis = rows ? style.grid.template_columns : style.grid.template_rows;
+    cross_axis = {TrackSizing::fixed(60)};
     const auto a = TrackSizing::minmax(TrackBreadth::calc(sum(15, .05f)), TrackBreadth::calc(sum(15, .05f)));
     const auto clipped = Calculation::maximum(Calculation::length(0), sum(50, -.05f));
     const auto b = TrackSizing::minmax(TrackBreadth::calc(clipped), TrackBreadth::calc(clipped));

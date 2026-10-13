@@ -89,10 +89,11 @@ void concurrent_and_reentrant() {
     });
     const LayoutRequest request{&tree, root, {}};
     bool completed = false;
-    std::jthread running([&] { completed = batch.compute({&request, 1}).front().succeeded(); });
+    std::thread running([&] { completed = batch.compute({&request, 1}).front().succeeded(); });
     entered.wait();
     bool rejected = false;
     try { (void)batch.compute({}); } catch (const std::logic_error&) { rejected = true; }
+    catch (...) { release.count_down(); running.join(); throw; }
     release.count_down();
     running.join();
     require(rejected && nested_rejected && completed, "Concurrent/reentrant batch guard failed");

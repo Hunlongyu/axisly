@@ -5,7 +5,24 @@
 
 ## 未发布
 
-### 0.2.0：统一 Grid 语义
+## 0.2.0 - 2026-10-13
+
+### 首次公开发布
+
+Axisly 是面向原生 UI 的 C++20 布局库，核心仅依赖 C++ 标准库。
+常规构建和使用无需 Rust；Rust 仅用于可选的 Taffy 参考测试与比较基准。
+
+- 支持在同一棵树中组合 Block / FlowRoot、Flexbox 与 Grid，提供内容测量、
+  尺寸约束、定位、双向对齐、滚动范围和可选设备像素取整。
+- 提供自有 `LayoutTree` 和宿主树 `LayoutSource/LayoutSession` 两种接入方式，
+  支持脏标记、测量与布局缓存、共享内存、按节点查询和独立树批量计算。
+- 通过 `add_subdirectory` 或安装后的 `find_package(axisly CONFIG REQUIRED)`
+  接入，统一链接 `axisly::axisly`。需要 C++20 编译器和 CMake 3.25+。
+- 提供中英文 README、控制台示例、SDL3 Playground、GeeyoouUI Showcase，
+  以及带环境与原始数据的 Axisly / Taffy / Yoga 比较基准。
+- 发布源码 ZIP、tar.gz、SHA-256 校验文件和资产清单；使用方按自己的平台与编译器构建。
+
+### 破坏性变更：统一 Grid 语义
 
 BREAKING CHANGE：删除原生 `compute_grid`、`GridCache`、`GridTree` 及配套的
 `Track`／`GridSpec`／`GridItem`／测量与结果类型，不保留别名或兼容层。
@@ -19,6 +36,9 @@ BREAKING CHANGE：删除 `css::LayoutTree::remove` 重复入口，原调用直�
 
 ### 评审修复
 
+- 修复 macOS 标准库缺少 `std::jthread` 时的测试构建；并发契约测试仍保留线程回收。
+- 在 ThreadSanitizer 中跳过会触发运行时主动终止的超大分配探针，普通构建继续覆盖该路径。
+- 统一 Rust 参考工具的格式，恢复 CI 格式检查。
 - 批量 `set_children` 只扫描一次祖先链，并按旧父节点统一移除迁移项；相同子节点列表直接复用。
 - 叶子发布数组预留根槽位；隐藏子树的尺寸/基线查询保留深度检查，省去后代几何构造。
 - 减少 Block 的布局盒拷贝和重复父节点查找；仅切换 Grid 轨道报告时保留无关分支缓存。

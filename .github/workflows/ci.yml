@@ -2,8 +2,15 @@ name: Build and test
 
 on:
   push:
+    branches:
+      - '**'
+    tags:
+      - 'v*.*.*'
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -199,3 +206,48 @@ jobs:
             build/reference/tests/reference/advanced-failures/
             build/reference/Testing/Temporary/LastTest.log
           if-no-files-found: ignore
+
+  release:
+    name: Publish source release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build, sanitizers, thread-sanitizer, coverage, playground, geeyoou, reference]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate version and package tagged sources
+        run: python3 scripts/package-release.py --tag "$RELEASE_TAG" --require-tag --output build/release
+      - name: Build and test the source archive
+        shell: bash
+        run: |
+          mkdir -p build/release-source
+          tar -xzf "build/release/assets/axisly-${RELEASE_TAG#v}-source.tar.gz" -C build/release-source
+          source_dir="$PWD/build/release-source/axisly-${RELEASE_TAG#v}"
+          cmake -S "$source_dir" -B build/release-check -DCMAKE_BUILD_TYPE=Release -DAXISLY_BUILD_TESTS=ON -DAXISLY_BUILD_EXAMPLES=ON
+          cmake --build build/release-check --parallel
+          ctest --test-dir build/release-check --output-on-failure --no-tests=error
+          cmake --install build/release-check --prefix "$PWD/build/release-install"
+          cmake -S "$source_dir/tests/consumer" -B build/release-consumer -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$PWD/build/release-install"
+          cmake --build build/release-consumer --parallel
+          ctest --test-dir build/release-consumer --output-on-failure --no-tests=error
+      - name: Preserve release build report and assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.ref_name }}
+          path: build/release/
+          if-no-files-found: error
+      - name: Publish release with complete assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$RELEASE_TAG" build/release/assets/*
+          --repo "$GITHUB_REPOSITORY" --verify-tag --latest
+          --title "Axisly $RELEASE_TAG" --notes-file build/release/release-notes.md

@@ -76,8 +76,13 @@ void tree_reuse() {
 }
 void concurrent_resource() {
     auto memory = std::make_shared<axisly::css::LayoutMemory>(32768);
-    std::array<std::jthread, 4> workers;
-    for (auto& worker : workers) worker = std::jthread([memory] {
+    std::array<std::thread, 4> workers;
+    // 部分 Apple 标准库尚未提供 jthread；启动失败时仍等待已有线程。
+    struct JoinWorkers {
+        std::array<std::thread, 4>& workers;
+        ~JoinWorkers() { for (auto& worker : workers) if (worker.joinable()) worker.join(); }
+    } join_workers{workers};
+    for (auto& worker : workers) worker = std::thread([memory] {
         for (int i = 0; i < 500; ++i) {
             auto* pointer = static_cast<std::byte*>(memory->allocate(8192, 64));
             pointer[0] = std::byte{1}; pointer[8191] = std::byte{2};
@@ -93,8 +98,9 @@ void concurrent_resource() {
 #ifndef __has_feature
 #define __has_feature(feature) 0
 #endif
-#if !defined(__SANITIZE_ADDRESS__) && !__has_feature(address_sanitizer)
-// ASan intentionally terminates on impossible allocation sizes before calling
+#if !defined(__SANITIZE_ADDRESS__) && !__has_feature(address_sanitizer) \
+    && !defined(__SANITIZE_THREAD__) && !__has_feature(thread_sanitizer)
+// ASan and TSan terminate on impossible allocation sizes before calling
 // new_handler. Ordinary builds exercise the real system-allocation failure.
 axisly::css::LayoutMemory* failed_resource;
 bool handled_failure;
@@ -126,7 +132,8 @@ void allocation_failure() {
 int main() {
     try {
         budget_and_alignment(); tree_reuse(); concurrent_resource();
-#if !defined(__SANITIZE_ADDRESS__) && !__has_feature(address_sanitizer)
+#if !defined(__SANITIZE_ADDRESS__) && !__has_feature(address_sanitizer) \
+    && !defined(__SANITIZE_THREAD__) && !__has_feature(thread_sanitizer)
         allocation_failure();
 #endif
         return 0;

@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.2.0%20dev-087F73?style=flat&amp;labelColor=263B3A" alt="Development version 0.2.0"></a>
+  <a href="https://github.com/Hunlongyu/axisly/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/version-0.2.0-087F73?style=flat&amp;labelColor=263B3A" alt="Version 0.2.0"></a>
   <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/C%2B%2B-20-087F73?style=flat&amp;labelColor=263B3A" alt="C++20"></a>
   <a href="docs/building.md"><img src="https://img.shields.io/badge/CMake-3.25%2B-087F73?style=flat&amp;labelColor=263B3A" alt="CMake 3.25 or newer"></a>
   <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/core-STL%20only-087F73?style=flat&amp;labelColor=263B3A" alt="Core uses only the C++ standard library"></a>
@@ -61,6 +61,9 @@ for individual fields and behavior limits.
 ## Quick start
 
 Requires a **C++20** compiler and **CMake 3.25+**.
+
+Download the source ZIP or tar.gz from [GitHub Releases](https://github.com/Hunlongyu/axisly/releases/tag/v0.2.0).
+Each release includes SHA-256 checksums. Build the library with the compiler and configuration used by your application.
 
 ### 1. Add Axisly to your CMake project
 
@@ -179,7 +182,7 @@ and rendering are outside its scope, as are browser features such as inline form
 table layout, vertical writing, and pagination. Scroll extents are layout output;
 the host implements scrolling and clipping.
 
-> The current development version is **0.2.0**. Source and binary compatibility across versions is not guaranteed.
+> The current release is **0.2.0**. Source and binary compatibility across versions is not guaranteed.
 > Rebuild all consumers when upgrading and review the [changelog and migration notes](CHANGELOG.md).
 
 ## Documentation

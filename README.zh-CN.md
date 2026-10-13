@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.2.0%20dev-087F73?style=flat&amp;labelColor=263B3A" alt="开发版本 0.2.0"></a>
+  <a href="https://github.com/Hunlongyu/axisly/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/version-0.2.0-087F73?style=flat&amp;labelColor=263B3A" alt="版本 0.2.0"></a>
   <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/C%2B%2B-20-087F73?style=flat&amp;labelColor=263B3A" alt="C++20"></a>
   <a href="docs/building.md"><img src="https://img.shields.io/badge/CMake-3.25%2B-087F73?style=flat&amp;labelColor=263B3A" alt="CMake 3.25 及以上"></a>
   <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/core-STL%20only-087F73?style=flat&amp;labelColor=263B3A" alt="核心仅依赖 C++ 标准库"></a>
@@ -60,6 +60,9 @@ Axisly 将**布局树、样式和内容尺寸**转换为控件的**位置与大�
 ## 快速开始
 
 需要支持 **C++20** 的编译器和 **CMake 3.25+**。
+
+从 [GitHub Releases](https://github.com/Hunlongyu/axisly/releases/tag/v0.2.0) 下载源码 ZIP 或 tar.gz，
+每个版本附带 SHA-256 校验文件。请使用与应用相同的编译器和配置构建此库。
 
 <a id="接入项目"></a>
 
@@ -175,7 +178,7 @@ CSS 布局以 **Taffy 0.14.0** 为版本兼容参照，使用固定用例、组�
 完整浏览器排版中的内联格式化、Table 布局、垂直书写与分页等也不属于当前实现范围。
 滚动范围是布局输出，滚动交互和裁剪由宿主实现。
 
-> 当前开发版本为 **0.2.0**，暂不承诺跨版本源码或二进制兼容。
+> 当前发布版本为 **0.2.0**，暂不承诺跨版本源码或二进制兼容。
 > 升级时请重新编译所有使用方，并核对 [变更与迁移记录](CHANGELOG.md)。
 
 ## 文档与示例

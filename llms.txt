@@ -1,0 +1,38 @@
+# Axisly
+
+> 面向原生 UI 的 C++20 布局库，将 Block、Flexbox、Grid 布局树、类型化样式和内容测量转换为控件位置与尺寸。
+
+核心以静态库交付，只使用 C++ 标准库及平台线程支持。宿主负责控件、文字塑形、内容测量和绘制。
+CMake 包名为 `axisly`，目标为 `axisly::axisly`，布局接口位于 `axisly::css`，公共入口为 `<axisly/axisly.hpp>`。
+布局行为以锁定的 Taffy 0.14.0 为兼容参照，具体能力与浏览器规范差异见下方文档。
+Rust/Cargo 仅用于可选的 Taffy 参考测试和比较基准；普通构建不下载参考实现或 GUI 依赖。
+
+本文件是精简的仓库文档索引，链接相对仓库根目录。开发前阅读 [AGENTS.md](AGENTS.md)，按任务选择相关资料。
+
+## 开始使用
+
+- [README](README.md): 英文项目介绍、最小示例、安装包与宿主集成方式。
+- [中文 README](README.zh-CN.md): 完整中文介绍与快速开始。
+- [构建与安装](docs/building.md): 工具链、CMake 预设、可选依赖、安装及下游消费。
+- [示例与宿主接入](docs/examples.md): 控制台、SDL3 Playground、GeeyoouUI Showcase 和宿主集成步骤。
+
+## 布局与兼容性
+
+- [CSS 布局指南](docs/css-layout.md): 布局树、样式、测量、缓存失效、坐标、结果生命周期、宿主树接入与错误处理。
+- [执行资源](docs/css-execution-resources.md): 内存复用、结果发布、批量计算、线程约定和可选 PGO。
+- [兼容性矩阵](docs/css-compatibility.md): 样式字段、Taffy 版本参照、实现范围及对应参考用例。
+- [规范差异](docs/css-conformance.md): Taffy、CSS 规范和浏览器重放之间的已知差异与证据。
+
+## 开发入口
+
+- [开发约定与源码导航](AGENTS.md): 按任务定位实现和测试，以及分支、提交、构建和发布约定。
+- [公共头文件入口](include/axisly/axisly.hpp): 公共 API 的聚合头文件。
+- [布局树接口](include/axisly/css_tree.hpp): 库管理的节点、布局选项、结果查询和缓存失效接口。
+- [宿主树接口](include/axisly/css_source.hpp): 借用宿主树的 LayoutSource 与 LayoutSession。
+- [测试与参考验证](docs/testing.md): 核心契约、Taffy 差分、上游语料、Sanitizer 和覆盖率。
+- [版本与构建配置](CMakeLists.txt): 当前版本、库目标、构建选项和安装规则的来源。
+
+## Optional
+
+- [性能比较](benchmarks/comparison/README.md): Axisly、Taffy、Yoga 的测试方法、输出模式、实测结果和重放信息。
+- [变更记录](CHANGELOG.md): 版本变化及旧项目名称、头文件和 CMake 接口的迁移说明。
